@@ -1,0 +1,20 @@
+[package]
+name = "weavatrix-seo-architecture"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Internal-link architecture over the Search Evidence Graph"
+publish = false
+keywords = ["weavatrix", "seo", "graph"]
+categories = ["development-tools"]
+
+[dependencies]
+weavatrix-seo-model = { workspace = true }
+weavatrix-graph = { workspace = true }
+
+[lints]
+workspace = true

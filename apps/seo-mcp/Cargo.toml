@@ -1,0 +1,27 @@
+[package]
+name = "weavatrix-seo-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Bounded MCP host for Weavatrix SEO"
+publish = false
+keywords = ["weavatrix", "seo", "mcp"]
+categories = ["development-tools"]
+
+[[bin]]
+name = "weavatrix-seo-mcp"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+mcport = { workspace = true }
+serde = { workspace = true }
+weavatrix-seo = { workspace = true }
+weavatrix-seo-observation = { workspace = true }
+
+[lints]
+workspace = true

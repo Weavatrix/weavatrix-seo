@@ -1,0 +1,19 @@
+[package]
+name = "weavatrix-seo-nextjs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Next.js App Router search-surface adapter"
+publish = false
+keywords = ["weavatrix", "seo", "nextjs"]
+categories = ["development-tools"]
+
+[dependencies]
+weavatrix-seo-source = { workspace = true }
+
+[lints]
+workspace = true

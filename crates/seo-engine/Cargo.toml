@@ -1,0 +1,42 @@
+[package]
+name = "weavatrix-seo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+description = "Source-aware Search Intelligence engine for Weavatrix SEO"
+publish = false
+keywords = ["weavatrix", "seo", "search"]
+categories = ["development-tools", "command-line-utilities"]
+
+[features]
+default = ["tls"]
+tls = ["weavatrix-seo-crawl/tls"]
+
+[dependencies]
+weavatrix-seo-model = { workspace = true }
+weavatrix-seo-crawl = { workspace = true }
+weavatrix-seo-rules = { workspace = true }
+weavatrix-seo-architecture = { workspace = true }
+weavatrix-seo-content = { workspace = true }
+weavatrix-seo-opportunity = { workspace = true }
+weavatrix-seo-render = { workspace = true }
+weavatrix-seo-source = { workspace = true }
+weavatrix-seo-nextjs = { workspace = true }
+weavatrix-seo-claims = { workspace = true }
+weavatrix-seo-observation = { workspace = true }
+weavatrix-seo-competitor = { workspace = true }
+weavatrix-seo-programmatic = { workspace = true }
+serde = { workspace = true }
+blazingly-json = { workspace = true }
+
+[[bench]]
+name = "crawl"
+harness = false
+
+[lints]
+workspace = true

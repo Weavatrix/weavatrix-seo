@@ -1,0 +1,27 @@
+[package]
+name = "weavatrix-seo-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "weavatrix-seo command-line surface"
+publish = false
+keywords = ["weavatrix", "seo"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "weavatrix-seo"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+weavatrix-seo = { workspace = true }
+weavatrix-seo-mcp = { workspace = true }
+blazingly-json = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,19 @@
+[package]
+name = "weavatrix-seo-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Search Evidence Graph types for Weavatrix SEO"
+publish = false
+keywords = ["weavatrix", "seo", "search", "evidence"]
+categories = ["development-tools"]
+
+[dependencies]
+serde = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,27 @@
+[package]
+name = "weavatrix-seo-crawl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "First-party bounded HTTP crawler for Weavatrix SEO"
+publish = false
+keywords = ["weavatrix", "seo", "crawler", "http"]
+categories = ["web-programming"]
+
+[features]
+default = ["tls"]
+tls = ["dep:rustls", "dep:webpki-roots"]
+
+[dependencies]
+weavatrix-seo-model = { workspace = true }
+weavatrix-parse = { workspace = true }
+blazingly-json = { workspace = true }
+rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"], optional = true }
+webpki-roots = { version = "1.0", optional = true }
+
+[lints]
+workspace = true
