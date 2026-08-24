@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.0.1` ships the site-only vertical:
+`0.0.2` ships the site-only vertical plus Next.js repo prediction:
 
 - bounded first-party HTTP crawl
 - robots and sitemap discovery
@@ -42,7 +42,7 @@ repository source
 - exact-duplicate detection
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
 
-Repo-only, hybrid, render, claim integrity, programmatic safety, observations, and compare are typed contracts. Missing evidence is `unmeasured`, never green.
+Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Render, claim integrity, and imported observations stay `unmeasured` until those layers are wired. Missing evidence is never green.
 
 The ordinary audit path does not call a model.
 
@@ -51,9 +51,9 @@ The ordinary audit path does not call a model.
 | Mode | Input | What it can prove |
 |---|---|---|
 | Site-only | `--site URL` | Live crawl, technical audit, architecture, duplicates |
-| Repo-only | `--repo PATH` | Predicted search surface from source (`unmeasured` in 0.0.1) |
-| Hybrid | `--repo` + `--site` | Source intent versus HTTP/render (`unmeasured` in 0.0.1) |
-| Compare | `--site` + `--competitor` | Public-site structural gaps (`unmeasured` in 0.0.1) |
+| Repo-only | `--repo PATH` | Next.js App Router families, sitemap/robots owners, programmatic flags |
+| Hybrid | `--repo` + `--site` | Source intent versus HTTP inventory |
+| Compare | `--site` + `--competitor` | Public-site structural archetype/schema/locale gaps |
 
 ## Install
 
@@ -65,7 +65,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.1"
+weavatrix-seo = "0.0.2"
 ```
 
 ## CLI

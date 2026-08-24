@@ -92,6 +92,8 @@ impl Crawl {
             hosts: vec![seed.host().to_owned()],
             pages,
             edges,
+            predicted_routes: Vec::new(),
+            sitemap_discovered: sitemap_set.len(),
             counts: InventoryCounts {
                 crawled: 0,
                 fetched: 0,
@@ -122,22 +124,51 @@ fn fetch_sitemaps(fetcher: &Fetcher, seed: &AbsoluteUrl, robots: &Robots) -> Vec
     let mut declared = robots.sitemaps.clone();
     if declared.is_empty() {
         declared.push(format!("{}/sitemap.xml", seed.origin()));
+        declared.push(format!("{}/sitemap_index.xml", seed.origin()));
     }
-    let mut locs = Vec::new();
+    let mut queue = VecDeque::new();
     for item in declared {
-        let Ok(url) = AbsoluteUrl::parse(&item).or_else(|_| seed.join(&item)) else {
+        if let Ok(url) = AbsoluteUrl::parse(&item).or_else(|_| seed.join(&item)) {
+            queue.push_back(url);
+        }
+    }
+    let mut visited = BTreeSet::new();
+    let mut locs = Vec::new();
+    let mut documents = 0_usize;
+    while let Some(url) = queue.pop_front() {
+        if documents >= 64 || !visited.insert(url.clone()) {
             continue;
-        };
+        }
         let Ok(response) = fetcher.get(&url) else {
             continue;
         };
-        if response.status == 200 {
-            locs.extend(parse_sitemap(&response.body, seed));
+        if response.status != 200 {
+            continue;
+        }
+        documents += 1;
+        let body = &response.body;
+        let nested = parse_sitemap(body, seed);
+        if is_sitemap_index(body) {
+            for child in nested {
+                queue.push_back(child);
+            }
+            continue;
+        }
+        if is_urlset(body) || !nested.is_empty() {
+            locs.extend(nested);
         }
     }
     locs.sort();
     locs.dedup();
     locs
+}
+
+fn is_sitemap_index(body: &str) -> bool {
+    body.contains("<sitemapindex") || body.contains("<sitemapindex ")
+}
+
+fn is_urlset(body: &str) -> bool {
+    body.contains("<urlset")
 }
 
 fn assemble(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool) -> ExtractedPage {

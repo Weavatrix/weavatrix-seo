@@ -25,11 +25,11 @@ pub fn usage() -> String {
     "weavatrix-seo — Weavatrix SEO
 
 Usage:
-  weavatrix-seo audit --site URL [--max-pages N] [--json]
-  weavatrix-seo inventory --site URL [--max-pages N] [--json]
+  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--json]
+  weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--json]
   weavatrix-seo opportunities --site URL [--max-pages N] [--json]
   weavatrix-seo plan --site URL [--max-pages N] [--json]
-  weavatrix-seo compare --site URL --competitor URL [--json]
+  weavatrix-seo compare --site URL --competitor URL [--max-pages N] [--json]
   weavatrix-seo explain ID --site URL [--json]
   weavatrix-seo mcp
   weavatrix-seo --version
@@ -161,7 +161,7 @@ fn request(
         AnalysisMode::Site
     };
     if site.is_none() && repo.is_none() {
-        return Err("provide --site URL".into());
+        return Err("provide --site URL and/or --repo PATH".into());
     }
     Ok(AuditRequest {
         mode,

@@ -49,7 +49,7 @@ fn main() {
     let started = Instant::now();
     let report = run_audit(&AuditRequest {
         mode: AnalysisMode::Site,
-        site: Some(site),
+        site: Some(site.clone()),
         repo: None,
         competitors: Vec::new(),
         max_pages: Some(32),
@@ -61,7 +61,26 @@ fn main() {
         "weavatrix-seo site-only {} pages in {elapsed:?}",
         report.inventory.counts.crawled
     );
+    probe_external_crawlers(&site);
     black_box(report);
+}
+
+fn probe_external_crawlers(site: &str) {
+    // Names of other crawlers belong only in this bench tree.
+    for binary in ["siteone-crawler", "screamingfrogseospider"] {
+        match std::process::Command::new(binary).arg("--help").output() {
+            Ok(output) if output.status.success() => {
+                let started = Instant::now();
+                let run = std::process::Command::new(binary).arg(site).output();
+                println!(
+                    "{binary} present; spawn {:?} in {:?}",
+                    run.map(|item| item.status.code()),
+                    started.elapsed()
+                );
+            }
+            _ => println!("{binary} not installed; skip baseline"),
+        }
+    }
 }
 
 fn pages() -> BTreeMap<String, String> {

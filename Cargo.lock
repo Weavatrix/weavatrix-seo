@@ -292,6 +292,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b033bf477f1a615abdabb19de3b851fd4d64fe1914b4be583124608e8dbfb4f"
 
 [[package]]
+name = "weavatrix-scan"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f411362c24f268e733b5820a6c118961a9954c9d9d8e3f23a4b9c8721f084557"
+dependencies = [
+ "winapi-util",
+]
+
+[[package]]
 name = "weavatrix-semantic"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -302,7 +311,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "blazingly-json",
  "serde",
@@ -323,7 +332,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-architecture"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-graph",
  "weavatrix-seo-model",
@@ -331,7 +340,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-claims"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
  "weavatrix-seo-model",
@@ -339,7 +348,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-cli"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "blazingly-json",
  "serde",
@@ -349,21 +358,21 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-competitor"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-content"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-crawl"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "blazingly-json",
  "rustls",
@@ -374,7 +383,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-mcp"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "mcport",
  "serde",
@@ -384,21 +393,24 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-model"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "weavatrix-seo-nextjs"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
+ "weavatrix-parse",
+ "weavatrix-scan",
+ "weavatrix-seo-model",
  "weavatrix-seo-source",
 ]
 
 [[package]]
 name = "weavatrix-seo-observation"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
  "weavatrix-seo-model",
@@ -406,7 +418,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-opportunity"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-seo-architecture",
  "weavatrix-seo-model",
@@ -414,28 +426,28 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-programmatic"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "weavatrix-seo-render"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-rules"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-semantic"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "weavatrix-graph",
  "weavatrix-semantic",
@@ -444,8 +456,9 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-source"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
+ "serde",
  "weavatrix-seo-model",
 ]
 
@@ -456,6 +469,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
 dependencies = [
  "rustls-pki-types",
+]
+
+[[package]]
+name = "winapi-util"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
+dependencies = [
+ "windows-sys",
 ]
 
 [[package]]

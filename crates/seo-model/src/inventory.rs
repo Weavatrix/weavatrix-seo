@@ -51,6 +51,12 @@ pub struct Inventory {
     pub pages: Vec<ExtractedPage>,
     /// Graph edges.
     pub edges: Vec<GraphEdge>,
+    /// Route patterns predicted from source.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub predicted_routes: Vec<String>,
+    /// Loc entries discovered from sitemaps, before page cap.
+    #[serde(default)]
+    pub sitemap_discovered: usize,
     /// Totals.
     pub counts: InventoryCounts,
 }
@@ -78,7 +84,11 @@ impl Inventory {
                 .filter(|page| !page.redirects.is_empty())
                 .count(),
             errors: self.pages.iter().filter(|page| page.status >= 400).count(),
-            sitemap_urls: self.pages.iter().filter(|page| page.in_sitemap).count(),
+            sitemap_urls: if self.sitemap_discovered == 0 {
+                self.pages.iter().filter(|page| page.in_sitemap).count()
+            } else {
+                self.sitemap_discovered
+            },
             indexable: self
                 .pages
                 .iter()

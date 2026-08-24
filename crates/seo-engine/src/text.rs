@@ -15,13 +15,14 @@ pub fn render_text(report: &AuditReport) -> String {
     let counts = &report.inventory.counts;
     let _ = writeln!(
         out,
-        "inventory: crawled={} fetched={} redirected={} errors={} sitemap={} indexable={}",
+        "inventory: crawled={} fetched={} redirected={} errors={} sitemap={} indexable={} routes={}",
         counts.crawled,
         counts.fetched,
         counts.redirected,
         counts.errors,
         counts.sitemap_urls,
-        counts.indexable
+        counts.indexable,
+        report.inventory.predicted_routes.len()
     );
     let _ = writeln!(out, "\naxes");
     for axis in &report.axes {
