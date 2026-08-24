@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.0.2` ships the site-only vertical plus Next.js repo prediction:
+`0.0.3` ships the site-only vertical plus Next.js repo prediction:
 
 - bounded first-party HTTP crawl
 - robots and sitemap discovery
@@ -41,6 +41,7 @@ repository source
 - internal-link architecture (depth, orphans, authority)
 - exact-duplicate detection
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
+- market-entity contamination and license claim/fact contradictions
 
 Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Render, claim integrity, and imported observations stay `unmeasured` until those layers are wired. Missing evidence is never green.
 
@@ -65,7 +66,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.2"
+weavatrix-seo = "0.0.3"
 ```
 
 ## CLI

@@ -103,6 +103,9 @@ pub struct ExtractedPage {
     pub json_ld: Vec<JsonLd>,
     /// Extracted main-content text.
     pub text: String,
+    /// Script/RSC payload used for market and claim integrity.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub payload: String,
     /// Hash of normalized main-content text.
     pub content_hash: ContentHash,
     /// Indexability from this response.

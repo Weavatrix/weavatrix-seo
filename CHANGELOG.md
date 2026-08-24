@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.3 - 2026-08-24
+
+- Detect cross-market entity contamination (`WVX-SEO-MARKET-001`) on crawled pages and in Washington source packs.
+- Detect public license claims contradicted by `license_verified=false` (`WVX-SEO-CLAIM-001`).
+- Crawl linked landings before sitemap loc floods so category pages are measured inside a small budget.
+
 ## 0.0.2 - 2026-08-24
 
 - Expand sitemap indexes into nested urlsets instead of treating index loc values as pages.

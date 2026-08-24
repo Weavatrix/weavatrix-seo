@@ -1,46 +1,36 @@
-//! Public claims versus domain facts.
+//! Public claims, domain facts, and market-entity integrity.
 
 #![forbid(unsafe_code)]
 
-use serde::{Deserialize, Serialize};
-use weavatrix_seo_model::{Evidence, EvidenceSource};
+mod license;
+mod market;
+mod repo;
 
-/// A statement published on a URL.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Claim {
-    /// Claim identity.
-    pub id: String,
-    /// URL that publishes it.
-    pub url: String,
-    /// Visible or structured text.
-    pub text: String,
+use weavatrix_seo_model::{Evidence, EvidenceSource, Finding, Inventory};
+
+pub use license::{audit_claims, false_facts, page_claims};
+pub use market::{Market, audit_pages, foreign_entities, infer_market};
+pub use repo::{RepoSignals, scan as scan_repo};
+
+/// Combined live + repo integrity pass.
+#[must_use]
+pub fn audit(inventory: &Inventory, repo: Option<&str>) -> Vec<Finding> {
+    let mut findings = audit_pages(inventory);
+    let signals = repo.map(scan_repo);
+    if let Some(signals) = &signals {
+        findings.extend(signals.findings.clone());
+        findings.extend(audit_claims(
+            inventory,
+            signals.license_false,
+            signals.license_field,
+        ));
+    } else {
+        findings.extend(audit_claims(inventory, false, false));
+    }
+    findings
 }
 
-/// Authoritative fact that may support or contradict a claim.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Fact {
-    /// Fact identity.
-    pub id: String,
-    /// Domain field or policy key.
-    pub field: String,
-    /// Recorded value.
-    pub value: String,
-}
-
-/// Claim review outcome.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ClaimReview {
-    /// Claim.
-    pub claim: Claim,
-    /// Supporting facts.
-    pub supported_by: Vec<Fact>,
-    /// Contradicting facts.
-    pub contradicted_by: Vec<Fact>,
-    /// Evidence grade.
-    pub evidence: Evidence,
-}
-
-/// No domain pack is wired in 0.0.1.
+/// Legacy helper kept for callers that only need an unmeasured marker.
 #[must_use]
 pub fn unmeasured() -> Evidence {
     Evidence::unmeasured(EvidenceSource::Repo)

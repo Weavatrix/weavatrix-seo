@@ -24,6 +24,7 @@ pub fn extract_html(html: &str) -> ExtractedPageDraft {
         skip_depth: 0,
         in_title: false,
         json_ld: false,
+        capture_script: false,
         json_buf: String::new(),
         text_buf: String::new(),
         draft: ExtractedPageDraft::default(),
@@ -58,6 +59,8 @@ pub struct ExtractedPageDraft {
     pub json_ld: Vec<weavatrix_seo_model::JsonLd>,
     /// Visible main text.
     pub text: String,
+    /// Script/RSC payload text used for market and claim integrity.
+    pub payload: String,
 }
 
 struct Walker<'source> {
@@ -67,6 +70,7 @@ struct Walker<'source> {
     skip_depth: usize,
     in_title: bool,
     json_ld: bool,
+    capture_script: bool,
     json_buf: String,
     text_buf: String,
     draft: ExtractedPageDraft,
@@ -126,9 +130,13 @@ impl Walker<'_> {
                     self.json_buf.clear();
                 } else {
                     self.skip_depth += 1;
+                    self.capture_script = true;
                 }
             }
-            "style" | "noscript" => self.skip_depth += 1,
+            "style" | "noscript" => {
+                self.skip_depth += 1;
+                self.capture_script = false;
+            }
             "a" => {
                 if let Some(href) = attr(tag, "href") {
                     self.draft.links.push(href);
@@ -180,10 +188,13 @@ impl Walker<'_> {
             self.json_buf.push_str(text);
             return;
         }
-        if token.kind == TokenKind::Punctuation {
+        if self.skip_depth > 0 {
+            if self.capture_script {
+                self.draft.payload.push_str(text);
+            }
             return;
         }
-        if self.skip_depth > 0 {
+        if token.kind == TokenKind::Punctuation {
             return;
         }
         if self.in_title {

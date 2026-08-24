@@ -1,6 +1,7 @@
 //! Deterministic BFS crawl over one origin.
 
 use crate::extract::{ExtractedPageDraft, extract_html};
+use crate::frontier::Frontier;
 use crate::{CrawlBudget, FetchResponse, Fetcher, Result, Robots, parse_sitemap};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use weavatrix_seo_model::{
@@ -41,12 +42,10 @@ impl Crawl {
         let robots = fetch_robots(&fetcher, seed);
         let sitemap_urls = fetch_sitemaps(&fetcher, seed, &robots);
         let sitemap_set: BTreeSet<AbsoluteUrl> = sitemap_urls.iter().cloned().collect();
-        let mut visited = BTreeSet::from([seed.clone()]);
-        let mut queue = VecDeque::from([(seed.clone(), 0_u32)]);
+        let mut frontier = Frontier::default();
+        frontier.seed(seed.clone());
         for url in &sitemap_urls {
-            if visited.insert(url.clone()) {
-                queue.push_back((url.clone(), 0));
-            }
+            frontier.push_sitemap(url.clone());
         }
         let mut pages = Vec::new();
         let mut edges = Vec::new();
@@ -58,7 +57,7 @@ impl Crawl {
                 Evidence::sitemap(),
             ));
         }
-        while let Some((url, depth)) = queue.pop_front() {
+        while let Some((url, depth)) = frontier.pop() {
             if pages.len() >= self.config.budget.max_pages {
                 break;
             }
@@ -76,8 +75,7 @@ impl Crawl {
                 seed,
                 depth,
                 self.config.budget.max_depth,
-                &mut queue,
-                &mut visited,
+                &mut frontier,
                 &mut edges,
             );
             pages.push(page);
@@ -193,6 +191,7 @@ fn assemble(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
         images: draft.images,
         json_ld: draft.json_ld,
         text: draft.text,
+        payload: draft.payload,
         content_hash: ContentHash::of(&[]),
         indexability: Indexability::Indexable,
         in_sitemap,
@@ -206,8 +205,7 @@ fn record_links(
     seed: &AbsoluteUrl,
     depth: u32,
     max_depth: u32,
-    queue: &mut VecDeque<(AbsoluteUrl, u32)>,
-    visited: &mut BTreeSet<AbsoluteUrl>,
+    frontier: &mut Frontier,
     edges: &mut Vec<GraphEdge>,
 ) {
     if let Some(canonical) = &page.canonical
@@ -233,8 +231,8 @@ fn record_links(
             Relation::LinksTo,
             Evidence::http(),
         ));
-        if depth < max_depth && visited.insert(target.clone()) {
-            queue.push_back((target, depth + 1));
+        if depth < max_depth {
+            frontier.push_link(target, depth + 1);
         }
     }
 }

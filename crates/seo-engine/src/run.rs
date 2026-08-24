@@ -3,7 +3,7 @@
 use crate::plan_from;
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_architecture::analyze as analyze_architecture;
-use weavatrix_seo_claims::unmeasured as claims_unmeasured;
+use weavatrix_seo_claims::audit as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
 use weavatrix_seo_content::exact_duplicates;
 use weavatrix_seo_crawl::{Crawl, CrawlBudget, CrawlConfig, CrawlError};
@@ -164,6 +164,7 @@ fn assemble(
     let (architecture, architecture_findings) = analyze_architecture(&inventory);
     findings.extend(architecture_findings);
     findings.extend(exact_duplicates(&inventory));
+    findings.extend(integrity_audit(&inventory, request.repo.as_deref()));
     if let Some(surface) = &surface {
         findings.extend(source_findings(&inventory, surface));
         findings.extend(programmatic_findings(surface));
@@ -173,7 +174,6 @@ fn assemble(
         items.extend(compare_inventories(&inventory, competitors));
     }
     let _ = render_unmeasured();
-    let _ = claims_unmeasured();
     let _ = observations_unmeasured();
     let _ = plan_from(&items);
     let axes = axes(&findings, surface.is_some());
@@ -344,6 +344,7 @@ fn axes(findings: &[Finding], has_source: bool) -> Vec<AxisScore> {
         ("architecture", FindingFamily::Link),
         ("content_coverage", FindingFamily::Content),
         ("claim_integrity", FindingFamily::Claim),
+        ("market_integrity", FindingFamily::Market),
         ("international", FindingFamily::I18n),
         ("programmatic_safety", FindingFamily::Prog),
         ("observed_search", FindingFamily::Obs),
@@ -356,10 +357,8 @@ fn axes(findings: &[Finding], has_source: bool) -> Vec<AxisScore> {
                 .iter()
                 .filter(|item| item.family == family)
                 .collect();
-            let unmeasured = (matches!(
-                family,
-                FindingFamily::Claim | FindingFamily::Obs | FindingFamily::Ai
-            ) && subset.is_empty())
+            let unmeasured = (matches!(family, FindingFamily::Obs | FindingFamily::Ai)
+                && subset.is_empty())
                 || (family == FindingFamily::Prog && !has_source && subset.is_empty());
             AxisScore {
                 axis: axis.into(),

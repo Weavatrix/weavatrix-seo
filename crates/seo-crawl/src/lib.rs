@@ -9,6 +9,7 @@ mod budget;
 mod engine;
 mod error;
 mod extract;
+mod frontier;
 mod http;
 mod robots;
 mod sitemap;
