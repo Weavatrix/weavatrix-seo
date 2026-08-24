@@ -32,10 +32,10 @@ repository source
 
 ## Status
 
-`0.0.4` ships the site-only vertical plus Next.js repo prediction:
+`0.0.5` ships the site-only vertical plus Next.js repo prediction:
 
-- bounded first-party HTTP crawl with parallel workers (default 5)
-- robots and sitemap discovery, landings before sitemap loc floods
+- bounded first-party HTTP crawl with keep-alive workers (default 5)
+- robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
 - response metadata, canonical, hreflang, schema, links, headings, images, Open Graph
 - deterministic technical audit plus H1 / a11y / security-header / performance checks
 - internal-link architecture (depth, orphans, authority)
@@ -67,14 +67,14 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.4"
+weavatrix-seo = "0.0.5"
 ```
 
 ## CLI
 
 ```bash
 weavatrix-seo audit --site https://example.com
-weavatrix-seo audit --site https://example.com --workers 5 --html report.html
+weavatrix-seo audit --site https://example.com --workers 5 --html report.html --ci --baseline previous.json
 weavatrix-seo inventory --site https://example.com
 weavatrix-seo opportunities --site https://example.com
 weavatrix-seo plan --site https://example.com
@@ -82,7 +82,7 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares error fingerprints to a previous JSON report.
 
 ## MCP
 

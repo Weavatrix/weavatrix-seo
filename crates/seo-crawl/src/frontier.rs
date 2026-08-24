@@ -10,6 +10,7 @@ pub struct Frontier {
     linked: VecDeque<(AbsoluteUrl, u32)>,
     sitemap: VecDeque<(AbsoluteUrl, u32)>,
     scheduled: BTreeSet<AbsoluteUrl>,
+    sampled_cities: BTreeSet<String>,
 }
 
 impl Frontier {
@@ -27,23 +28,36 @@ impl Frontier {
     }
 
     /// Enqueues a hyperlink. Promotes a sitemap-only URL into the hot lane.
+    /// First city URL per family is urgent so uniqueness can be measured.
     pub fn push_link(&mut self, url: AbsoluteUrl, depth: u32) {
+        let lane = self.lane(&url);
         if self.scheduled.contains(&url) {
             if let Some(position) = self.sitemap.iter().position(|(item, _)| item == &url) {
                 let _ = self.sitemap.remove(position);
-                if is_landing(&url) {
-                    self.urgent.push_back((url, depth));
-                } else {
-                    self.linked.push_back((url, depth));
-                }
+                self.push_lane(lane, url, depth);
             }
             return;
         }
         self.scheduled.insert(url.clone());
-        if is_landing(&url) {
-            self.urgent.push_back((url, depth));
-        } else {
-            self.linked.push_back((url, depth));
+        self.push_lane(lane, url, depth);
+    }
+
+    fn lane(&mut self, url: &AbsoluteUrl) -> Lane {
+        if is_landing(url) {
+            return Lane::Urgent;
+        }
+        if let Some(family) = city_family(url)
+            && self.sampled_cities.insert(family)
+        {
+            return Lane::Urgent;
+        }
+        Lane::Linked
+    }
+
+    fn push_lane(&mut self, lane: Lane, url: AbsoluteUrl, depth: u32) {
+        match lane {
+            Lane::Urgent => self.urgent.push_back((url, depth)),
+            Lane::Linked => self.linked.push_back((url, depth)),
         }
     }
 
@@ -68,6 +82,34 @@ impl Frontier {
             return;
         }
         self.urgent.push_back((url, depth));
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Lane {
+    Urgent,
+    Linked,
+}
+
+fn city_family(url: &AbsoluteUrl) -> Option<String> {
+    let parts: Vec<&str> = url
+        .path()
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .collect();
+    let rest = if parts
+        .first()
+        .is_some_and(|part| matches!(*part, "en" | "ru" | "he" | "es" | "fr" | "de"))
+    {
+        parts.get(1..)?
+    } else {
+        &parts
+    };
+    match rest {
+        ["category" | "services", slug, city] if city.contains('-') => {
+            Some(format!("category/{slug}"))
+        }
+        _ => None,
     }
 }
 
@@ -138,5 +180,16 @@ mod tests {
         let rest = frontier.pop_batch(5);
         assert_eq!(rest.len(), 5);
         assert!(rest.iter().all(|(url, _)| url.path().starts_with("/blog/")));
+    }
+
+    #[test]
+    fn first_city_variant_is_urgent() {
+        let mut frontier = Frontier::default();
+        frontier.seed(AbsoluteUrl::parse("https://x.test/").unwrap());
+        let city = AbsoluteUrl::parse("https://x.test/category/electrician/vancouver-wa").unwrap();
+        frontier.push_link(city.clone(), 1);
+        let _ = frontier.pop_batch(1);
+        let second = frontier.pop_batch(1);
+        assert_eq!(second[0].0, city);
     }
 }

@@ -116,6 +116,8 @@ fn site_audit_finds_broken_orphan_duplicate_and_sitemap_noindex() {
         competitors: Vec::new(),
         max_pages: Some(30),
         workers: Some(4),
+        ci: false,
+        baseline: None,
     })
     .expect("audit");
     assert!(report.inventory.counts.fetched >= 4, "{report:?}");

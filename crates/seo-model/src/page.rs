@@ -53,8 +53,11 @@ pub struct Heading {
 pub struct ImageRef {
     /// Image URL.
     pub src: String,
-    /// Alt text when present.
+    /// Alt text. `None` means the attribute is absent; `Some("")` is decorative.
     pub alt: Option<String>,
+    /// `aria-hidden` or `role=presentation|none`.
+    #[serde(default)]
+    pub hidden: bool,
 }
 
 /// Parsed JSON-LD document or a syntax failure.
@@ -124,6 +127,12 @@ pub struct ExtractedPage {
     /// Fetch duration in milliseconds.
     #[serde(default)]
     pub fetch_ms: u32,
+    /// Document exposes a `main` landmark.
+    #[serde(default)]
+    pub has_main: bool,
+    /// Interactive controls without an accessible name.
+    #[serde(default)]
+    pub unlabeled_controls: usize,
     /// Hash of normalized main-content text.
     pub content_hash: ContentHash,
     /// Indexability from this response.

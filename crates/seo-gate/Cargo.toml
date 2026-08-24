@@ -1,0 +1,20 @@
+[package]
+name = "weavatrix-seo-gate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Evidence-graph CI gate for Weavatrix SEO"
+publish = false
+keywords = ["weavatrix", "seo", "ci"]
+categories = ["development-tools"]
+
+[dependencies]
+weavatrix-seo-model = { workspace = true }
+blazingly-json = { workspace = true }
+
+[lints]
+workspace = true

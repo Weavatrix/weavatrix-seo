@@ -5,19 +5,21 @@
 
 #![forbid(unsafe_code)]
 
+mod assemble;
 mod budget;
+mod discover;
 mod engine;
 mod error;
 mod extract;
 mod frontier;
-mod http;
 mod robots;
+mod schedule;
 mod sitemap;
 
 pub use budget::CrawlBudget;
 pub use engine::{Crawl, CrawlConfig};
 pub use error::{CrawlError, Result};
 pub use extract::extract_html;
-pub use http::{FetchResponse, Fetcher};
+pub use weavatrix_seo_http::{FetchResponse, Fetcher};
 pub use robots::Robots;
 pub use sitemap::parse_sitemap;

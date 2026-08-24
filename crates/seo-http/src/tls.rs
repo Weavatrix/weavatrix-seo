@@ -1,6 +1,6 @@
-//! rustls client stream for HTTPS fetches.
+//! rustls client stream.
 
-use crate::{CrawlError, Result};
+use crate::{HttpError, Result};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
 use std::net::TcpStream;
 use std::sync::{Arc, OnceLock};
@@ -25,13 +25,13 @@ fn client_config() -> Arc<ClientConfig> {
 ///
 /// # Errors
 ///
-/// Returns [`CrawlError::Transport`] when the handshake fails.
+/// Returns [`HttpError::Transport`] when the handshake fails.
 pub fn wrap(host: &str, stream: TcpStream) -> Result<StreamOwned<ClientConnection, TcpStream>> {
     let server_name = host
         .to_owned()
         .try_into()
-        .map_err(|_| CrawlError::Transport(format!("invalid TLS host: {host}")))?;
+        .map_err(|_| HttpError::Transport(format!("invalid TLS host: {host}")))?;
     let connection = ClientConnection::new(client_config(), server_name)
-        .map_err(|error| CrawlError::Transport(error.to_string()))?;
+        .map_err(|error| HttpError::Transport(error.to_string()))?;
     Ok(StreamOwned::new(connection, stream))
 }

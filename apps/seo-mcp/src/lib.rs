@@ -161,6 +161,8 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
                     competitors: Vec::new(),
                     max_pages: input.max_pages.or(Some(max_pages)),
                     workers: None,
+                    ci: false,
+                    baseline: None,
                 };
                 match run_audit(&request) {
                     Ok(report) => match explain(&report, &input.id) {
@@ -224,6 +226,8 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         competitors,
         max_pages: input.max_pages.or(Some(default_pages)),
         workers: None,
+        ci: false,
+        baseline: None,
     };
     match run_audit(&request) {
         Ok(report) => match view {

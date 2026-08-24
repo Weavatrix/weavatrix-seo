@@ -21,6 +21,8 @@ fn usage_lists_html_and_workers() {
     let help = run(&argv(&["--help"]));
     assert!(help.stdout.contains("--html PATH"));
     assert!(help.stdout.contains("--workers N"));
+    assert!(help.stdout.contains("--ci"));
+    assert!(help.stdout.contains("--baseline PATH"));
 }
 
 #[test]

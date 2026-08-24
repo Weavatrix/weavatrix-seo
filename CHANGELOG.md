@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.5 - 2026-08-25
+
+- Split transport (`weavatrix-seo-http`), live quality (`weavatrix-seo-quality`), and evidence CI (`weavatrix-seo-gate`) out of the crawl/engine crates.
+- Keep-alive pool, DNS cache, and gzip/deflate decode on the HTTP path.
+- Origin-level security headers; alt absence is not empty decorative alt.
+- Sample the first city URL per family so uniqueness is measured inside a small budget.
+- `--ci` / `--baseline PATH` compare error fingerprints, not a fake score.
+
 ## 0.0.4 - 2026-08-25
 
 - Parallel crawl workers (`--workers N`, default 5) without mixing landing and sitemap lanes.

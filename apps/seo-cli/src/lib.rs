@@ -5,7 +5,8 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use weavatrix_seo::{
-    AnalysisMode, AuditRequest, explain, plan_from, render_html, render_text, run_audit,
+    AnalysisMode, AuditRequest, evaluate_gate, explain, load_fingerprints, plan_from, render_html,
+    render_text, run_audit,
 };
 
 type ParsedArgs = (String, BTreeMap<String, String>, Vec<String>);
@@ -27,7 +28,7 @@ pub fn usage() -> String {
     "weavatrix-seo — Weavatrix SEO
 
 Usage:
-  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--json]
+  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--json]
   weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--workers N] [--json]
   weavatrix-seo opportunities --site URL [--max-pages N] [--json]
   weavatrix-seo plan --site URL [--max-pages N] [--json]
@@ -118,12 +119,20 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
         }
         _ => render_text(&report),
     };
-    let code = i32::from(
+    let mut code = i32::from(
         report
             .findings
             .iter()
             .any(|item| matches!(item.severity, weavatrix_seo::Severity::Error)),
     );
+    if request.ci || request.baseline.is_some() {
+        let baseline = request
+            .baseline
+            .as_deref()
+            .map(load_fingerprints)
+            .transpose()?;
+        code = evaluate_gate(&report, baseline.as_ref()).code;
+    }
     Ok(CliOutput {
         code,
         stdout: body,
@@ -154,6 +163,8 @@ fn request(
                 .map_err(|_| "invalid --workers".to_owned())
         })
         .transpose()?;
+    let ci = flags.contains_key("ci");
+    let baseline = flags.get("baseline").cloned();
     let competitors = flags
         .get("competitor")
         .map(|value| {
@@ -183,6 +194,8 @@ fn request(
         competitors,
         max_pages,
         workers,
+        ci,
+        baseline,
     })
 }
 
@@ -202,8 +215,8 @@ fn split(args: &[String]) -> Result<ParsedArgs, String> {
     let mut index = 1;
     while index < args.len() {
         let item = &args[index];
-        if item == "--json" {
-            flags.insert("json".into(), "true".into());
+        if item == "--json" || item == "--ci" {
+            flags.insert(item.trim_start_matches('-').to_owned(), "true".into());
             index += 1;
             continue;
         }

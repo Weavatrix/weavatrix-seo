@@ -45,3 +45,19 @@ fn reads_title_canonical_links_and_json_ld() {
     assert_eq!(draft.og_title.as_deref(), Some("OG Guide"));
     assert_eq!(draft.og_image.as_deref(), Some("https://x.test/og.png"));
 }
+
+#[test]
+fn empty_alt_is_present_missing_alt_is_none() {
+    let draft = extract_html(
+        r#"<html><body>
+          <img src="/icon.svg" alt="">
+          <img src="/hero.png">
+          <img src="/skip.png" aria-hidden="true">
+          <main><p>Body</p></main>
+        </body></html>"#,
+    );
+    assert_eq!(draft.images[0].alt.as_deref(), Some(""));
+    assert!(draft.images[1].alt.is_none());
+    assert!(draft.images[2].hidden);
+    assert!(draft.has_main);
+}

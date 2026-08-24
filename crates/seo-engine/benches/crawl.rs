@@ -54,6 +54,8 @@ fn main() {
         competitors: Vec::new(),
         max_pages: Some(32),
         workers: Some(4),
+        ci: false,
+        baseline: None,
     })
     .expect("audit");
     stop.store(true, Ordering::SeqCst);

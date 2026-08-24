@@ -143,6 +143,8 @@ mod tests {
             headers: Vec::new(),
             body_bytes: 0,
             fetch_ms: 0,
+            has_main: false,
+            unlabeled_controls: 0,
             content_hash: ContentHash::of(b"x"),
             indexability: Indexability::Indexable,
             in_sitemap: true,

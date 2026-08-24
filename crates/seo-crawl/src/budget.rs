@@ -1,6 +1,7 @@
 //! Crawl bounds. Missing bounds are refused rather than unbounded.
 
 use std::time::Duration;
+use weavatrix_seo_http::FetchBudget;
 
 /// Hard limits for one crawl snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,5 +49,17 @@ impl CrawlBudget {
     pub const fn with_workers(mut self, workers: usize) -> Self {
         self.workers = if workers == 0 { 1 } else { workers };
         self
+    }
+
+    /// Transport budget for `weavatrix-seo-http`.
+    #[must_use]
+    pub fn fetch_budget(&self) -> FetchBudget {
+        FetchBudget {
+            max_redirects: self.max_redirects,
+            max_body_bytes: self.max_body_bytes,
+            timeout: self.timeout,
+            user_agent: self.user_agent.clone(),
+            pool_size: self.workers.max(1),
+        }
     }
 }

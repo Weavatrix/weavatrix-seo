@@ -67,6 +67,8 @@ fn quality_and_thin_cities_and_html() {
         competitors: Vec::new(),
         max_pages: Some(10),
         workers: Some(3),
+        ci: false,
+        baseline: None,
     })
     .expect("audit");
     let codes: Vec<_> = report
