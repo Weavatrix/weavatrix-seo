@@ -37,6 +37,14 @@ const CHECKS: &[(&str, u16, Severity, &str, &str, &str)] = &[
         "Clickjacking protection is an origin header.",
         "Send X-Frame-Options or a frame-ancestors CSP.",
     ),
+    (
+        "referrer-policy",
+        5,
+        Severity::Info,
+        "origin is missing Referrer-Policy",
+        "Referrer leakage is an origin privacy and search-surface fact.",
+        "Send a Referrer-Policy on the origin.",
+    ),
 ];
 
 pub fn audit_origin(inventory: &Inventory, findings: &mut Vec<Finding>) {

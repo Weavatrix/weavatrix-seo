@@ -1,6 +1,6 @@
 //! Link-first crawl frontier. Sitemap URLs stay cold until the hot queue drains.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use weavatrix_seo_model::AbsoluteUrl;
 
 /// Three-lane URL schedule.
@@ -10,7 +10,7 @@ pub struct Frontier {
     linked: VecDeque<(AbsoluteUrl, u32)>,
     sitemap: VecDeque<(AbsoluteUrl, u32)>,
     scheduled: BTreeSet<AbsoluteUrl>,
-    sampled_cities: BTreeSet<String>,
+    sampled_cities: BTreeMap<String, u8>,
 }
 
 impl Frontier {
@@ -46,10 +46,12 @@ impl Frontier {
         if is_landing(url) {
             return Lane::Urgent;
         }
-        if let Some(family) = city_family(url)
-            && self.sampled_cities.insert(family)
-        {
-            return Lane::Urgent;
+        if let Some(family) = city_family(url) {
+            let taken = self.sampled_cities.entry(family).or_insert(0);
+            if *taken < 2 {
+                *taken += 1;
+                return Lane::Urgent;
+            }
         }
         Lane::Linked
     }
@@ -187,9 +189,12 @@ mod tests {
         let mut frontier = Frontier::default();
         frontier.seed(AbsoluteUrl::parse("https://x.test/").unwrap());
         let city = AbsoluteUrl::parse("https://x.test/category/electrician/vancouver-wa").unwrap();
+        let other = AbsoluteUrl::parse("https://x.test/category/electrician/camas-wa").unwrap();
         frontier.push_link(city.clone(), 1);
+        frontier.push_link(other.clone(), 1);
         let _ = frontier.pop_batch(1);
-        let second = frontier.pop_batch(1);
-        assert_eq!(second[0].0, city);
+        let batch = frontier.pop_batch(2);
+        assert_eq!(batch[0].0, city);
+        assert_eq!(batch[1].0, other);
     }
 }

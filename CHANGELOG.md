@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.6 - 2026-08-25
+
+- Accessible-name: button inner text and submit `value` count; empty `alt` stays decorative.
+- Shared unlabelled chrome is one origin finding, not a per-URL dump.
+- Sample two city URLs per family so uniqueness can actually be measured.
+- Origin `Referrer-Policy` evidence.
+
 ## 0.0.5 - 2026-08-25
 
 - Split transport (`weavatrix-seo-http`), live quality (`weavatrix-seo-quality`), and evidence CI (`weavatrix-seo-gate`) out of the crawl/engine crates.

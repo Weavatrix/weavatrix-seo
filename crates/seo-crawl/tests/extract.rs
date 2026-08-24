@@ -61,3 +61,17 @@ fn empty_alt_is_present_missing_alt_is_none() {
     assert!(draft.images[2].hidden);
     assert!(draft.has_main);
 }
+
+#[test]
+fn button_inner_text_counts_as_accessible_name() {
+    let draft = extract_html(
+        r#"<html lang="en"><body>
+          <main>
+            <button type="button">English</button>
+            <button type="submit">Send</button>
+            <textarea placeholder="Describe the work"></textarea>
+          </main>
+        </body></html>"#,
+    );
+    assert_eq!(draft.unlabeled_controls, 1);
+}

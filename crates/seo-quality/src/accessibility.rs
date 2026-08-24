@@ -1,6 +1,8 @@
 //! Accessibility evidence from the live document, not a crawler score.
 
-use weavatrix_seo_model::{ExtractedPage, Finding, FindingFamily, ImageRef, Locator, Severity};
+use weavatrix_seo_model::{
+    ExtractedPage, Finding, FindingFamily, ImageRef, Indexability, Inventory, Locator, Severity,
+};
 
 pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
     if page
@@ -13,6 +15,7 @@ pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
             page,
             Issue {
                 number: 1,
+                subject: page.url.to_string(),
                 summary: format!("{} is missing html lang", page.url),
                 path: "html[lang]",
                 why: "Assistive tech and hreflang consumers use html lang.",
@@ -28,6 +31,7 @@ pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
             page,
             Issue {
                 number: 2,
+                subject: page.url.to_string(),
                 summary: format!(
                     "{missing_alt} content images on {} have no alt attribute",
                     page.url
@@ -45,6 +49,7 @@ pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
             page,
             Issue {
                 number: 4,
+                subject: page.url.to_string(),
                 summary: format!("{} has no main landmark", page.url),
                 path: "main",
                 why: "Search and AT use main to find the primary content.",
@@ -53,12 +58,53 @@ pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
             },
         );
     }
-    if page.unlabeled_controls > 0 {
+}
+
+/// Shared chrome is one origin fact, not a per-URL dump.
+pub fn audit_controls(inventory: &Inventory, findings: &mut Vec<Finding>) {
+    let indexable: Vec<_> = inventory
+        .pages
+        .iter()
+        .filter(|page| page.status == 200 && page.indexability == Indexability::Indexable)
+        .collect();
+    let unlabeled: Vec<_> = indexable
+        .iter()
+        .copied()
+        .filter(|page| page.unlabeled_controls > 0)
+        .collect();
+    if unlabeled.is_empty() {
+        return;
+    }
+    let shared = unlabeled.len() >= 3 && unlabeled.len() * 2 >= indexable.len();
+    if shared {
+        let sample = unlabeled[0];
+        let total: usize = unlabeled.iter().map(|page| page.unlabeled_controls).sum();
+        emit(
+            findings,
+            sample,
+            Issue {
+                number: 5,
+                subject: sample.url.host().to_owned(),
+                summary: format!(
+                    "{} indexable pages share unlabelled controls ({} total)",
+                    unlabeled.len(),
+                    total
+                ),
+                path: "input,select,textarea,button",
+                why: "A template control without an accessible name repeats across the search surface.",
+                action: "Name the shared control in the owning component.",
+                verification: "The chrome control has a label or aria-label.",
+            },
+        );
+        return;
+    }
+    for page in unlabeled {
         emit(
             findings,
             page,
             Issue {
                 number: 5,
+                subject: page.url.to_string(),
                 summary: format!(
                     "{} has {} controls without an accessible name",
                     page.url, page.unlabeled_controls
@@ -81,6 +127,7 @@ fn needs_alt(image: &ImageRef) -> bool {
 
 struct Issue<'a> {
     number: u16,
+    subject: String,
     summary: String,
     path: &'a str,
     why: &'a str,
@@ -94,7 +141,7 @@ fn emit(findings: &mut Vec<Finding>, page: &ExtractedPage, issue: Issue<'_>) {
             FindingFamily::A11y,
             issue.number,
             Severity::Warn,
-            &page.url.to_string(),
+            &issue.subject,
             issue.summary,
             Locator::dom(&page.url, issue.path),
             page.evidence.clone(),

@@ -1,5 +1,6 @@
 //! HTML extraction from a raw HTTP body.
 
+mod controls;
 mod document;
 mod jsonld;
 mod meta;

@@ -1,12 +1,12 @@
 //! Token-stream walk over HTML.
 
+use super::controls::ControlRecorder;
 use super::document::ExtractedPageDraft;
 use super::jsonld::parse_json_ld;
 use super::meta::{apply_link, apply_meta};
 use super::tag::{
     Tag, attr, attr_raw, in_heading, is_boilerplate, is_skip_text, is_void, unquote,
 };
-use std::collections::BTreeSet;
 use weavatrix_parse::token::{Token, TokenKind};
 use weavatrix_seo_model::{Heading, ImageRef};
 
@@ -22,8 +22,7 @@ pub struct Walker<'source> {
     text_buf: String,
     draft: ExtractedPageDraft,
     stack: Vec<String>,
-    label_for: BTreeSet<String>,
-    controls: Vec<(Option<String>, bool)>,
+    controls: ControlRecorder,
 }
 
 impl<'source> Walker<'source> {
@@ -40,8 +39,7 @@ impl<'source> Walker<'source> {
             text_buf: String::new(),
             draft: ExtractedPageDraft::default(),
             stack: Vec::new(),
-            label_for: BTreeSet::new(),
-            controls: Vec::new(),
+            controls: ControlRecorder::default(),
         }
     }
 
@@ -61,13 +59,7 @@ impl<'source> Walker<'source> {
             .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ");
-        self.draft.unlabeled_controls = self
-            .controls
-            .iter()
-            .filter(|(id, named)| {
-                !named && id.as_ref().is_none_or(|id| !self.label_for.contains(id))
-            })
-            .count();
+        self.draft.unlabeled_controls = self.controls.unlabeled();
     }
 
     pub fn finish(self) -> ExtractedPageDraft {
@@ -101,11 +93,7 @@ impl<'source> Walker<'source> {
             "meta" => apply_meta(&mut self.draft, tag),
             "link" => apply_link(&mut self.draft, tag),
             "main" => self.draft.has_main = true,
-            "label" => {
-                if let Some(for_id) = attr(tag, "for") {
-                    self.label_for.insert(for_id);
-                }
-            }
+            "label" => self.controls.open_label(tag),
             "script" => self.open_script(tag),
             "style" | "noscript" => {
                 self.skip_depth += 1;
@@ -117,7 +105,10 @@ impl<'source> Walker<'source> {
                 }
             }
             "img" => self.draft.images.push(image(tag)),
-            "input" | "select" | "textarea" | "button" => self.note_control(tag),
+            "input" | "select" | "textarea" | "button" => {
+                let in_label = self.stack.iter().any(|name| name == "label");
+                self.controls.open_control(tag, in_label);
+            }
             _ => {
                 if attr(tag, "role").is_some_and(|role| role.eq_ignore_ascii_case("main")) {
                     self.draft.has_main = true;
@@ -140,20 +131,10 @@ impl<'source> Walker<'source> {
         }
     }
 
-    fn note_control(&mut self, tag: &Tag) {
-        if tag.name == "input"
-            && attr(tag, "type").is_some_and(|value| value.eq_ignore_ascii_case("hidden"))
-        {
-            return;
-        }
-        let named = attr(tag, "aria-label").is_some()
-            || attr(tag, "aria-labelledby").is_some()
-            || attr(tag, "title").is_some()
-            || self.stack.iter().any(|name| name == "label");
-        self.controls.push((attr(tag, "id"), named));
-    }
-
     fn close(&mut self, name: &str) {
+        if name == "button" {
+            self.controls.close_button();
+        }
         if name == "title" {
             self.in_title = false;
         }
@@ -203,6 +184,7 @@ impl<'source> Walker<'source> {
             *current = current.split_whitespace().collect::<Vec<_>>().join(" ");
             return;
         }
+        self.controls.text(text);
         if in_heading(&self.stack) || !is_boilerplate(&self.stack) {
             self.text_buf.push_str(text);
             self.text_buf.push(' ');

@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.0.5` ships the site-only vertical plus Next.js repo prediction:
+`0.0.6` ships the site-only vertical plus Next.js repo prediction:
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.5"
+weavatrix-seo = "0.0.6"
 ```
 
 ## CLI
