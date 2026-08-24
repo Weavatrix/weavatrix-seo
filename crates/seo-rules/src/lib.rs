@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+mod quality;
+
 use weavatrix_seo_model::{
     AbsoluteUrl, Evidence, ExtractedPage, Finding, FindingFamily, Indexability, Inventory, Locator,
     Relation, Severity,
@@ -18,6 +20,7 @@ pub fn audit(inventory: &Inventory) -> Vec<Finding> {
     hreflang(inventory, &mut findings);
     schema(inventory, &mut findings);
     links(inventory, &mut findings);
+    quality::audit(inventory, &mut findings);
     findings.sort_by(|left, right| {
         right
             .severity

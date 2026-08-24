@@ -53,6 +53,7 @@ fn main() {
         repo: None,
         competitors: Vec::new(),
         max_pages: Some(32),
+        workers: Some(4),
     })
     .expect("audit");
     stop.store(true, Ordering::SeqCst);

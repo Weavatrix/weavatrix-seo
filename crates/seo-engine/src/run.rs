@@ -15,6 +15,7 @@ use weavatrix_seo_model::{
 use weavatrix_seo_nextjs::{predict, route_matches};
 use weavatrix_seo_observation::unmeasured as observations_unmeasured;
 use weavatrix_seo_opportunity::opportunities;
+use weavatrix_seo_programmatic::thin_city_variants;
 use weavatrix_seo_render::unmeasured as render_unmeasured;
 use weavatrix_seo_rules::audit as rule_audit;
 use weavatrix_seo_source::SourceSurface;
@@ -36,6 +37,9 @@ pub struct AuditRequest {
     /// Page cap.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_pages: Option<usize>,
+    /// Parallel fetch workers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workers: Option<usize>,
 }
 
 impl AuditRequest {
@@ -48,6 +52,7 @@ impl AuditRequest {
             repo: None,
             competitors: Vec::new(),
             max_pages: None,
+            workers: None,
         }
     }
 }
@@ -119,6 +124,9 @@ fn budget(request: &AuditRequest) -> CrawlBudget {
     if let Some(max_pages) = request.max_pages {
         budget = budget.with_max_pages(max_pages);
     }
+    if let Some(workers) = request.workers {
+        budget = budget.with_workers(workers);
+    }
     budget
 }
 
@@ -164,6 +172,7 @@ fn assemble(
     let (architecture, architecture_findings) = analyze_architecture(&inventory);
     findings.extend(architecture_findings);
     findings.extend(exact_duplicates(&inventory));
+    findings.extend(thin_city_variants(&inventory));
     findings.extend(integrity_audit(&inventory, request.repo.as_deref()));
     if let Some(surface) = &surface {
         findings.extend(source_findings(&inventory, surface));
@@ -176,7 +185,7 @@ fn assemble(
     let _ = render_unmeasured();
     let _ = observations_unmeasured();
     let _ = plan_from(&items);
-    let axes = axes(&findings, surface.is_some());
+    let axes = axes(&findings, surface.is_some(), !inventory.pages.is_empty());
     AuditReport {
         inventory,
         findings,
@@ -336,7 +345,7 @@ fn is_private(pattern: &str) -> bool {
     .any(|token| pattern.contains(token))
 }
 
-fn axes(findings: &[Finding], has_source: bool) -> Vec<AxisScore> {
+fn axes(findings: &[Finding], has_source: bool, has_http: bool) -> Vec<AxisScore> {
     let named = [
         ("technical_discoverability", FindingFamily::Crawl),
         ("indexability", FindingFamily::Idx),
@@ -346,6 +355,9 @@ fn axes(findings: &[Finding], has_source: bool) -> Vec<AxisScore> {
         ("claim_integrity", FindingFamily::Claim),
         ("market_integrity", FindingFamily::Market),
         ("international", FindingFamily::I18n),
+        ("accessibility", FindingFamily::A11y),
+        ("security", FindingFamily::Security),
+        ("performance", FindingFamily::Perf),
         ("programmatic_safety", FindingFamily::Prog),
         ("observed_search", FindingFamily::Obs),
         ("ai_search", FindingFamily::Ai),
@@ -359,7 +371,12 @@ fn axes(findings: &[Finding], has_source: bool) -> Vec<AxisScore> {
                 .collect();
             let unmeasured = (matches!(family, FindingFamily::Obs | FindingFamily::Ai)
                 && subset.is_empty())
-                || (family == FindingFamily::Prog && !has_source && subset.is_empty());
+                || (family == FindingFamily::Prog && !has_source && subset.is_empty())
+                || (matches!(
+                    family,
+                    FindingFamily::A11y | FindingFamily::Security | FindingFamily::Perf
+                ) && !has_http
+                    && subset.is_empty());
             AxisScore {
                 axis: axis.into(),
                 errors: subset

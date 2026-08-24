@@ -14,6 +14,7 @@ categories = ["development-tools"]
 
 [dependencies]
 serde = { workspace = true }
+weavatrix-seo-model = { workspace = true }
 
 [lints]
 workspace = true

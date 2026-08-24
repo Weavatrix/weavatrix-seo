@@ -2,8 +2,9 @@
 
 use crate::extract::{ExtractedPageDraft, extract_html};
 use crate::frontier::Frontier;
-use crate::{CrawlBudget, FetchResponse, Fetcher, Result, Robots, parse_sitemap};
+use crate::{CrawlBudget, CrawlError, FetchResponse, Fetcher, Result, Robots, parse_sitemap};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::thread;
 use weavatrix_seo_model::{
     AbsoluteUrl, AnalysisMode, ContentHash, Evidence, ExtractedPage, GraphEdge, Indexability,
     Inventory, InventoryCounts, Relation,
@@ -57,28 +58,30 @@ impl Crawl {
                 Evidence::sitemap(),
             ));
         }
-        while let Some((url, depth)) = frontier.pop() {
-            if pages.len() >= self.config.budget.max_pages {
+        let workers = self.config.budget.workers.max(1);
+        while pages.len() < self.config.budget.max_pages {
+            let remaining = self.config.budget.max_pages - pages.len();
+            let batch = pop_allowed(&mut frontier, &robots, workers.min(remaining));
+            if batch.is_empty() {
                 break;
             }
-            if !robots.allows(&url) {
-                continue;
+            for (url, depth, fetched) in fetch_batch(&fetcher, batch) {
+                let Ok(response) = fetched else {
+                    continue;
+                };
+                let draft = extract_html(&response.body);
+                let in_sitemap = sitemap_set.contains(&response.url) || sitemap_set.contains(&url);
+                let page = assemble(&response, draft, in_sitemap).finalize();
+                record_links(
+                    &page,
+                    seed,
+                    depth,
+                    self.config.budget.max_depth,
+                    &mut frontier,
+                    &mut edges,
+                );
+                pages.push(page);
             }
-            let Ok(response) = fetcher.get(&url) else {
-                continue;
-            };
-            let draft = extract_html(&response.body);
-            let in_sitemap = sitemap_set.contains(&response.url) || sitemap_set.contains(&url);
-            let page = assemble(&response, draft, in_sitemap).finalize();
-            record_links(
-                &page,
-                seed,
-                depth,
-                self.config.budget.max_depth,
-                &mut frontier,
-                &mut edges,
-            );
-            pages.push(page);
         }
         mark_inbound(&mut pages, &edges);
         pages.sort_by(|left, right| left.url.to_string().cmp(&right.url.to_string()));
@@ -169,11 +172,76 @@ fn is_urlset(body: &str) -> bool {
     body.contains("<urlset")
 }
 
+fn pop_allowed(
+    frontier: &mut Frontier,
+    robots: &Robots,
+    count: usize,
+) -> Vec<(AbsoluteUrl, u32)> {
+    frontier
+        .pop_batch(count)
+        .into_iter()
+        .filter(|(url, _)| robots.allows(url))
+        .collect()
+}
+
+fn fetch_batch(
+    fetcher: &Fetcher,
+    batch: Vec<(AbsoluteUrl, u32)>,
+) -> Vec<(AbsoluteUrl, u32, Result<FetchResponse>)> {
+    if batch.len() <= 1 {
+        return batch
+            .into_iter()
+            .map(|(url, depth)| {
+                let response = fetcher.get(&url);
+                (url, depth, response)
+            })
+            .collect();
+    }
+    thread::scope(|scope| {
+        let jobs: Vec<_> = batch
+            .into_iter()
+            .map(|(url, depth)| {
+                let fetch_url = url.clone();
+                let handle = scope.spawn(move || fetcher.get(&fetch_url));
+                (url, depth, handle)
+            })
+            .collect();
+        jobs.into_iter()
+            .map(|(url, depth, handle)| {
+                let response = handle.join().unwrap_or_else(|_| {
+                    Err(CrawlError::Transport(format!(
+                        "worker panicked fetching {url}"
+                    )))
+                });
+                (url, depth, response)
+            })
+            .collect()
+    })
+}
+
+const KEPT_HEADERS: &[&str] = &[
+    "cache-control",
+    "content-encoding",
+    "content-security-policy",
+    "permissions-policy",
+    "referrer-policy",
+    "strict-transport-security",
+    "x-content-type-options",
+    "x-frame-options",
+    "x-robots-tag",
+];
+
 fn assemble(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool) -> ExtractedPage {
     let mut robots = draft.robots;
     if let Some(header) = fetched.header("x-robots-tag") {
         robots.push(header.to_owned());
     }
+    let headers = fetched
+        .headers
+        .iter()
+        .filter(|(name, _)| KEPT_HEADERS.contains(&name.as_str()))
+        .cloned()
+        .collect();
     ExtractedPage {
         url: fetched.url.clone(),
         requested: fetched.requested.clone(),
@@ -192,6 +260,12 @@ fn assemble(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
         json_ld: draft.json_ld,
         text: draft.text,
         payload: draft.payload,
+        og_title: draft.og_title,
+        og_description: draft.og_description,
+        og_image: draft.og_image,
+        headers,
+        body_bytes: fetched.body.len(),
+        fetch_ms: fetched.fetch_ms,
         content_hash: ContentHash::of(&[]),
         indexability: Indexability::Indexable,
         in_sitemap,

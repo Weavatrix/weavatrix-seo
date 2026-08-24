@@ -12,6 +12,8 @@ fn reads_title_canonical_links_and_json_ld() {
   <link rel="alternate" hreflang="ru" href="https://x.test/ru/guide">
   <meta name="description" content="A guide.">
   <meta name="robots" content="index,follow">
+  <meta property="og:title" content="OG Guide">
+  <meta property="og:image" content="https://x.test/og.png">
   <script type="application/ld+json">{"@type":"Article","name":"Guide"}</script>
 </head>
 <body>
@@ -40,4 +42,6 @@ fn reads_title_canonical_links_and_json_ld() {
     );
     assert!(draft.text.contains("Body text"));
     assert!(!draft.text.contains("ignore"));
+    assert_eq!(draft.og_title.as_deref(), Some("OG Guide"));
+    assert_eq!(draft.og_image.as_deref(), Some("https://x.test/og.png"));
 }

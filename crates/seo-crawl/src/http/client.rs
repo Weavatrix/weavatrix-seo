@@ -4,6 +4,7 @@ use super::response::{ParsedResponse, read_response};
 use crate::{CrawlBudget, CrawlError, Result};
 use std::io::Write;
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::time::Instant;
 use weavatrix_seo_model::{AbsoluteUrl, RedirectHop, Scheme};
 
 /// One fetched URL after following redirects.
@@ -21,6 +22,8 @@ pub struct FetchResponse {
     pub headers: Vec<(String, String)>,
     /// Body as lossy UTF-8.
     pub body: String,
+    /// Elapsed fetch time including redirects.
+    pub fetch_ms: u32,
 }
 
 impl FetchResponse {
@@ -54,6 +57,7 @@ impl Fetcher {
     ///
     /// Returns [`CrawlError`] on transport, TLS, or budget failure.
     pub fn get(&self, url: &AbsoluteUrl) -> Result<FetchResponse> {
+        let started = Instant::now();
         let mut current = url.clone();
         let mut redirects = Vec::new();
         for _ in 0..=self.budget.max_redirects {
@@ -83,6 +87,7 @@ impl Fetcher {
                 redirects,
                 headers: parsed.headers,
                 body: String::from_utf8_lossy(&parsed.body).into_owned(),
+                fetch_ms: millis(started),
             });
         }
         Err(CrawlError::Transport("too many redirects".into()))
@@ -134,6 +139,10 @@ fn write_request(stream: &mut impl Write, url: &AbsoluteUrl, user_agent: &str) -
     stream
         .write_all(request.as_bytes())
         .map_err(|error| CrawlError::Transport(error.to_string()))
+}
+
+fn millis(started: Instant) -> u32 {
+    u32::try_from(started.elapsed().as_millis()).unwrap_or(u32::MAX)
 }
 
 fn resolve(url: &AbsoluteUrl) -> Result<SocketAddr> {

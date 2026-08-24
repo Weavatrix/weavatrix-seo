@@ -4,7 +4,9 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use weavatrix_seo::{AnalysisMode, AuditRequest, explain, plan_from, render_text, run_audit};
+use weavatrix_seo::{
+    AnalysisMode, AuditRequest, explain, plan_from, render_html, render_text, run_audit,
+};
 
 type ParsedArgs = (String, BTreeMap<String, String>, Vec<String>);
 
@@ -25,8 +27,8 @@ pub fn usage() -> String {
     "weavatrix-seo — Weavatrix SEO
 
 Usage:
-  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--json]
-  weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--json]
+  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--json]
+  weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--workers N] [--json]
   weavatrix-seo opportunities --site URL [--max-pages N] [--json]
   weavatrix-seo plan --site URL [--max-pages N] [--json]
   weavatrix-seo compare --site URL --competitor URL [--max-pages N] [--json]
@@ -71,6 +73,9 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
         return Err("compare requires --competitor URL".into());
     }
     let report = run_audit(&request).map_err(|error| error.to_string())?;
+    if let Some(path) = flags.get("html") {
+        std::fs::write(path, render_html(&report)).map_err(|error| error.to_string())?;
+    }
     let body = match command.as_str() {
         "inventory" if json => encode(&report.inventory)?,
         "audit" if json => encode(&report)?,
@@ -141,6 +146,14 @@ fn request(
                 .map_err(|_| "invalid --max-pages".to_owned())
         })
         .transpose()?;
+    let workers = flags
+        .get("workers")
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .map_err(|_| "invalid --workers".to_owned())
+        })
+        .transpose()?;
     let competitors = flags
         .get("competitor")
         .map(|value| {
@@ -169,6 +182,7 @@ fn request(
         repo,
         competitors,
         max_pages,
+        workers,
     })
 }
 

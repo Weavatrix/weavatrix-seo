@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.4 - 2026-08-25
+
+- Parallel crawl workers (`--workers N`, default 5) without mixing landing and sitemap lanes.
+- HTML report via `--html PATH`.
+- Live quality axes: H1, Open Graph, accessibility, security headers, and fetch size/time.
+- Programmatic uniqueness: city variants that only swap the city token (`WVX-SEO-PROG-002`).
+
 ## 0.0.3 - 2026-08-24
 
 - Detect cross-market entity contamination (`WVX-SEO-MARKET-001`) on crawled pages and in Washington source packs.

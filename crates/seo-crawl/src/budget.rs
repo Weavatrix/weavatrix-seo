@@ -17,6 +17,8 @@ pub struct CrawlBudget {
     pub timeout: Duration,
     /// User-Agent product token.
     pub user_agent: String,
+    /// Parallel fetch workers. `1` is sequential.
+    pub workers: usize,
 }
 
 impl Default for CrawlBudget {
@@ -28,6 +30,7 @@ impl Default for CrawlBudget {
             max_body_bytes: 1_048_576,
             timeout: Duration::from_secs(15),
             user_agent: format!("weavatrix-seo/{}", env!("CARGO_PKG_VERSION")),
+            workers: 5,
         }
     }
 }
@@ -37,6 +40,13 @@ impl CrawlBudget {
     #[must_use]
     pub const fn with_max_pages(mut self, max_pages: usize) -> Self {
         self.max_pages = max_pages;
+        self
+    }
+
+    /// Overrides fetch worker count. Values below 1 become 1.
+    #[must_use]
+    pub const fn with_workers(mut self, workers: usize) -> Self {
+        self.workers = if workers == 0 { 1 } else { workers };
         self
     }
 }

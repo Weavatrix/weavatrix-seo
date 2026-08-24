@@ -52,6 +52,10 @@ pub enum FindingFamily {
     Prog,
     /// Performance.
     Perf,
+    /// Accessibility of the live document.
+    A11y,
+    /// Response security headers.
+    Security,
     /// Local SEO.
     Local,
     /// AI-search readiness.
@@ -84,6 +88,8 @@ impl FindingFamily {
             Self::Claim => "WVX-SEO-CLAIM",
             Self::Prog => "WVX-SEO-PROG",
             Self::Perf => "WVX-SEO-PERF",
+            Self::A11y => "WVX-SEO-A11Y",
+            Self::Security => "WVX-SEO-SEC",
             Self::Local => "WVX-SEO-LOCAL",
             Self::Ai => "WVX-SEO-AI",
             Self::Obs => "WVX-SEO-OBS",

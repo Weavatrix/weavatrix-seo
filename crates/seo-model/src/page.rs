@@ -106,6 +106,24 @@ pub struct ExtractedPage {
     /// Script/RSC payload used for market and claim integrity.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub payload: String,
+    /// Open Graph title.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub og_title: Option<String>,
+    /// Open Graph description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub og_description: Option<String>,
+    /// Open Graph image URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub og_image: Option<String>,
+    /// Selected response headers (name, value), lowercased names.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub headers: Vec<(String, String)>,
+    /// Response body size in bytes (lossy UTF-8 length).
+    #[serde(default)]
+    pub body_bytes: usize,
+    /// Fetch duration in milliseconds.
+    #[serde(default)]
+    pub fetch_ms: u32,
     /// Hash of normalized main-content text.
     pub content_hash: ContentHash,
     /// Indexability from this response.
@@ -125,6 +143,16 @@ impl ExtractedPage {
         self.content_hash = ContentHash::of_str(&normalize_text(&self.text));
         self.indexability = classify(&self);
         self
+    }
+
+    /// Lowercased response header value.
+    #[must_use]
+    pub fn header(&self, name: &str) -> Option<&str> {
+        let name = name.to_ascii_lowercase();
+        self.headers
+            .iter()
+            .find(|(key, _)| *key == name)
+            .map(|(_, value)| value.as_str())
     }
 }
 

@@ -76,6 +76,7 @@ fn link_priority_reaches_electrician_and_flags_market() {
         repo: None,
         competitors: Vec::new(),
         max_pages: Some(8),
+        workers: Some(4),
     })
     .expect("audit");
     assert!(

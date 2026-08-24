@@ -32,18 +32,19 @@ repository source
 
 ## Status
 
-`0.0.3` ships the site-only vertical plus Next.js repo prediction:
+`0.0.4` ships the site-only vertical plus Next.js repo prediction:
 
-- bounded first-party HTTP crawl
-- robots and sitemap discovery
-- response metadata, canonical, hreflang, schema, links, and main content
-- deterministic technical audit
+- bounded first-party HTTP crawl with parallel workers (default 5)
+- robots and sitemap discovery, landings before sitemap loc floods
+- response metadata, canonical, hreflang, schema, links, headings, images, Open Graph
+- deterministic technical audit plus H1 / a11y / security-header / performance checks
 - internal-link architecture (depth, orphans, authority)
-- exact-duplicate detection
+- exact-duplicate detection and thin programmatic city variants
+- HTML report (`--html PATH`) plus JSON
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
 - market-entity contamination and license claim/fact contradictions
 
-Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Render, claim integrity, and imported observations stay `unmeasured` until those layers are wired. Missing evidence is never green.
+Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Browser DOM render and imported observations stay `unmeasured` until those layers are wired. Next.js RSC payloads are captured from HTTP. Missing evidence is never green.
 
 The ordinary audit path does not call a model.
 
@@ -66,13 +67,14 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.3"
+weavatrix-seo = "0.0.4"
 ```
 
 ## CLI
 
 ```bash
 weavatrix-seo audit --site https://example.com
+weavatrix-seo audit --site https://example.com --workers 5 --html report.html
 weavatrix-seo inventory --site https://example.com
 weavatrix-seo opportunities --site https://example.com
 weavatrix-seo plan --site https://example.com
@@ -80,7 +82,7 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report.
 
 ## MCP
 
@@ -139,6 +141,8 @@ WVX-SEO-MARKET-*     market/jurisdiction
 WVX-SEO-CLAIM-*      public claim integrity
 WVX-SEO-PROG-*       programmatic SEO
 WVX-SEO-PERF-*       performance
+WVX-SEO-A11Y-*       accessibility
+WVX-SEO-SEC-*        security headers
 WVX-SEO-LOCAL-*      local SEO
 WVX-SEO-AI-*         AI-search readiness
 WVX-SEO-OBS-*        imported observations

@@ -17,6 +17,13 @@ fn help_and_version() {
 }
 
 #[test]
+fn usage_lists_html_and_workers() {
+    let help = run(&argv(&["--help"]));
+    assert!(help.stdout.contains("--html PATH"));
+    assert!(help.stdout.contains("--workers N"));
+}
+
+#[test]
 fn missing_site_is_usage() {
     let output = run(&argv(&["audit"]));
     assert_eq!(output.code, 2);

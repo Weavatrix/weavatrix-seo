@@ -61,6 +61,12 @@ pub struct ExtractedPageDraft {
     pub text: String,
     /// Script/RSC payload text used for market and claim integrity.
     pub payload: String,
+    /// Open Graph title.
+    pub og_title: Option<String>,
+    /// Open Graph description.
+    pub og_description: Option<String>,
+    /// Open Graph image.
+    pub og_image: Option<String>,
 }
 
 struct Walker<'source> {
@@ -285,12 +291,20 @@ fn apply_meta(draft: &mut ExtractedPageDraft, tag: &Tag) {
     let content = attr(tag, "content");
     if let Some(name) = attr(tag, "name") {
         match name.to_ascii_lowercase().as_str() {
-            "description" => draft.description = content,
+            "description" => draft.description.clone_from(&content),
             "robots" => {
-                if let Some(content) = content {
+                if let Some(content) = content.clone() {
                     draft.robots.push(content);
                 }
             }
+            _ => {}
+        }
+    }
+    if let Some(property) = attr(tag, "property").or_else(|| attr(tag, "name")) {
+        match property.to_ascii_lowercase().as_str() {
+            "og:title" => draft.og_title = content,
+            "og:description" => draft.og_description = content,
+            "og:image" => draft.og_image = content,
             _ => {}
         }
     }
