@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.5` reads `.weavatrix/seo.json` (or yaml) so include/exclude globs own the intended search surface. City-path `?city=` redirects, locale twins, and inverse market leaks stay in the audit. SEO does not own a browser.
+`0.1.6` binds pack entities to JSON-LD (`ENTITY-001`) and requires Place/Service schema on `:city` families (`ENTITY-002`). `.weavatrix/seo.json` still owns include/exclude. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -42,7 +42,7 @@ repository source
 - exact-duplicate detection and thin programmatic city variants
 - HTML report (`--html PATH`) plus JSON
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
-- market-entity contamination and license claim/fact contradictions
+- market-entity contamination, license claim/fact contradictions, and undeclared pack entities
 
 `.weavatrix/seo.json` is optional. When present, `indexability.include` / `exclude` decide which route families may be CREATE/SOURCE_ONLY; otherwise private chrome (`/admin`, `/auth`, …) is excluded.
 
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.5"
+weavatrix-seo = "0.1.6"
 ```
 
 ## CLI

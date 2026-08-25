@@ -199,6 +199,32 @@ fn plan_skips_private_create_families() {
 }
 
 #[test]
+fn city_family_without_json_ld_producer_is_entity() {
+    let root = format!(
+        "{}/../seo-nextjs/tests/fixtures",
+        env!("CARGO_MANIFEST_DIR").replace('\\', "/")
+    );
+    let report = run_audit(&weavatrix_seo::AuditRequest {
+        mode: weavatrix_seo::AnalysisMode::Repo,
+        repo: Some(root),
+        ..weavatrix_seo::AuditRequest::default()
+    })
+    .expect("repo");
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|item| item.code == "WVX-SEO-ENTITY-002"),
+        "{:?}",
+        report
+            .findings
+            .iter()
+            .map(|item| item.code.as_str())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn policy_include_limits_create_families() {
     let root = format!(
         "{}/../seo-nextjs/tests/fixtures",

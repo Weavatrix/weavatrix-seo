@@ -133,7 +133,7 @@ fn contains_hebrew(text: &str) -> bool {
         .any(|ch| ('\u{0590}'..='\u{05FF}').contains(&ch))
 }
 
-fn contains_token(hay: &str, needle: &str) -> bool {
+pub(crate) fn contains_token(hay: &str, needle: &str) -> bool {
     if !needle.is_ascii() {
         return hay.contains(needle);
     }

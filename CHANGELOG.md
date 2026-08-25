@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.6 - 2026-08-25
+
+- Entity graph: pack entities named in visible copy but missing from JSON-LD are `WVX-SEO-ENTITY-001`.
+- `:city` families without a Place/Service type (or JSON-LD producer) are `WVX-SEO-ENTITY-002`. Foreign entities stay `MARKET-001`.
+
 ## 0.1.5 - 2026-08-25
 
 - Repository search contract: `.weavatrix/seo.json` or a tiny `.weavatrix/seo.yaml` subset. `include`/`exclude` globs own CREATE and SOURCE_ONLY. Missing file keeps the private-family default.
