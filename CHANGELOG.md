@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.9 - 2026-08-25
+
+- Impact cone follows relative imports of SEO helpers (`weavatrix-parse`). Editing `cities.ts` imported by `citySeo.ts` names the `:city` family even though the helper file did not change.
+- Next.js page/layout modules are not walked, so the cone does not hash the whole UI tree.
+
 ## 0.1.8 - 2026-08-25
 
 - AI-search citation: Organization/WebSite without `@id`/`sameAs` is `WVX-SEO-AI-001`. FAQ copy without FAQPage is `AI-002`. FAQ source producers without schema are `AI-003`.
