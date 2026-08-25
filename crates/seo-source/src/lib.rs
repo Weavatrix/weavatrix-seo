@@ -132,6 +132,24 @@ pub fn unmeasured(repo: &str) -> SourceSurface {
     }
 }
 
+/// True when a route family is private chrome, not an indexable search URL.
+#[must_use]
+pub fn is_private_pattern(pattern: &str) -> bool {
+    [
+        "/admin",
+        "/dashboard",
+        "/auth",
+        "/chats",
+        "/settings",
+        "/pro/",
+        "/tasks/",
+        "/profile",
+    ]
+    .iter()
+    .any(|token| pattern.contains(token))
+        || pattern.contains("/*")
+}
+
 impl SourceSurface {
     /// Patterns only.
     #[must_use]

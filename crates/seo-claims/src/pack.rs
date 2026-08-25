@@ -68,6 +68,34 @@ const US_WA_ENTITIES: &[EntityRule] = &[
         token: "Clark County",
         label: "Clark County",
     },
+    EntityRule {
+        token: "Southwest Washington",
+        label: "Southwest Washington",
+    },
+    EntityRule {
+        token: "Vancouver WA",
+        label: "Vancouver WA",
+    },
+    EntityRule {
+        token: "Vancouver, WA",
+        label: "Vancouver WA",
+    },
+    EntityRule {
+        token: "Camas WA",
+        label: "Camas WA",
+    },
+    EntityRule {
+        token: "Battle Ground WA",
+        label: "Battle Ground WA",
+    },
+    EntityRule {
+        token: "Ridgefield WA",
+        label: "Ridgefield WA",
+    },
+    EntityRule {
+        token: "L&I verify",
+        label: "Washington L&I verify",
+    },
 ];
 
 const IL_ENTITIES: &[EntityRule] = &[

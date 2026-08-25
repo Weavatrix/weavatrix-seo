@@ -95,6 +95,9 @@ fn matrix_opportunities(
 ) -> Vec<weavatrix_seo_model::Opportunity> {
     let mut items = Vec::new();
     for matrix in matrices {
+        if weavatrix_seo_source::is_private_pattern(&matrix.family) {
+            continue;
+        }
         let (kind, summary, action) = match matrix.verdict {
             SafetyVerdict::Consolidate => (
                 "cannibal",

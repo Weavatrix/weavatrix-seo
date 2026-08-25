@@ -6,6 +6,7 @@ mod canonical;
 mod i18n;
 mod links;
 mod metadata;
+mod query;
 mod schema;
 mod sitemap;
 mod status;
@@ -21,6 +22,7 @@ pub fn audit(inventory: &Inventory) -> Vec<Finding> {
     sitemap::audit(inventory, &mut findings);
     metadata::audit(inventory, &mut findings);
     i18n::audit(inventory, &mut findings);
+    query::audit(inventory, &mut findings);
     schema::audit(inventory, &mut findings);
     links::audit(inventory, &mut findings);
     findings.sort_by(|left, right| {

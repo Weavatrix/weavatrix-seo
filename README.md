@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.2` traces a source helper edit to the search families it can change, even when page files did not change. Render snapshots, crawl history, worktree `seo_diff`, and observation providers are in the beta cut. SEO does not own a browser.
+`0.1.3` catches locale twins without hreflang, query-city cannibalization, and the inverse Israel←Washington market leak. Private families are no longer CREATE actions. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.2"
+weavatrix-seo = "0.1.3"
 ```
 
 ## CLI

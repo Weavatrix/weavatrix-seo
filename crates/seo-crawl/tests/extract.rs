@@ -3,6 +3,21 @@
 use weavatrix_seo_crawl::extract_html;
 
 #[test]
+fn keeps_query_string_in_href() {
+    let draft = extract_html(
+        r#"<html><body><a href="/specialists?city=vancouver-wa">City</a></body></html>"#,
+    );
+    assert!(
+        draft
+            .links
+            .iter()
+            .any(|href| href.contains("city=vancouver-wa")),
+        "{:?}",
+        draft.links
+    );
+}
+
+#[test]
 fn reads_title_canonical_links_and_json_ld() {
     let html = r#"<!doctype html>
 <html lang="en">

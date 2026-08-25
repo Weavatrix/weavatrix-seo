@@ -21,7 +21,7 @@ pub fn source_findings(
     };
     if !inventory.pages.is_empty() {
         for family in &surface.families {
-            if is_private(&family.pattern) {
+            if weavatrix_seo_source::is_private_pattern(&family.pattern) {
                 continue;
             }
             let matched = inventory
@@ -47,11 +47,9 @@ pub fn source_findings(
                 );
             }
         }
-        for page in inventory
-            .pages
-            .iter()
-            .filter(|page| page.status == 200 && !is_private(page.url.path()))
-        {
+        for page in inventory.pages.iter().filter(|page| {
+            page.status == 200 && !weavatrix_seo_source::is_private_pattern(page.url.path())
+        }) {
             let matched = surface
                 .families
                 .iter()
@@ -134,19 +132,4 @@ pub fn programmatic_findings(surface: &SourceSurface) -> Vec<Finding> {
         );
     }
     findings
-}
-
-fn is_private(pattern: &str) -> bool {
-    [
-        "/admin",
-        "/dashboard",
-        "/auth",
-        "/chats",
-        "/settings",
-        "/pro/",
-        "/tasks/",
-        "/profile",
-    ]
-    .iter()
-    .any(|token| pattern.contains(token))
 }

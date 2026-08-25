@@ -179,4 +179,20 @@ mod tests {
         let rsc = "{\"company\":\"Hevrat HaHashmal\"}";
         assert!(foreign_entities(rsc, owned).contains(&"Hevrat HaHashmal"));
     }
+
+    #[test]
+    fn flags_vancouver_wa_on_israel_url() {
+        let url = AbsoluteUrl::parse("https://kablay.co.il/category/electrician").unwrap();
+        let market = infer_market(&url, Some("he"), "חשמלאי מוסמך");
+        assert_eq!(market, Market::Israel);
+        let hits = foreign_entities(
+            "Electrician in Vancouver WA and Clark County licensed work.",
+            market,
+        );
+        assert!(
+            hits.iter()
+                .any(|item| item.contains("Vancouver") || item.contains("Clark")),
+            "{hits:?}"
+        );
+    }
 }

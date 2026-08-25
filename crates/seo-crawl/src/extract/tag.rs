@@ -24,6 +24,31 @@ pub fn unquote(value: &str) -> String {
         .to_owned()
 }
 
+fn read_attr_value(
+    source: &str,
+    tokens: &[weavatrix_parse::token::Token],
+    index: &mut usize,
+) -> String {
+    let Some(first) = tokens.get(*index) else {
+        return String::new();
+    };
+    let text = first.text(source);
+    let quote = text.chars().next().filter(|ch| *ch == '"' || *ch == '\'');
+    let Some(quote) = quote else {
+        *index += 1;
+        return unquote(text);
+    };
+    let mut raw = String::new();
+    while let Some(token) = tokens.get(*index) {
+        raw.push_str(token.text(source));
+        *index += 1;
+        if raw.len() > 1 && raw.ends_with(quote) {
+            break;
+        }
+    }
+    unquote(&raw)
+}
+
 pub fn is_void(name: &str) -> bool {
     matches!(
         name,
@@ -119,8 +144,7 @@ pub fn read_tag(
                 token.kind == TokenKind::Punctuation && token.text(source) == "="
             }) {
                 index += 1;
-                value = unquote(text_at(index));
-                index += 1;
+                value = read_attr_value(source, tokens, &mut index);
             }
             attrs.push((key, value));
             continue;

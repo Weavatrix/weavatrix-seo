@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.3 - 2026-08-25
+
+- Market packs are bidirectional: Israel files/pages that name Vancouver WA / Clark County are `MARKET-001`, not only the US→Israel direction.
+- Locale twins (`/` and `/ru`) without hreflang are `WVX-SEO-I18N-002`. SiteOne does not score this.
+- Query city URLs (`?city=`) that sit beside a pretty city path are `WVX-SEO-CANN-002`.
+- Attribute values keep `?query` across tokenizer splits, so faceted URLs are crawled as their own identity.
+- `seo_plan` no longer CREATE-proposes admin/auth/dashboard/catch-all families.
+
 ## 0.1.2 - 2026-08-25
 
 - Source impact cone: producer file hashes travel with snapshots. A helper/metadata edit names `families_impacted` even when the route pattern did not change.

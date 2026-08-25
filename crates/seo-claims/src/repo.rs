@@ -65,7 +65,22 @@ pub fn scan(repo: &str) -> RepoSignals {
         };
         record_facts(&mut signals, &relative, &source);
         if pack::file_belongs(&pack::US_WA, &relative, &source) {
-            record_foreign(&mut signals, &relative, &source);
+            record_foreign(
+                &mut signals,
+                &relative,
+                &source,
+                Market::UsWa,
+                pack::US_WA.id,
+            );
+        }
+        if pack::file_belongs(&pack::ISRAEL, &relative, &source) {
+            record_foreign(
+                &mut signals,
+                &relative,
+                &source,
+                Market::Israel,
+                pack::ISRAEL.id,
+            );
         }
     }
     signals
@@ -110,8 +125,14 @@ fn record_facts(signals: &mut RepoSignals, relative: &str, source: &str) {
     }
 }
 
-fn record_foreign(signals: &mut RepoSignals, relative: &str, source: &str) {
-    let hits = foreign_entities(source, Market::UsWa);
+fn record_foreign(
+    signals: &mut RepoSignals,
+    relative: &str,
+    source: &str,
+    owned: Market,
+    pack_id: &str,
+) {
+    let hits = foreign_entities(source, owned);
     if hits.is_empty() {
         return;
     }
@@ -122,7 +143,7 @@ fn record_foreign(signals: &mut RepoSignals, relative: &str, source: &str) {
             1,
             Severity::Error,
             &subject,
-            format!("{relative} mixes {hits:?} into pack {}", pack::US_WA.id),
+            format!("{relative} mixes {hits:?} into pack {pack_id}"),
             Locator::source_span(relative, None, None),
             Evidence {
                 kind: EvidenceKind::Deterministic,
@@ -134,8 +155,8 @@ fn record_foreign(signals: &mut RepoSignals, relative: &str, source: &str) {
             },
         )
         .explained(
-            "A US/Washington SEO module contains entities from another market pack.",
-            "Split foreign city/intent packs from the Washington renderer.",
+            "A market pack module contains entities that belong to another jurisdiction.",
+            "Split city/intent packs so each renderer owns one market.",
             "The owning source file no longer names the foreign entities.",
         ),
     );

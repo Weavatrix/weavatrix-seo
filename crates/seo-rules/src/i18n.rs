@@ -1,8 +1,20 @@
-//! Reciprocal hreflang.
+//! Reciprocal hreflang and locale twins that never declared a cluster.
 
-use weavatrix_seo_model::{AbsoluteUrl, Finding, FindingFamily, Inventory, Locator, Severity};
+use std::collections::BTreeMap;
+use weavatrix_seo_model::{
+    AbsoluteUrl, ExtractedPage, Finding, FindingFamily, Indexability, Inventory, Locator, Severity,
+};
+
+const LOCALES: &[&str] = &[
+    "en", "ru", "he", "uk", "ar", "es", "de", "fr", "pt", "it", "pl", "nl",
+];
 
 pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
+    reciprocal(inventory, findings);
+    missing_clusters(inventory, findings);
+}
+
+fn reciprocal(inventory: &Inventory, findings: &mut Vec<Finding>) {
     for page in &inventory.pages {
         for alternate in &page.alternates {
             let Ok(target) =
@@ -38,6 +50,78 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
                         "Each locale in the set lists every other locale.",
                     ),
                 );
+            }
+        }
+    }
+}
+
+fn missing_clusters(inventory: &Inventory, findings: &mut Vec<Finding>) {
+    let mut groups: BTreeMap<String, Vec<&ExtractedPage>> = BTreeMap::new();
+    for page in inventory.pages.iter().filter(|page| {
+        page.status == 200 && page.indexability == Indexability::Indexable && page.media.is_html()
+    }) {
+        let key = locale_rest(page.url.path());
+        groups.entry(key).or_default().push(page);
+    }
+    for (rest, pages) in groups {
+        if pages.len() < 2 {
+            continue;
+        }
+        let mut locales: Vec<String> = pages
+            .iter()
+            .map(|page| locale_of(page.url.path()).unwrap_or("default"))
+            .map(str::to_owned)
+            .collect();
+        locales.sort();
+        locales.dedup();
+        if locales.len() < 2 {
+            continue;
+        }
+        if pages.iter().all(|page| !page.alternates.is_empty()) {
+            continue;
+        }
+        let urls: Vec<String> = pages.iter().map(|page| page.url.to_string()).collect();
+        findings.push(
+            Finding::new(
+                FindingFamily::I18n,
+                2,
+                Severity::Warn,
+                &rest,
+                format!(
+                    "locale variants of {rest} exist ({}) without an hreflang cluster",
+                    locales.join(", ")
+                ),
+                Locator::url(&pages[0].url),
+                pages[0].evidence.clone(),
+            )
+            .with_affected(urls)
+            .explained(
+                "The crawl measured multiple locales of the same path, but pages do not declare alternates.",
+                "Emit reciprocal hreflang (and x-default) on every locale variant.",
+                "Each locale lists every other locale in the set.",
+            ),
+        );
+    }
+}
+
+fn locale_of(path: &str) -> Option<&str> {
+    let head = path.trim_start_matches('/').split('/').next().unwrap_or("");
+    LOCALES.contains(&head).then_some(head)
+}
+
+fn locale_rest(path: &str) -> String {
+    match locale_of(path) {
+        None => path.to_owned(),
+        Some(locale) => {
+            let rest = path
+                .trim_start_matches('/')
+                .strip_prefix(locale)
+                .unwrap_or(path)
+                .trim_start_matches('/');
+            if rest.is_empty() {
+                "/".into()
+            } else {
+                format!("/{rest}")
             }
         }
     }
