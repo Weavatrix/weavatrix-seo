@@ -22,6 +22,7 @@ pub use weavatrix_seo_gate::{
     Baseline, GateVerdict, evaluate as evaluate_gate, from_report as baseline_from_report,
     load_baseline, load_fingerprints,
 };
+pub use weavatrix_seo_history::{SearchDiff, diff_paths, load as load_snapshot, save as save_history};
 pub use weavatrix_seo_model::{
     AnalysisMode, AuditReport, Finding, Inventory, Opportunity, Severity,
 };

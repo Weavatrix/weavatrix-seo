@@ -5,7 +5,7 @@
 use mcport::{ConcurrentMcpServer, RuntimeConfig, ToolReply, json};
 use serde::Deserialize;
 use std::time::Duration;
-use weavatrix_seo::{AnalysisMode, AuditRequest, explain, plan_from, run_audit};
+use weavatrix_seo::{AnalysisMode, AuditRequest, diff_paths, explain, plan_from, run_audit};
 use weavatrix_seo_observation::unmeasured as observations_unmeasured;
 
 /// Host options. Startup only.
@@ -96,6 +96,7 @@ struct DiffInput {
 
 /// Eight-tool SEO server.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
     ConcurrentMcpServer::new("weavatrix-seo", env!("CARGO_PKG_VERSION"))
         .instructions(
@@ -134,16 +135,18 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
         )
         .typed_tool(
             "seo_diff",
-            "Compare search surface between two revisions. Unmeasured until repo mode is wired.",
+            "Compare two revision-bound snapshots or audit JSON files.",
             schema_diff(),
-            move |_ctx, input: DiffInput| {
-                ToolReply::structured(json!({
+            move |_ctx, input: DiffInput| match (input.base.as_deref(), input.head.as_deref()) {
+                (Some(base), Some(head)) => match diff_paths(base, head) {
+                    Ok(delta) => ToolReply::structured(delta),
+                    Err(error) => ToolReply::error(error),
+                },
+                _ => ToolReply::structured(json!({
                     "unmeasured": true,
                     "repo": input.repo,
-                    "base": input.base,
-                    "head": input.head,
-                    "reason": "SEO diff requires the repository adapter."
-                }))
+                    "reason": "seo_diff requires base and head snapshot paths. Git SHAs without snapshots stay unmeasured."
+                })),
             },
         )
         .typed_tool(
@@ -165,6 +168,8 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
                     baseline: None,
                     allow_private: false,
                     gsc: None,
+                    observations: None,
+                    history: None,
                 };
                 match run_audit(&request) {
                     Ok(report) => match explain(&report, &input.id) {
@@ -232,6 +237,8 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         baseline: None,
         allow_private: false,
         gsc: None,
+        observations: None,
+        history: None,
     };
     match run_audit(&request) {
         Ok(report) => match view {
@@ -282,8 +289,8 @@ fn schema_diff() -> mcport::Value {
         "type": "object",
         "properties": {
             "repo": { "type": "string" },
-            "base": { "type": "string" },
-            "head": { "type": "string" }
+            "base": { "type": "string", "description": "Base snapshot or audit JSON path." },
+            "head": { "type": "string", "description": "Head snapshot or audit JSON path." }
         },
         "additionalProperties": false
     })

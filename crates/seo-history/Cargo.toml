@@ -1,0 +1,21 @@
+[package]
+name = "weavatrix-seo-history"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Revision-bound crawl snapshots and seo_diff for Weavatrix SEO"
+publish = false
+keywords = ["weavatrix", "seo"]
+categories = ["development-tools"]
+
+[dependencies]
+weavatrix-seo-model = { workspace = true }
+serde = { workspace = true }
+blazingly-json = { workspace = true }
+
+[lints]
+workspace = true

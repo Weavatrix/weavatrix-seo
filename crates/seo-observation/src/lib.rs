@@ -3,11 +3,13 @@
 #![forbid(unsafe_code)]
 
 mod gsc;
+mod provider;
 
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{Evidence, EvidenceSource};
 
 pub use gsc::{disconnected, from_json, load};
+pub use provider::{from_any, load_any};
 
 /// One query-URL observation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

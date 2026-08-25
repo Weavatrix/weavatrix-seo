@@ -10,7 +10,9 @@ use weavatrix_seo_claims::audit as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
 use weavatrix_seo_content::exact_duplicates;
 use weavatrix_seo_model::{AuditReport, Inventory};
-use weavatrix_seo_observation::{load as load_gsc, unmeasured as observations_unmeasured};
+use weavatrix_seo_observation::{
+    load as load_gsc, load_any, unmeasured as observations_unmeasured,
+};
 use weavatrix_seo_opportunity::{opportunities, rank};
 use weavatrix_seo_programmatic::{SafetyVerdict, compile, thin_city_variants};
 use weavatrix_seo_quality::audit as quality_audit;
@@ -52,9 +54,10 @@ pub fn assemble(
         items.extend(compare_inventories(&inventory, competitors));
     }
     let observations = request
-        .gsc
+        .observations
         .as_deref()
-        .and_then(|path| load_gsc(path).ok())
+        .and_then(|path| load_any(path).ok())
+        .or_else(|| request.gsc.as_deref().and_then(|path| load_gsc(path).ok()))
         .unwrap_or_else(observations_unmeasured);
     findings.extend(observe::decorate(&observations, &inventory, &mut items));
     let items = rank(items);

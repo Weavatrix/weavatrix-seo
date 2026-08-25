@@ -47,12 +47,16 @@ pub fn run_audit(request: &AuditRequest) -> Result<AuditReport, EngineError> {
             competitor_inventories.push((origin.clone(), crawl_site(origin, &public)?));
         }
     }
-    Ok(assemble(
+    let report = assemble(
         request,
         inventory,
         surface.as_ref(),
         &competitor_inventories,
-    ))
+    );
+    if let Some(dir) = request.history.as_deref() {
+        let _ = weavatrix_seo_history::save(dir, &report);
+    }
+    Ok(report)
 }
 
 /// Inventory-only convenience.

@@ -5,8 +5,8 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use weavatrix_seo::{
-    AnalysisMode, AuditRequest, evaluate_gate, explain, load_baseline, plan_from, render_html,
-    render_text, run_audit,
+    AnalysisMode, AuditRequest, diff_paths, evaluate_gate, explain, load_baseline, plan_from,
+    render_html, render_text, run_audit,
 };
 
 type ParsedArgs = (String, BTreeMap<String, String>, Vec<String>);
@@ -28,11 +28,12 @@ pub fn usage() -> String {
     "weavatrix-seo — Weavatrix SEO
 
 Usage:
-  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--gsc PATH] [--public-only] [--json]
+  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--gsc PATH] [--observations PATH] [--history DIR] [--public-only] [--json]
   weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--workers N] [--json]
   weavatrix-seo opportunities --site URL [--max-pages N] [--json]
   weavatrix-seo plan --site URL [--max-pages N] [--json]
   weavatrix-seo compare --site URL --competitor URL [--max-pages N] [--json]
+  weavatrix-seo diff --base PATH --head PATH [--json]
   weavatrix-seo explain ID --site URL [--json]
   weavatrix-seo mcp
   weavatrix-seo --version
@@ -69,6 +70,9 @@ pub fn run(args: &[String]) -> CliOutput {
 fn dispatch(args: &[String]) -> Result<CliOutput, String> {
     let (command, flags, positionals) = split(args)?;
     let json = flags.contains_key("json") || args.iter().any(|item| item == "--json");
+    if command == "diff" {
+        return diff_command(&flags, json);
+    }
     let request = request(&command, &flags, &positionals)?;
     if command == "compare" && request.competitors.is_empty() {
         return Err("compare requires --competitor URL".into());
@@ -140,6 +144,34 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
     })
 }
 
+fn diff_command(flags: &BTreeMap<String, String>, json: bool) -> Result<CliOutput, String> {
+    let base = flags
+        .get("base")
+        .ok_or_else(|| "diff requires --base PATH".to_owned())?;
+    let head = flags
+        .get("head")
+        .ok_or_else(|| "diff requires --head PATH".to_owned())?;
+    let delta = diff_paths(base, head)?;
+    let stdout = if json {
+        encode(&delta)?
+    } else {
+        format!(
+            "comparable={} added={} removed={} changed={} new_errors={} resolved={}\n",
+            delta.comparable,
+            delta.urls_added.len(),
+            delta.urls_removed.len(),
+            delta.urls_changed.len(),
+            delta.findings_added.len(),
+            delta.findings_resolved.len()
+        )
+    };
+    Ok(CliOutput {
+        code: i32::from(!delta.comparable || !delta.findings_added.is_empty()),
+        stdout,
+        stderr: String::new(),
+    })
+}
+
 fn request(
     command: &str,
     flags: &BTreeMap<String, String>,
@@ -167,6 +199,8 @@ fn request(
     let baseline = flags.get("baseline").cloned();
     let allow_private = !flags.contains_key("public-only");
     let gsc = flags.get("gsc").cloned();
+    let observations = flags.get("observations").cloned();
+    let history = flags.get("history").cloned();
     let competitors = flags
         .get("competitor")
         .map(|value| {
@@ -200,6 +234,8 @@ fn request(
         baseline,
         allow_private,
         gsc,
+        observations,
+        history,
     })
 }
 
@@ -210,7 +246,7 @@ fn split(args: &[String]) -> Result<ParsedArgs, String> {
     let command = args[0].clone();
     if !matches!(
         command.as_str(),
-        "audit" | "inventory" | "opportunities" | "plan" | "compare" | "explain"
+        "audit" | "inventory" | "opportunities" | "plan" | "compare" | "explain" | "diff"
     ) {
         return Err(format!("unknown command `{command}`\n{}", usage()));
     }

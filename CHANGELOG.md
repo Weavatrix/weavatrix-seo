@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.0 - 2026-08-25
+
+- Beta: compact crawl history (`--history DIR`) and revision-bound `seo_diff` (`diff --base PATH --head PATH`, MCP `seo_diff`).
+- Provider adapters: GSC, Bing, and bot-log JSON via `--observations PATH`. Missing import stays unmeasured.
+- Competitor compare now covers prefix families, indexable cardinality, internal-link leverage, and H1 coverage. Still no competitor prose.
+- Snapshots omit page text/payload. Git SHAs without snapshot files stay unmeasured.
+
 ## 0.0.9 - 2026-08-25
 
 - Semantic pass: first-party lexical embeddings through `weavatrix-semantic` (SEO policy, directed links, AnchorMatcher). Evidence is `INFERRED`.

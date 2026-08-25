@@ -38,6 +38,12 @@ pub struct AuditRequest {
     /// Optional GSC export JSON.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gsc: Option<String>,
+    /// Optional provider export (GSC, Bing, bot logs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observations: Option<String>,
+    /// Directory that receives a compact snapshot after the run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<String>,
 }
 
 fn default_allow_private() -> bool {
@@ -57,6 +63,8 @@ impl Default for AuditRequest {
             baseline: None,
             allow_private: true,
             gsc: None,
+            observations: None,
+            history: None,
         }
     }
 }
@@ -135,6 +143,7 @@ pub fn request_config_digest(request: &AuditRequest) -> String {
             "public"
         },
         request.gsc.as_deref().unwrap_or("no-gsc"),
+        request.observations.as_deref().unwrap_or("no-obs"),
     ])
 }
 
