@@ -39,6 +39,9 @@ pub fn run_audit(request: &AuditRequest) -> Result<AuditReport, EngineError> {
     }
     if let Some(surface) = &surface {
         inventory.predicted_routes = surface.patterns();
+        if let Some(repo) = request.repo.as_deref() {
+            inventory.producers = surface.producer_facts(repo);
+        }
     }
     let mut competitor_inventories = Vec::new();
     if request.mode == AnalysisMode::Compare {

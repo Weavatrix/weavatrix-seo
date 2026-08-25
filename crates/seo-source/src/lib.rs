@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+mod impact;
+
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{AnalysisMode, Evidence, EvidenceSource, Locator};
 

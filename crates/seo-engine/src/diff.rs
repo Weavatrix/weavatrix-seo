@@ -3,14 +3,14 @@
 use std::path::Path;
 use weavatrix_seo_history::{SearchDiff, StoredSnapshot, diff};
 use weavatrix_seo_model::{AnalysisMode, InventoryCounts, POLICY_VERSION};
-use weavatrix_seo_nextjs::predict;
+use weavatrix_seo_nextjs::{predict, route_matches};
 
 use crate::request::read_revision;
 
 /// Diffs two snapshot files, worktree directories, or git SHAs.
 ///
 /// Git SHAs without snapshot files stay unmeasured. Two worktrees compare
-/// predicted routes only.
+/// predicted routes and hashed producers.
 ///
 /// # Errors
 ///
@@ -19,12 +19,31 @@ pub fn diff_paths(base: &str, head: &str) -> Result<SearchDiff, String> {
     let base_snap = load_side(base)?;
     let head_snap = load_side(head)?;
     let mut delta = diff(&base_snap, &head_snap);
+    delta.urls_impacted = urls_impacted(&head_snap, &delta.families_impacted);
     let empty = |snap: &StoredSnapshot| snap.pages.is_empty() && snap.predicted_routes.is_empty();
     if empty(&base_snap) && empty(&head_snap) {
         delta.comparable = false;
         delta.unmeasured = true;
     }
     Ok(delta)
+}
+
+fn urls_impacted(snapshot: &StoredSnapshot, families: &[String]) -> Vec<String> {
+    snapshot
+        .pages
+        .iter()
+        .filter(|page| {
+            families.iter().any(|pattern| {
+                let path = page
+                    .url
+                    .split_once("://")
+                    .and_then(|(_, rest)| rest.split_once('/'))
+                    .map_or(page.url.as_str(), |(_, path)| path);
+                route_matches(pattern, &format!("/{path}"))
+            })
+        })
+        .map(|page| page.url.clone())
+        .collect()
 }
 
 fn load_side(path: &str) -> Result<StoredSnapshot, String> {
@@ -59,6 +78,7 @@ fn from_worktree(repo: &str) -> StoredSnapshot {
         repo: Some(repo.to_owned()),
         repo_revision: revision,
         predicted_routes: surface.patterns(),
+        producers: surface.producer_facts(repo),
         pages: Vec::new(),
         findings: Vec::new(),
         counts: InventoryCounts::default(),
@@ -77,6 +97,7 @@ fn unmeasured_revision(revision: &str) -> StoredSnapshot {
         repo: None,
         repo_revision: Some(revision.to_owned()),
         predicted_routes: Vec::new(),
+        producers: Vec::new(),
         pages: Vec::new(),
         findings: Vec::new(),
         counts: InventoryCounts::default(),

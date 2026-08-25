@@ -7,7 +7,7 @@ mod args;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use weavatrix_seo::{
-    diff_paths, evaluate_gate, explain, load_baseline, plan_from, render_html, render_text,
+    diff_paths, evaluate_gate, explain_chain, load_baseline, plan_from, render_html, render_text,
     run_audit,
 };
 
@@ -91,20 +91,30 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
             let id = positionals
                 .first()
                 .ok_or_else(|| "explain requires a finding id".to_owned())?;
-            let Some(finding) = explain(&report, id) else {
+            let Some(explanation) = explain_chain(&report, id) else {
                 return Err(format!("unknown finding {id}"));
             };
             if json {
-                encode(finding)?
+                encode(&explanation)?
             } else {
-                format!(
+                let mut text = format!(
                     "{}\n{}\nwhy: {}\naction: {}\nverify: {}\n",
-                    finding.fingerprint,
-                    finding.summary,
-                    finding.why,
-                    finding.action,
-                    finding.verification
-                )
+                    explanation.finding.fingerprint,
+                    explanation.finding.summary,
+                    explanation.finding.why,
+                    explanation.finding.action,
+                    explanation.finding.verification
+                );
+                for hop in &explanation.chain {
+                    let _ = writeln!(
+                        text,
+                        "chain: {} {} {}",
+                        hop.kind,
+                        hop.relation.as_deref().unwrap_or("-"),
+                        hop.label
+                    );
+                }
+                text
             }
         }
         "opportunities" => {
@@ -152,13 +162,14 @@ fn diff_command(flags: &BTreeMap<String, String>, json: bool) -> Result<CliOutpu
         encode(&delta)?
     } else {
         format!(
-            "comparable={} added={} removed={} changed={} new_errors={} resolved={}\n",
+            "comparable={} added={} removed={} changed={} new_errors={} resolved={} impacted_families={}\n",
             delta.comparable,
             delta.urls_added.len(),
             delta.urls_removed.len(),
             delta.urls_changed.len(),
             delta.findings_added.len(),
-            delta.findings_resolved.len()
+            delta.findings_resolved.len(),
+            delta.families_impacted.len()
         )
     };
     Ok(CliOutput {

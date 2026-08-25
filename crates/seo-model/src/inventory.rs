@@ -1,8 +1,8 @@
 //! Search-surface inventory.
 
 use crate::{
-    AbsoluteUrl, ExtractedPage, FactEdge, FetchObservation, GraphEdge, POLICY_VERSION, SearchNode,
-    snapshot_digest,
+    AbsoluteUrl, ExtractedPage, FactEdge, FetchObservation, GraphEdge, POLICY_VERSION,
+    ProducerFact, SearchNode, snapshot_digest,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
@@ -82,6 +82,9 @@ pub struct Inventory {
     /// Route patterns predicted from source.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub predicted_routes: Vec<String>,
+    /// Source producers hashed for impact.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub producers: Vec<ProducerFact>,
     /// Loc entries discovered from sitemaps, before page cap.
     #[serde(default)]
     pub sitemap_discovered: usize,
@@ -109,6 +112,7 @@ impl Inventory {
             facts: Vec::new(),
             observations: Vec::new(),
             predicted_routes: Vec::new(),
+            producers: Vec::new(),
             sitemap_discovered: 0,
             counts: InventoryCounts::default(),
         }

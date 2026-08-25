@@ -7,7 +7,7 @@ mod schema;
 use mcport::{ConcurrentMcpServer, RuntimeConfig, ToolReply, json};
 use serde::Deserialize;
 use std::time::Duration;
-use weavatrix_seo::{AnalysisMode, AuditRequest, diff_paths, explain, plan_from, run_audit};
+use weavatrix_seo::{AnalysisMode, AuditRequest, diff_paths, explain_chain, plan_from, run_audit};
 use weavatrix_seo_observation::unmeasured as observations_unmeasured;
 
 /// Host options. Startup only.
@@ -85,6 +85,8 @@ struct ExplainInput {
     #[serde(default)]
     site: Option<String>,
     #[serde(default)]
+    repo: Option<String>,
+    #[serde(default)]
     max_pages: Option<usize>,
 }
 
@@ -158,13 +160,20 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
             "Explain one finding or opportunity with its evidence chain.",
             schema::explain(),
             move |_ctx, input: ExplainInput| {
-                let Some(site) = input.site else {
-                    return ToolReply::error("seo_explain requires site");
+                if input.site.is_none() && input.repo.is_none() {
+                    return ToolReply::error("seo_explain requires site or repo");
+                }
+                let mode = if input.repo.is_some() && input.site.is_some() {
+                    AnalysisMode::Hybrid
+                } else if input.repo.is_some() {
+                    AnalysisMode::Repo
+                } else {
+                    AnalysisMode::Site
                 };
                 let request = AuditRequest {
-                    mode: AnalysisMode::Site,
-                    site: Some(site),
-                    repo: None,
+                    mode,
+                    site: input.site.clone(),
+                    repo: input.repo.clone(),
                     competitors: Vec::new(),
                     max_pages: input.max_pages.or(Some(max_pages)),
                     workers: None,
@@ -177,8 +186,8 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
                     render: None,
                 };
                 match run_audit(&request) {
-                    Ok(report) => match explain(&report, &input.id) {
-                        Some(finding) => ToolReply::structured(finding),
+                    Ok(report) => match explain_chain(&report, &input.id) {
+                        Some(explanation) => ToolReply::structured(explanation),
                         None => ToolReply::error(format!("unknown finding {}", input.id)),
                     },
                     Err(error) => ToolReply::error(error.to_string()),

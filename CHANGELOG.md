@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.2 - 2026-08-25
+
+- Source impact cone: producer file hashes travel with snapshots. A helper/metadata edit names `families_impacted` even when the route pattern did not change.
+- `seo_diff` reports `producers_changed`, `families_impacted`, and measured `urls_impacted`.
+- `seo_explain` returns the evidence chain URL → route → symbol@span → revision. Repo-only explain is valid without a live site.
+
 ## 0.1.1 - 2026-08-25
 
 - Render proof: ingest WVQ/Playwright JSON (`weavatrix-seo-render/v1`) via `--render PATH`. HTTP versus rendered title/canonical/H1/JSON-LD is `WVX-SEO-RENDER-003`–`007`. SEO still does not own a browser.

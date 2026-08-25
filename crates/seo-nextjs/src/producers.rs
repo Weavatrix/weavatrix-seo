@@ -55,7 +55,7 @@ pub fn inspect(path: &str, source: &str) -> Producers {
             .cloned()
             .unwrap_or_else(|| import.specifier.clone());
         out.helpers.push(SourceSymbol {
-            path: path.to_owned(),
+            path: join_relative(path, &import.specifier),
             name,
             start_line: Some(import.span.line),
             end_line: Some(import.span.end_line),
@@ -69,6 +69,26 @@ fn is_reserved(name: &str) -> bool {
         name,
         "generateMetadata" | "metadata" | "generateStaticParams" | "viewport" | "revalidate"
     )
+}
+
+fn join_relative(from_file: &str, specifier: &str) -> String {
+    if !specifier.starts_with('.') {
+        return specifier.replace('\\', "/");
+    }
+    let parent = from_file.replace('\\', "/");
+    let parent = parent.rsplit_once('/').map_or("", |(head, _)| head);
+    let mut parts: Vec<&str> = parent.split('/').filter(|part| !part.is_empty()).collect();
+    let specifier = specifier.replace('\\', "/");
+    for segment in specifier.split('/') {
+        match segment {
+            "." | "" => {}
+            ".." => {
+                let _ = parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
 }
 
 fn looks_like_json_ld(name: &str) -> bool {
@@ -96,5 +116,13 @@ mod tests {
             producers.page.as_ref().map(|item| item.name.as_str()),
             Some("Page")
         );
+    }
+
+    #[test]
+    fn resolves_relative_seo_helper() {
+        let source = "import { cityTitle } from '../../../../lib/citySeo';\nexport default function Page() { return null; }\n";
+        let producers = inspect("src/app/[locale]/category/[city]/page.tsx", source);
+        assert_eq!(producers.helpers[0].path, "src/lib/citySeo");
+        assert_eq!(producers.helpers[0].name, "cityTitle");
     }
 }

@@ -91,6 +91,41 @@ fn worktree_dirs_diff_predicted_routes() {
 }
 
 #[test]
+fn helper_edit_impacts_city_family() {
+    let fixture =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../seo-nextjs/tests/fixtures");
+    let head_dir = std::env::temp_dir().join(format!("wvx-seo-wt-helper-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&head_dir);
+    copy_tree(&fixture, &head_dir);
+    std::fs::write(
+        head_dir.join("src/lib/citySeo.ts"),
+        "export function cityTitle(): string { return \"Changed City\"; }\n",
+    )
+    .expect("helper");
+    let delta = diff_paths(
+        fixture.to_string_lossy().as_ref(),
+        head_dir.to_string_lossy().as_ref(),
+    )
+    .expect("diff");
+    assert!(delta.comparable, "{delta:?}");
+    assert!(
+        delta
+            .producers_changed
+            .iter()
+            .any(|item| item.contains("citySeo")),
+        "{delta:?}"
+    );
+    assert!(
+        delta
+            .families_impacted
+            .iter()
+            .any(|item| item.contains("category") && item.contains("city")),
+        "{delta:?}"
+    );
+    let _ = std::fs::remove_dir_all(head_dir);
+}
+
+#[test]
 fn git_shas_without_snapshots_stay_unmeasured() {
     let delta = diff_paths("aaaaaaaa", "bbbbbbbb").expect("diff");
     assert!(!delta.comparable);

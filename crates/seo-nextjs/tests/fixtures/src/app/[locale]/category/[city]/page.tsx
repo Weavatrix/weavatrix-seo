@@ -1,5 +1,7 @@
+import { cityTitle } from "../../../../lib/citySeo";
+
 export async function generateMetadata() {
-  return { title: "City" };
+  return { title: cityTitle() };
 }
 
 export function generateStaticParams() {

@@ -4,6 +4,7 @@
 
 mod axes;
 mod diff;
+mod explain;
 mod graph;
 mod html;
 mod observe;
@@ -15,6 +16,7 @@ mod source;
 mod text;
 
 pub use diff::diff_paths;
+pub use explain::{ExplainHop, Explanation, explain_chain};
 pub use html::render_html;
 pub use plan::{PlanAction, PlanKind, SearchPlan, plan_from};
 pub use request::{AuditRequest, EngineError};

@@ -32,9 +32,16 @@ fn predicts_locale_and_city_families() {
         surface.evidence.kind,
         weavatrix_seo_model::EvidenceKind::Deterministic
     );
+    assert!(
+        city.helpers
+            .iter()
+            .any(|item| item.path.contains("citySeo")),
+        "{:?}",
+        city.helpers
+    );
     let meta = city.metadata_symbol.as_ref().expect("metadata symbol");
     assert_eq!(meta.name, "generateMetadata");
-    assert_eq!(meta.start_line, Some(1));
+    assert_eq!(meta.start_line, Some(3));
     let config = surface.next_config.as_ref().expect("next.config");
     assert_eq!(config.base_path.as_deref(), Some("/app"));
     assert_eq!(config.trailing_slash, Some(true));

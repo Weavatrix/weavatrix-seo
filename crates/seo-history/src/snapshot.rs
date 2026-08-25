@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{
     AnalysisMode, AuditReport, ContentHash, ExtractedPage, Finding, Indexability, InventoryCounts,
-    Severity,
+    ProducerFact, Severity,
 };
 
 /// One measured URL without body text.
@@ -76,6 +76,9 @@ pub struct StoredSnapshot {
     /// Predicted route families.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub predicted_routes: Vec<String>,
+    /// Source producers hashed for impact.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub producers: Vec<ProducerFact>,
     /// Measured pages.
     pub pages: Vec<StoredPage>,
     /// Error/warn findings.
@@ -99,6 +102,7 @@ impl StoredSnapshot {
             repo: report.inventory.repo.clone(),
             repo_revision: report.inventory.repo_revision.clone(),
             predicted_routes: report.inventory.predicted_routes.clone(),
+            producers: report.inventory.producers.clone(),
             pages: report.inventory.pages.iter().map(store_page).collect(),
             findings: report.findings.iter().map(store_finding).collect(),
             counts: report.inventory.counts.clone(),

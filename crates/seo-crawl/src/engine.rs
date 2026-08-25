@@ -120,6 +120,7 @@ impl Crawl {
             facts: Vec::new(),
             observations,
             predicted_routes: Vec::new(),
+            producers: Vec::new(),
             sitemap_discovered: sitemap_set.len(),
             counts: weavatrix_seo_model::InventoryCounts::default(),
         }

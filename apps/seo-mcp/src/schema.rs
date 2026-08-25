@@ -29,6 +29,7 @@ pub fn explain() -> mcport::Value {
         "properties": {
             "id": { "type": "string", "description": "Finding fingerprint or code." },
             "site": { "type": "string", "description": "Site used to rebuild the audit." },
+            "repo": { "type": "string", "description": "Repository path for source chain." },
             "max_pages": { "type": "integer", "minimum": 1 }
         },
         "required": ["id"],

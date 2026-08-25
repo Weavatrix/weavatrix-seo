@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.1` ingests WVQ/Playwright render snapshots and reconciles them with HTTP. Compact crawl history, revision-bound `seo_diff` (snapshots or worktrees), observation providers, and structural competitor compare are in the beta cut. SEO does not own a browser.
+`0.1.2` traces a source helper edit to the search families it can change, even when page files did not change. Render snapshots, crawl history, worktree `seo_diff`, and observation providers are in the beta cut. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.1"
+weavatrix-seo = "0.1.2"
 ```
 
 ## CLI
@@ -88,7 +88,7 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports GSC/Bing/bot-log JSON. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories. Git SHAs without snapshot files stay unmeasured.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports GSC/Bing/bot-log JSON. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories and reports producer impact: families whose helper/metadata files changed even if the route pattern did not. Git SHAs without snapshot files stay unmeasured. `explain` prints the URL → route → symbol chain.
 
 Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
 

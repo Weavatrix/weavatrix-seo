@@ -41,6 +41,15 @@ pub struct SearchDiff {
     pub routes_added: Vec<String>,
     /// Predicted routes removed.
     pub routes_removed: Vec<String>,
+    /// Producer path#name whose file hash changed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub producers_changed: Vec<String>,
+    /// Route families whose producer changed, even if the pattern did not.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub families_impacted: Vec<String>,
+    /// Measured URLs in those families, even if page bytes did not change.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub urls_impacted: Vec<String>,
     /// True when the inputs could not be compared as SEO evidence.
     pub unmeasured: bool,
 }
@@ -110,6 +119,7 @@ pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
     }
     let base_routes: BTreeSet<_> = base.predicted_routes.iter().collect();
     let head_routes: BTreeSet<_> = head.predicted_routes.iter().collect();
+    let (producers_changed, families_impacted) = producer_delta(base, head);
     SearchDiff {
         base: DiffRef {
             snapshot_id: base.snapshot_id.clone(),
@@ -135,8 +145,47 @@ pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
             .difference(&head_routes)
             .map(|item| (*item).clone())
             .collect(),
+        producers_changed,
+        families_impacted,
+        urls_impacted: Vec::new(),
         unmeasured: !comparable,
     }
+}
+
+fn producer_delta(base: &StoredSnapshot, head: &StoredSnapshot) -> (Vec<String>, Vec<String>) {
+    let old: BTreeMap<String, &weavatrix_seo_model::ProducerFact> = base
+        .producers
+        .iter()
+        .map(|item| (item.key(), item))
+        .collect();
+    let mut changed = Vec::new();
+    let mut families = BTreeSet::new();
+    for producer in &head.producers {
+        let key = producer.key();
+        match old.get(&key) {
+            Some(previous) if previous.content_hash == producer.content_hash => {}
+            Some(previous) => {
+                changed.push(key);
+                families.extend(previous.families.iter().cloned());
+                families.extend(producer.families.iter().cloned());
+            }
+            None => {
+                changed.push(key);
+                families.extend(producer.families.iter().cloned());
+            }
+        }
+    }
+    for producer in &base.producers {
+        if head
+            .producers
+            .iter()
+            .all(|item| item.key() != producer.key())
+        {
+            changed.push(producer.key());
+            families.extend(producer.families.iter().cloned());
+        }
+    }
+    (changed, families.into_iter().collect())
 }
 
 /// Loads two snapshot files and diffs them.
@@ -168,6 +217,7 @@ mod tests {
             repo: None,
             repo_revision: Some("abc".into()),
             predicted_routes: Vec::new(),
+            producers: Vec::new(),
             pages: urls
                 .iter()
                 .map(|url| StoredPage {
