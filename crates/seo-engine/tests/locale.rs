@@ -5,7 +5,7 @@ use weavatrix_seo::{AuditRequest, plan_from, run_audit};
 
 mod common;
 
-use common::{html, page, spawn};
+use common::{Page, html, page, spawn};
 
 #[test]
 fn locale_twins_without_hreflang_are_i18n_warn() {
@@ -110,6 +110,61 @@ fn query_city_cannibalizes_path_landing() {
             .iter()
             .any(|item| item.code == "WVX-SEO-CANN-002"),
         "urls={urls:?} codes={:?}",
+        report
+            .findings
+            .iter()
+            .map(|item| item.code.as_str())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn city_path_redirect_to_query_is_cannibal() {
+    let mut pages = BTreeMap::new();
+    pages.insert(
+        "/".into(),
+        page(
+            200,
+            html(
+                "Home",
+                "<link rel=\"canonical\" href=\"/\">",
+                "<h1>Home</h1><a href=\"/ru/cities/yavne\">Yavne</a>",
+            ),
+        ),
+    );
+    pages.insert(
+        "/ru/cities/yavne".into(),
+        Page {
+            status: 301,
+            headers: vec![("Location".into(), "/ru/specialists?city=yavne".into())],
+            body: String::new(),
+        },
+    );
+    pages.insert(
+        "/ru/specialists".into(),
+        page(
+            200,
+            html(
+                "Specialists",
+                "<link rel=\"canonical\" href=\"/ru/specialists\">",
+                "<h1>Specialists</h1><p>Yavne list.</p>",
+            ),
+        ),
+    );
+    let site = spawn(pages);
+    let report = run_audit(&AuditRequest {
+        site: Some(format!("{}/", site.base)),
+        max_pages: Some(8),
+        workers: Some(1),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|item| item.code == "WVX-SEO-CANN-003"),
+        "{:?}",
         report
             .findings
             .iter()

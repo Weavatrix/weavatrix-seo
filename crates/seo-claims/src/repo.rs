@@ -64,6 +64,9 @@ pub fn scan(repo: &str) -> RepoSignals {
             continue;
         };
         record_facts(&mut signals, &relative, &source);
+        if relative.rsplit('.').next() == Some("md") {
+            continue;
+        }
         if pack::file_belongs(&pack::US_WA, &relative, &source) {
             record_foreign(
                 &mut signals,

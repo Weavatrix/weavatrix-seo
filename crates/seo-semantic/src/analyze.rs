@@ -127,6 +127,9 @@ fn share_intent(
     left: &weavatrix_seo_model::ExtractedPage,
     right: &weavatrix_seo_model::ExtractedPage,
 ) -> bool {
+    if different_service_same_city(left.url.path(), right.url.path()) {
+        return false;
+    }
     let lh = left
         .headings
         .iter()
@@ -141,10 +144,33 @@ fn share_intent(
         .map(|item| item.text.as_str())
         .or(right.title.as_deref())
         .unwrap_or("");
-    let lt: Vec<_> = lh.split_whitespace().map(str::to_ascii_lowercase).collect();
-    let rt: Vec<_> = rh.split_whitespace().map(str::to_ascii_lowercase).collect();
+    let lt = intent_tokens(lh);
+    let rt = intent_tokens(rh);
     let overlap = lt.iter().filter(|token| rt.contains(token)).count();
     overlap >= 2
+}
+
+fn different_service_same_city(left: &str, right: &str) -> bool {
+    let lp: Vec<&str> = left.split('/').filter(|part| !part.is_empty()).collect();
+    let rp: Vec<&str> = right.split('/').filter(|part| !part.is_empty()).collect();
+    if lp.len() < 3 || rp.len() != lp.len() {
+        return false;
+    }
+    let last = lp.len() - 1;
+    lp[last] == rp[last]
+        && lp[last - 1] != rp[last - 1]
+        && (lp[last].contains('-') || lp.contains(&"category"))
+}
+
+fn intent_tokens(heading: &str) -> Vec<String> {
+    const STOP: &[&str] = &[
+        "in", "the", "a", "an", "and", "or", "for", "of", "to", "on", "at", "wa", "il",
+    ];
+    heading
+        .split_whitespace()
+        .map(str::to_ascii_lowercase)
+        .filter(|token| token.len() > 2 && !STOP.contains(&token.as_str()))
+        .collect()
 }
 
 fn recommend(

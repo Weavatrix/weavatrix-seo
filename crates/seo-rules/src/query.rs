@@ -1,8 +1,15 @@
 //! Query-parameter URLs that cannibalize path landings.
 
-use weavatrix_seo_model::{Finding, FindingFamily, Indexability, Inventory, Locator, Severity};
+use weavatrix_seo_model::{
+    AbsoluteUrl, Finding, FindingFamily, Indexability, Inventory, Locator, Severity,
+};
 
 pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
+    query_next_to_path(inventory, findings);
+    city_path_redirects_to_query(inventory, findings);
+}
+
+fn query_next_to_path(inventory: &Inventory, findings: &mut Vec<Finding>) {
     for page in inventory.pages.iter().filter(|page| {
         page.status == 200 && page.indexability != Indexability::Noindex && page.media.is_html()
     }) {
@@ -44,6 +51,56 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
             ),
         );
     }
+}
+
+fn city_path_redirects_to_query(inventory: &Inventory, findings: &mut Vec<Finding>) {
+    for page in inventory
+        .pages
+        .iter()
+        .filter(|page| page.indexability == Indexability::Redirected)
+    {
+        let Some(hop) = page.redirects.last() else {
+            continue;
+        };
+        let Ok(target) = AbsoluteUrl::parse(&hop.to).or_else(|_| page.url.join(&hop.to)) else {
+            continue;
+        };
+        let Some(query) = target.query() else {
+            continue;
+        };
+        let Some(city) = query_value(query, "city") else {
+            continue;
+        };
+        if !city_shaped(page.url.path()) && !page.url.path().contains(city) {
+            continue;
+        }
+        findings.push(
+            Finding::new(
+                FindingFamily::Cann,
+                3,
+                Severity::Warn,
+                &page.url.to_string(),
+                format!("{} redirects a city path to {}", page.url, target),
+                Locator::url(&page.url),
+                page.evidence.clone(),
+            )
+            .with_affected([target.to_string()])
+            .explained(
+                "A pretty city URL hands the search identity to a query-parameter listing.",
+                "Keep the city path as the 200 canonical, or 301 it to a path landing, not ?city=.",
+                "The city URL is indexable on a path, or it is gone from internal links.",
+            ),
+        );
+    }
+}
+
+fn city_shaped(path: &str) -> bool {
+    path.contains("/cities/")
+        || path.contains("/city/")
+        || path
+            .rsplit('/')
+            .next()
+            .is_some_and(|segment| segment.contains('-') && segment.len() > 4)
 }
 
 fn query_value<'a>(query: &'a str, name: &str) -> Option<&'a str> {

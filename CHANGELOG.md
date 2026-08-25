@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.4 - 2026-08-25
+
+- City path that 301s onto `?city=` is `WVX-SEO-CANN-003` (live Profi `/ru/cities/yavne` → `/ru/specialists?city=yavne`).
+- Same-city different-service URLs are not cannibalization (`/category/plumber/x` vs `/category/electrician/x`).
+- Markdown docs are not market-pack evidence.
+- Live site/hybrid on kablay.us and kablay.co.il: CANN-003 and inverse MARKET confirmed; I18N-002 stays quiet when live pages already emit hreflang.
+
 ## 0.1.3 - 2026-08-25
 
 - Market packs are bidirectional: Israel files/pages that name Vancouver WA / Clark County are `MARKET-001`, not only the US→Israel direction.

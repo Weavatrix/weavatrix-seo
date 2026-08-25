@@ -74,6 +74,63 @@ fn similar_intent_pages_are_cannibalization_candidates() {
 }
 
 #[test]
+fn different_services_same_city_are_not_cannibal() {
+    let mut pages = BTreeMap::new();
+    pages.insert(
+        "/".into(),
+        page(
+            200,
+            html(
+                "Home",
+                "<link rel=\"canonical\" href=\"/\">",
+                "<h1>Home</h1><a href=\"/category/electrician/camas-wa\">e</a><a href=\"/category/plumbing/camas-wa\">p</a>",
+            ),
+        ),
+    );
+    pages.insert(
+        "/category/electrician/camas-wa".into(),
+        page(
+            200,
+            html(
+                "Electrician Camas WA",
+                "<link rel=\"canonical\" href=\"/category/electrician/camas-wa\">",
+                "<h1>Electrician in Camas WA</h1><p>Licensed electrician serving Camas with panel upgrades and same-day calls.</p>",
+            ),
+        ),
+    );
+    pages.insert(
+        "/category/plumbing/camas-wa".into(),
+        page(
+            200,
+            html(
+                "Plumber Camas WA",
+                "<link rel=\"canonical\" href=\"/category/plumbing/camas-wa\">",
+                "<h1>Plumber in Camas WA</h1><p>Licensed plumber serving Camas with leak repair and same-day calls.</p>",
+            ),
+        ),
+    );
+    let site = spawn(pages);
+    let report = run_audit(&AuditRequest {
+        site: Some(format!("{}/", site.base)),
+        max_pages: Some(8),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|finding| finding.code != "WVX-SEO-CANN-001"),
+        "{:?}",
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn gsc_export_marks_demand_and_unmeasured_urls() {
     let mut pages = BTreeMap::new();
     pages.insert(
