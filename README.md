@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.11` collapses shared chrome pack entities into one origin `ENTITY-001`. HSTS/CSP origin facts from 0.1.10 stay. SEO does not own a browser.
+`0.1.12` treats `/:locale` as optional, so default-locale city URLs match `:city` families. Chrome `ENTITY-001` collapse from 0.1.11 stays. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.11"
+weavatrix-seo = "0.1.12"
 ```
 
 ## CLI

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.12 - 2026-08-25
+
+- `/:locale` is optional in search-policy globs, so default-locale URLs (`/category/:slug/:city`) match city families. Live kablay.us city landings can be `LOCAL-001` / `ENTITY-002`.
+
 ## 0.1.11 - 2026-08-25
 
 - Shared chrome entities (nav/footer city names on most pages) collapse to one origin `WVX-SEO-ENTITY-001`. Page-unique undeclared entities stay per URL.

@@ -78,6 +78,22 @@ fn city_service_with_area_served_is_quiet() {
 }
 
 #[test]
+fn default_locale_city_family_is_local() {
+    let mut inventory = Inventory::blank(AnalysisMode::Hybrid);
+    inventory.predicted_routes = vec!["/:locale/category/:slug/:city".into()];
+    inventory.pages = vec![page(
+        "https://kablay.us/category/cleaning/camas-wa",
+        r#"{"@type":"Service","name":"Cleaning"}"#,
+        &["Service"],
+    )];
+    let codes: Vec<_> = audit_local(&inventory)
+        .into_iter()
+        .map(|item| item.code)
+        .collect();
+    assert_eq!(codes, ["WVX-SEO-LOCAL-001"]);
+}
+
+#[test]
 fn non_city_url_without_address_is_quiet() {
     let mut inventory = Inventory::blank(AnalysisMode::Site);
     inventory.pages = vec![page(

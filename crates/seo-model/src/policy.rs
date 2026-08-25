@@ -58,8 +58,20 @@ impl SearchPolicy {
 }
 
 /// Glob over route families. `**` is any tail; `*` and `:name` are one segment.
+/// `/:locale` is optional, matching default-locale URLs without the prefix.
 #[must_use]
 pub fn glob_match(glob: &str, pattern: &str) -> bool {
+    if match_glob(glob, pattern) {
+        return true;
+    }
+    if let Some(rest) = glob.strip_prefix("/:locale") {
+        let rest = if rest.is_empty() { "/" } else { rest };
+        return match_glob(rest, pattern);
+    }
+    false
+}
+
+fn match_glob(glob: &str, pattern: &str) -> bool {
     let glob: Vec<&str> = glob.split('/').filter(|part| !part.is_empty()).collect();
     let path: Vec<&str> = pattern.split('/').filter(|part| !part.is_empty()).collect();
     match_parts(&glob, &path)
@@ -120,5 +132,18 @@ mod tests {
         assert!(policy.allows_family("/:locale/category/:city"));
         assert!(!policy.allows_family("/:locale/about"));
         assert!(!policy.allows_family("/:locale/admin/dashboard"));
+        assert!(policy.allows_family("/category/:city"));
+        assert!(glob_match(
+            "/:locale/category/:slug/:city",
+            "/category/cleaning/camas-wa"
+        ));
+        assert!(glob_match(
+            "/:locale/category/:slug/:city",
+            "/en/category/cleaning/camas-wa"
+        ));
+        assert!(!glob_match(
+            "/:locale/category/:slug/:city",
+            "/blog/post"
+        ));
     }
 }
