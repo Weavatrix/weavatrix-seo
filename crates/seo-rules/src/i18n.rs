@@ -77,30 +77,58 @@ fn missing_clusters(inventory: &Inventory, findings: &mut Vec<Finding>) {
         if locales.len() < 2 {
             continue;
         }
-        if pages.iter().all(|page| !page.alternates.is_empty()) {
-            continue;
-        }
         let urls: Vec<String> = pages.iter().map(|page| page.url.to_string()).collect();
-        findings.push(
-            Finding::new(
-                FindingFamily::I18n,
-                2,
-                Severity::Warn,
-                &rest,
-                format!(
-                    "locale variants of {rest} exist ({}) without an hreflang cluster",
-                    locales.join(", ")
+        if pages.iter().any(|page| page.alternates.is_empty()) {
+            findings.push(
+                Finding::new(
+                    FindingFamily::I18n,
+                    2,
+                    Severity::Warn,
+                    &rest,
+                    format!(
+                        "locale variants of {rest} exist ({}) without an hreflang cluster",
+                        locales.join(", ")
+                    ),
+                    Locator::url(&pages[0].url),
+                    pages[0].evidence.clone(),
+                )
+                .with_affected(urls.clone())
+                .explained(
+                    "The crawl measured multiple locales of the same path, but pages do not declare alternates.",
+                    "Emit reciprocal hreflang (and x-default) on every locale variant.",
+                    "Each locale lists every other locale in the set.",
                 ),
-                Locator::url(&pages[0].url),
-                pages[0].evidence.clone(),
-            )
-            .with_affected(urls)
-            .explained(
-                "The crawl measured multiple locales of the same path, but pages do not declare alternates.",
-                "Emit reciprocal hreflang (and x-default) on every locale variant.",
-                "Each locale lists every other locale in the set.",
-            ),
-        );
+            );
+        }
+        let wants_default = inventory
+            .policy
+            .as_ref()
+            .and_then(|policy| policy.international.x_default.as_deref())
+            .is_some();
+        let has_default = pages.iter().any(|page| {
+            page.alternates
+                .iter()
+                .any(|item| item.hreflang.eq_ignore_ascii_case("x-default"))
+        });
+        if wants_default && !has_default {
+            findings.push(
+                Finding::new(
+                    FindingFamily::I18n,
+                    3,
+                    Severity::Warn,
+                    &rest,
+                    format!("locale variants of {rest} have no x-default hreflang"),
+                    Locator::url(&pages[0].url),
+                    pages[0].evidence.clone(),
+                )
+                .with_affected(urls)
+                .explained(
+                    "The repository policy requires x-default when locale twins exist.",
+                    "Add rel=alternate hreflang=x-default on the default locale URL.",
+                    "The cluster includes an x-default alternate.",
+                ),
+            );
+        }
     }
 }
 

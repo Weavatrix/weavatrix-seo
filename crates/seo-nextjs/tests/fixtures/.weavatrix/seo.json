@@ -1,0 +1,10 @@
+{
+  "schema": "weavatrix-seo-policy/v1",
+  "indexability": {
+    "include": ["/:locale", "/:locale/category/**"],
+    "exclude": ["/:locale/auth/**", "/:locale/admin/**"]
+  },
+  "international": {
+    "x_default": "en"
+  }
+}

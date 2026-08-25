@@ -21,7 +21,7 @@ pub fn source_findings(
     };
     if !inventory.pages.is_empty() {
         for family in &surface.families {
-            if weavatrix_seo_source::is_private_pattern(&family.pattern) {
+            if !weavatrix_seo_source::allows_family(inventory.policy.as_ref(), &family.pattern) {
                 continue;
             }
             let matched = inventory
@@ -48,7 +48,8 @@ pub fn source_findings(
             }
         }
         for page in inventory.pages.iter().filter(|page| {
-            page.status == 200 && !weavatrix_seo_source::is_private_pattern(page.url.path())
+            page.status == 200
+                && weavatrix_seo_source::allows_family(inventory.policy.as_ref(), page.url.path())
         }) {
             let matched = surface
                 .families

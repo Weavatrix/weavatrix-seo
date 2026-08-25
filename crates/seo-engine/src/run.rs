@@ -41,6 +41,7 @@ pub fn run_audit(request: &AuditRequest) -> Result<AuditReport, EngineError> {
         inventory.predicted_routes = surface.patterns();
         if let Some(repo) = request.repo.as_deref() {
             inventory.producers = surface.producer_facts(repo);
+            inventory.policy = weavatrix_seo_source::load_policy(repo);
         }
     }
     let mut competitor_inventories = Vec::new();

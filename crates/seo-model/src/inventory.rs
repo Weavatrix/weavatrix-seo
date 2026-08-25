@@ -2,7 +2,7 @@
 
 use crate::{
     AbsoluteUrl, ExtractedPage, FactEdge, FetchObservation, GraphEdge, POLICY_VERSION,
-    ProducerFact, SearchNode, snapshot_digest,
+    ProducerFact, SearchNode, SearchPolicy, snapshot_digest,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
@@ -85,6 +85,9 @@ pub struct Inventory {
     /// Source producers hashed for impact.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub producers: Vec<ProducerFact>,
+    /// Optional `.weavatrix/seo.json` contract.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<SearchPolicy>,
     /// Loc entries discovered from sitemaps, before page cap.
     #[serde(default)]
     pub sitemap_discovered: usize,
@@ -113,6 +116,7 @@ impl Inventory {
             observations: Vec::new(),
             predicted_routes: Vec::new(),
             producers: Vec::new(),
+            policy: None,
             sitemap_discovered: 0,
             counts: InventoryCounts::default(),
         }

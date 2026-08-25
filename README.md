@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.4` flags city paths that redirect onto `?city=` listings, locale twins without hreflang, and inverse market leaks. Private families are not CREATE actions. SEO does not own a browser.
+`0.1.5` reads `.weavatrix/seo.json` (or yaml) so include/exclude globs own the intended search surface. City-path `?city=` redirects, locale twins, and inverse market leaks stay in the audit. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -43,6 +43,8 @@ repository source
 - HTML report (`--html PATH`) plus JSON
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
 - market-entity contamination and license claim/fact contradictions
+
+`.weavatrix/seo.json` is optional. When present, `indexability.include` / `exclude` decide which route families may be CREATE/SOURCE_ONLY; otherwise private chrome (`/admin`, `/auth`, …) is excluded.
 
 Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Rendered DOM is measured only when `--render PATH` supplies a WVQ/Playwright snapshot. GSC/Bing/log imports use `--gsc` / `--observations`. Next.js RSC payloads are captured from HTTP. Missing evidence is never green.
 
@@ -67,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.4"
+weavatrix-seo = "0.1.5"
 ```
 
 ## CLI

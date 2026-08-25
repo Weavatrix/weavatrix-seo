@@ -49,7 +49,7 @@ pub fn assemble(
     findings.extend(semantic.findings);
     let mut items = opportunities(&inventory, &architecture);
     items.extend(semantic.opportunities);
-    items.extend(matrix_opportunities(&matrices));
+    items.extend(matrix_opportunities(&matrices, inventory.policy.as_ref()));
     if request.mode == weavatrix_seo_model::AnalysisMode::Compare {
         items.extend(compare_inventories(&inventory, competitors));
     }
@@ -92,10 +92,11 @@ pub fn assemble(
 
 fn matrix_opportunities(
     matrices: &[weavatrix_seo_programmatic::PageMatrix],
+    policy: Option<&weavatrix_seo_model::SearchPolicy>,
 ) -> Vec<weavatrix_seo_model::Opportunity> {
     let mut items = Vec::new();
     for matrix in matrices {
-        if weavatrix_seo_source::is_private_pattern(&matrix.family) {
+        if !weavatrix_seo_source::allows_family(policy, &matrix.family) {
             continue;
         }
         let (kind, summary, action) = match matrix.verdict {

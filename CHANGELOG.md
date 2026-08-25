@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.5 - 2026-08-25
+
+- Repository search contract: `.weavatrix/seo.json` or a tiny `.weavatrix/seo.yaml` subset. `include`/`exclude` globs own CREATE and SOURCE_ONLY. Missing file keeps the private-family default.
+- Policy `international.x_default` emits `WVX-SEO-I18N-003` when locale twins have no `x-default` alternate.
+
 ## 0.1.4 - 2026-08-25
 
 - City path that 301s onto `?city=` is `WVX-SEO-CANN-003` (live Profi `/ru/cities/yavne` → `/ru/specialists?city=yavne`).

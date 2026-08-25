@@ -15,6 +15,7 @@ categories = ["development-tools"]
 [dependencies]
 weavatrix-seo-model = { workspace = true }
 serde = { workspace = true }
+blazingly-json = { workspace = true }
 
 [lints]
 workspace = true

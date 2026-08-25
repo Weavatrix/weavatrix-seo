@@ -197,3 +197,27 @@ fn plan_skips_private_create_families() {
             .collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn policy_include_limits_create_families() {
+    let root = format!(
+        "{}/../seo-nextjs/tests/fixtures",
+        env!("CARGO_MANIFEST_DIR").replace('\\', "/")
+    );
+    let report = run_audit(&weavatrix_seo::AuditRequest {
+        mode: weavatrix_seo::AnalysisMode::Repo,
+        repo: Some(root),
+        ..weavatrix_seo::AuditRequest::default()
+    })
+    .expect("repo");
+    assert!(report.inventory.policy.is_some());
+    let plan = plan_from(&report);
+    assert!(
+        plan.actions
+            .iter()
+            .filter(|item| item.kind == weavatrix_seo::PlanKind::Create)
+            .all(|item| item.subject.contains("/category") || item.subject == "/:locale"),
+        "{:?}",
+        plan.actions
+    );
+}

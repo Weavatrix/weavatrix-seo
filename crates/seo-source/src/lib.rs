@@ -3,9 +3,12 @@
 #![forbid(unsafe_code)]
 
 mod impact;
+mod policy;
 
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{AnalysisMode, Evidence, EvidenceSource, Locator};
+
+pub use policy::{allows_family, load as load_policy};
 
 /// Source function, component, or export with an exact span.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
