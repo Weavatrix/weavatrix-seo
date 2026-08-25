@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.6` binds pack entities to JSON-LD (`ENTITY-001`) and requires Place/Service schema on `:city` families (`ENTITY-002`). `.weavatrix/seo.json` still owns include/exclude. SEO does not own a browser.
+`0.1.7` flags city Place/Service JSON-LD with no `areaServed`/address (`LOCAL-001`), plus pack entities missing from schema (`ENTITY-001`/`002`). SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.6"
+weavatrix-seo = "0.1.7"
 ```
 
 ## CLI

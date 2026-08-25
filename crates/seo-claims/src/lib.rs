@@ -4,6 +4,7 @@
 
 mod entity;
 mod license;
+mod local;
 mod market;
 mod pack;
 mod repo;
@@ -12,6 +13,7 @@ use weavatrix_seo_model::{Evidence, EvidenceSource, Finding, Inventory};
 
 pub use entity::audit as audit_entities;
 pub use license::{audit_claims, false_facts, page_claims};
+pub use local::audit as audit_local;
 pub use market::{audit_pages, foreign_entities, infer_market};
 pub use pack::{Market, PolicyPack, US_WA, all as packs};
 pub use repo::{RepoSignals, scan as scan_repo};
@@ -28,6 +30,7 @@ pub fn audit(inventory: &Inventory, repo: Option<&str>) -> Vec<Finding> {
         findings.extend(audit_claims(inventory, &[]));
     }
     findings.extend(audit_entities(inventory));
+    findings.extend(audit_local(inventory));
     findings
 }
 

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.7 - 2026-08-25
+
+- Local graph: city URLs that declare Place/Service JSON-LD without `areaServed` or an address are `WVX-SEO-LOCAL-001`. Missing types stay `ENTITY-002`.
+
 ## 0.1.6 - 2026-08-25
 
 - Entity graph: pack entities named in visible copy but missing from JSON-LD are `WVX-SEO-ENTITY-001`.

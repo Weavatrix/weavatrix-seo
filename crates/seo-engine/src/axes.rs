@@ -26,6 +26,7 @@ pub fn axes(findings: &[Finding], coverage: Coverage) -> Vec<AxisScore> {
         ("claim_integrity", FindingFamily::Claim),
         ("market_integrity", FindingFamily::Market),
         ("entity_integrity", FindingFamily::Entity),
+        ("local_seo", FindingFamily::Local),
         ("international", FindingFamily::I18n),
         ("accessibility", FindingFamily::A11y),
         ("security", FindingFamily::Security),
