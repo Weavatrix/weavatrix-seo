@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.1 - 2026-08-25
+
+- Render proof: ingest WVQ/Playwright JSON (`weavatrix-seo-render/v1`) via `--render PATH`. HTTP versus rendered title/canonical/H1/JSON-LD is `WVX-SEO-RENDER-003`–`007`. SEO still does not own a browser.
+- `render_reconciliation` stays unmeasured until a render snapshot is present. A repo path is not render evidence.
+- `seo_diff` accepts two worktree directories (predicted routes) or two snapshot files. Git SHAs without snapshots stay unmeasured.
+- Loopback bench covers two origins. Live fixture origins stay out of CI.
+
 ## 0.1.0 - 2026-08-25
 
 - Beta: compact crawl history (`--history DIR`) and revision-bound `seo_diff` (`diff --base PATH --head PATH`, MCP `seo_diff`).

@@ -44,6 +44,9 @@ pub struct AuditRequest {
     /// Directory that receives a compact snapshot after the run.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub history: Option<String>,
+    /// Optional WVQ/Playwright render snapshot JSON (`weavatrix-seo-render/v1`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render: Option<String>,
 }
 
 fn default_allow_private() -> bool {
@@ -65,6 +68,7 @@ impl Default for AuditRequest {
             gsc: None,
             observations: None,
             history: None,
+            render: None,
         }
     }
 }
@@ -127,16 +131,19 @@ pub fn crawl_site(site: &str, budget: &CrawlBudget) -> Result<Inventory, EngineE
 
 pub fn empty_repo_inventory(request: &AuditRequest) -> Inventory {
     let seed = request.repo.as_deref().unwrap_or("repo");
-    Inventory::blank(AnalysisMode::Repo)
-        .bind_run(&new_run_id(seed), seed)
+    Inventory::blank(AnalysisMode::Repo).bind_run(&new_run_id(seed), seed)
 }
 
 pub fn request_config_digest(request: &AuditRequest) -> String {
     config_digest(&[
         POLICY_VERSION,
         &format!("{:?}", request.mode),
-        &request.max_pages.map_or_else(|| "default".into(), |n| n.to_string()),
-        &request.workers.map_or_else(|| "default".into(), |n| n.to_string()),
+        &request
+            .max_pages
+            .map_or_else(|| "default".into(), |n| n.to_string()),
+        &request
+            .workers
+            .map_or_else(|| "default".into(), |n| n.to_string()),
         if request.allow_private {
             "private"
         } else {
@@ -144,6 +151,7 @@ pub fn request_config_digest(request: &AuditRequest) -> String {
         },
         request.gsc.as_deref().unwrap_or("no-gsc"),
         request.observations.as_deref().unwrap_or("no-obs"),
+        request.render.as_deref().unwrap_or("no-render"),
     ])
 }
 

@@ -27,7 +27,17 @@ pub fn unquote(value: &str) -> String {
 pub fn is_void(name: &str) -> bool {
     matches!(
         name,
-        "area" | "base" | "br" | "col" | "embed" | "hr" | "img" | "input" | "link" | "meta" | "source"
+        "area"
+            | "base"
+            | "br"
+            | "col"
+            | "embed"
+            | "hr"
+            | "img"
+            | "input"
+            | "link"
+            | "meta"
+            | "source"
     )
 }
 
@@ -62,9 +72,7 @@ pub fn is_app_data(tag: &Tag) -> bool {
 
 /// Next.js flight / RSC markers inside an otherwise anonymous script.
 pub fn looks_like_rsc(text: &str) -> bool {
-    text.contains("self.__next_f")
-        || text.contains("__NEXT_DATA__")
-        || text.contains("$Sreact")
+    text.contains("self.__next_f") || text.contains("__NEXT_DATA__") || text.contains("$Sreact")
 }
 
 pub fn rel_tokens(tag: &Tag) -> Vec<String> {
@@ -78,13 +86,17 @@ pub fn rel_tokens(tag: &Tag) -> Vec<String> {
         .unwrap_or_default()
 }
 
-pub fn read_tag(source: &str, tokens: &[weavatrix_parse::token::Token], start: usize) -> Option<(Tag, usize)> {
+pub fn read_tag(
+    source: &str,
+    tokens: &[weavatrix_parse::token::Token],
+    start: usize,
+) -> Option<(Tag, usize)> {
     use weavatrix_parse::token::TokenKind;
     let text_at = |index: usize| tokens.get(index).map_or("", |token| token.text(source));
     let mut index = start + 1;
-    let closing = tokens.get(index).is_some_and(|token| {
-        token.kind == TokenKind::Punctuation && token.text(source) == "/"
-    });
+    let closing = tokens
+        .get(index)
+        .is_some_and(|token| token.kind == TokenKind::Punctuation && token.text(source) == "/");
     if closing {
         index += 1;
     }
@@ -115,5 +127,12 @@ pub fn read_tag(source: &str, tokens: &[weavatrix_parse::token::Token], start: u
         }
         index += 1;
     }
-    Some((Tag { name, attrs, closing }, index))
+    Some((
+        Tag {
+            name,
+            attrs,
+            closing,
+        },
+        index,
+    ))
 }

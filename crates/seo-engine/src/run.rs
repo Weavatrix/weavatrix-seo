@@ -2,8 +2,8 @@
 
 use crate::report::assemble;
 use crate::request::{
-    budget, crawl_site, empty_repo_inventory, read_revision, request_config_digest, AuditRequest,
-    EngineError,
+    AuditRequest, EngineError, budget, crawl_site, empty_repo_inventory, read_revision,
+    request_config_digest,
 };
 use weavatrix_seo_model::{AnalysisMode, AuditReport, Finding, Inventory};
 use weavatrix_seo_nextjs::predict;

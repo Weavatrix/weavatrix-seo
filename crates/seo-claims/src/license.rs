@@ -1,7 +1,7 @@
 //! Public claims bound to pack facts, not a repo-wide boolean.
 
-use crate::pack::{self, ClaimRule, PolicyPack};
 use crate::market::{infer_market, page_haystack};
+use crate::pack::{self, ClaimRule, PolicyPack};
 use weavatrix_seo_model::{
     Evidence, EvidenceKind, EvidenceSource, Finding, FindingFamily, Inventory, Locator, Severity,
 };
@@ -180,8 +180,11 @@ mod tests {
         };
         assert!(!page_claims(&inventory).is_empty());
         assert!(
-            audit_claims(&inventory, &[("marketplace.contractor.il", "il.ts".into(), None)])
-                .is_empty()
+            audit_claims(
+                &inventory,
+                &[("marketplace.contractor.il", "il.ts".into(), None)]
+            )
+            .is_empty()
         );
         assert!(
             !audit_claims(

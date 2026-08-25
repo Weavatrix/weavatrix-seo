@@ -6,15 +6,9 @@ use weavatrix_seo_model::{
 
 pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
     let mut titles: Vec<(&ExtractedPage, String)> = Vec::new();
-    for page in inventory
-        .pages
-        .iter()
-        .filter(|page| {
-            page.status == 200
-                && page.indexability == Indexability::Indexable
-                && page.media.is_html()
-        })
-    {
+    for page in inventory.pages.iter().filter(|page| {
+        page.status == 200 && page.indexability == Indexability::Indexable && page.media.is_html()
+    }) {
         match &page.title {
             Some(title) if !title.trim().is_empty() => titles.push((page, title.clone())),
             _ => findings.push(
@@ -71,7 +65,11 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
                     2,
                     Severity::Warn,
                     &titles[index].1,
-                    format!("title {:?} is reused on {} URLs", titles[index].1, urls.len()),
+                    format!(
+                        "title {:?} is reused on {} URLs",
+                        titles[index].1,
+                        urls.len()
+                    ),
                     Locator::url(&titles[index].0.url),
                     titles[index].0.evidence.clone(),
                 )

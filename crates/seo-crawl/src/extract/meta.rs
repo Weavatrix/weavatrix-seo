@@ -1,7 +1,7 @@
 //! Meta and link extraction.
 
-use super::tag::{Tag, attr};
 use super::ExtractedPageDraft;
+use super::tag::{Tag, attr};
 use weavatrix_seo_model::Alternate;
 
 pub fn apply_meta(draft: &mut ExtractedPageDraft, tag: &Tag) {

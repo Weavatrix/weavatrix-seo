@@ -244,7 +244,10 @@ fn emit_link(
     });
     let anchor = placement
         .and_then(|link| link.suggestions().first())
-        .map_or_else(|| "contextual mention".into(), |item| item.anchor_text().to_owned());
+        .map_or_else(
+            || "contextual mention".into(),
+            |item| item.anchor_text().to_owned(),
+        );
     pass.findings.push(
         Finding::new(
             FindingFamily::Link,

@@ -46,7 +46,9 @@ pub fn compare_inventories(owned: &Inventory, others: &[(String, Inventory)]) ->
             items.push(Opportunity::unmeasured_demand(
                 "cluster_gap",
                 format!("{origin}:prefix:{prefix}"),
-                format!("owned site has no `{prefix}` URL family observed on a public competitor origin"),
+                format!(
+                    "owned site has no `{prefix}` URL family observed on a public competitor origin"
+                ),
                 "Prefix gaps are structural, not content to clone.",
                 "Add the family only when first-party demand and facts exist.",
             ));

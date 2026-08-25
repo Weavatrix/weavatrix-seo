@@ -32,7 +32,10 @@ fn timeout_is_timeout_outcome() {
         "{error}"
     );
     assert!(
-        matches!(error.outcome(), FetchOutcome::Timeout | FetchOutcome::Transport),
+        matches!(
+            error.outcome(),
+            FetchOutcome::Timeout | FetchOutcome::Transport
+        ),
         "{error:?}"
     );
 }

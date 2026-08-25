@@ -98,11 +98,7 @@ impl Fetcher {
                 continue;
             }
             let encoding = parsed.header("content-encoding").map(str::to_owned);
-            let body = decode_body(
-                encoding.as_deref(),
-                parsed.body,
-                self.budget.max_body_bytes,
-            )?;
+            let body = decode_body(encoding.as_deref(), parsed.body, self.budget.max_body_bytes)?;
             return Ok(FetchResponse {
                 url: current,
                 requested: url.clone(),
@@ -159,13 +155,9 @@ impl Fetcher {
 }
 
 fn retry_after(parsed: &ParsedResponse, attempt: u32) -> Duration {
-    let header = parsed.header("retry-after").and_then(|value| {
-        value
-            .trim()
-            .parse::<u64>()
-            .ok()
-            .map(Duration::from_secs)
-    });
+    let header = parsed
+        .header("retry-after")
+        .and_then(|value| value.trim().parse::<u64>().ok().map(Duration::from_secs));
     let wait = header.unwrap_or_else(|| Duration::from_millis(200 * u64::from(attempt)));
     wait.min(Duration::from_secs(5))
 }

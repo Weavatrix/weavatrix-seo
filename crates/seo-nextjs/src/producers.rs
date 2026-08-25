@@ -88,7 +88,10 @@ mod tests {
             producers.metadata.as_ref().map(|item| item.name.as_str()),
             Some("generateMetadata")
         );
-        assert_eq!(producers.metadata.as_ref().and_then(|item| item.start_line), Some(1));
+        assert_eq!(
+            producers.metadata.as_ref().and_then(|item| item.start_line),
+            Some(1)
+        );
         assert_eq!(
             producers.page.as_ref().map(|item| item.name.as_str()),
             Some("Page")

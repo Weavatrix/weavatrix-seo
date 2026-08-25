@@ -1,8 +1,8 @@
 //! Page assembly from a fetch + HTML draft.
 
+use crate::FetchResponse;
 use crate::extract::ExtractedPageDraft;
 use crate::frontier::Frontier;
-use crate::FetchResponse;
 use std::collections::BTreeMap;
 use weavatrix_seo_model::{
     AbsoluteUrl, ContentHash, Evidence, ExtractedPage, GraphEdge, Indexability, MediaKind, Relation,

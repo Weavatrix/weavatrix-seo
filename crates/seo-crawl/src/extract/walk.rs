@@ -217,7 +217,11 @@ impl<'source> Walker<'source> {
         };
         self.draft.link_refs.push(LinkRef {
             href: open.href,
-            anchor: if anchor.is_empty() { None } else { Some(anchor) },
+            anchor: if anchor.is_empty() {
+                None
+            } else {
+                Some(anchor)
+            },
             context,
             rel: open.rel,
             location: open.location,

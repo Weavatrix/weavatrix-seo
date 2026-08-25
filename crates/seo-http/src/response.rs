@@ -104,7 +104,9 @@ fn read_body(
             )));
         }
         let mut body = vec![0_u8; length];
-        reader.read_exact(&mut body).map_err(|error| map_io(&error))?;
+        reader
+            .read_exact(&mut body)
+            .map_err(|error| map_io(&error))?;
         return Ok((body, true));
     }
     let mut body = Vec::new();
@@ -135,10 +137,14 @@ fn read_chunked(reader: &mut impl Read, max_body: usize) -> Result<Vec<u8>> {
             return Err(HttpError::Budget("chunked body exceeds budget".into()));
         }
         let mut chunk = vec![0_u8; size];
-        reader.read_exact(&mut chunk).map_err(|error| map_io(&error))?;
+        reader
+            .read_exact(&mut chunk)
+            .map_err(|error| map_io(&error))?;
         body.extend_from_slice(&chunk);
         let mut crlf = [0_u8; 2];
-        reader.read_exact(&mut crlf).map_err(|error| map_io(&error))?;
+        reader
+            .read_exact(&mut crlf)
+            .map_err(|error| map_io(&error))?;
     }
     Ok(body)
 }

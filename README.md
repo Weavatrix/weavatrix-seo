@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.0` is the beta cut: compact crawl history, revision-bound `seo_diff`, observation provider adapters, and a deeper structural competitor compare. Rendered DOM stays unmeasured.
+`0.1.1` ingests WVQ/Playwright render snapshots and reconciles them with HTTP. Compact crawl history, revision-bound `seo_diff` (snapshots or worktrees), observation providers, and structural competitor compare are in the beta cut. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -44,7 +44,7 @@ repository source
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
 - market-entity contamination and license claim/fact contradictions
 
-Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Browser DOM render and imported observations stay `unmeasured` until those layers are wired. Next.js RSC payloads are captured from HTTP. Missing evidence is never green.
+Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Rendered DOM is measured only when `--render PATH` supplies a WVQ/Playwright snapshot. GSC/Bing/log imports use `--gsc` / `--observations`. Next.js RSC payloads are captured from HTTP. Missing evidence is never green.
 
 The ordinary audit path does not call a model.
 
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.0"
+weavatrix-seo = "0.1.1"
 ```
 
 ## CLI
@@ -77,8 +77,10 @@ weavatrix-seo audit --site https://example.com
 weavatrix-seo audit --site https://example.com --workers 5 --html report.html --ci --baseline previous.json
 weavatrix-seo audit --site https://example.com --public-only --json
 weavatrix-seo plan --site https://example.com --gsc gsc.json --json
+weavatrix-seo audit --site https://example.com --render render.json --json
 weavatrix-seo audit --site https://example.com --history ./seo-history --json
 weavatrix-seo diff --base ./seo-history/aaa.json --head ./seo-history/bbb.json --json
+weavatrix-seo diff --base ./worktree-a --head ./worktree-b --json
 weavatrix-seo inventory --site https://example.com
 weavatrix-seo opportunities --site https://example.com
 weavatrix-seo plan --site https://example.com
@@ -86,7 +88,7 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports GSC/Bing/bot-log JSON. Missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots or full audit JSON files. Git SHAs without snapshot files stay unmeasured.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports GSC/Bing/bot-log JSON. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories. Git SHAs without snapshot files stay unmeasured.
 
 Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
 

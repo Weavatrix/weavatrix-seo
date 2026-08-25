@@ -151,9 +151,7 @@ fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
 fn extras(kind: PlanKind, item: &Opportunity) -> (Vec<String>, Vec<String>, Vec<String>) {
     match kind {
         PlanKind::Link => (Vec::new(), Vec::new(), vec![item.action.clone()]),
-        PlanKind::Improve if item.kind == "content_gap" => {
-            (Vec::new(), Vec::new(), Vec::new())
-        }
+        PlanKind::Improve if item.kind == "content_gap" => (Vec::new(), Vec::new(), Vec::new()),
         PlanKind::Create => (
             vec!["unique local facts per combination".into()],
             vec!["Service".into()],

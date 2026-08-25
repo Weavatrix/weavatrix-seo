@@ -60,7 +60,11 @@ impl ControlRecorder {
         }
         self.button_depth -= 1;
         if self.button_depth == 0
-            && !self.button_text.split_whitespace().collect::<String>().is_empty()
+            && !self
+                .button_text
+                .split_whitespace()
+                .collect::<String>()
+                .is_empty()
             && let Some((_, named)) = self.controls.last_mut()
         {
             *named = true;

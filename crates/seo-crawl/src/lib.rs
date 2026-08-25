@@ -20,6 +20,6 @@ pub use budget::CrawlBudget;
 pub use engine::{Crawl, CrawlConfig};
 pub use error::{CrawlError, Result};
 pub use extract::extract_html;
-pub use weavatrix_seo_http::{FetchResponse, Fetcher};
 pub use robots::Robots;
 pub use sitemap::parse_sitemap;
+pub use weavatrix_seo_http::{FetchResponse, Fetcher};

@@ -2,7 +2,21 @@
 
 use weavatrix_seo_model::{AxisScore, Finding, FindingFamily, Severity};
 
-pub fn axes(findings: &[Finding], has_source: bool, has_http: bool, has_obs: bool) -> Vec<AxisScore> {
+/// Which evidence surfaces were actually connected for this run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct Coverage {
+    /// Repository / route model.
+    pub source: bool,
+    /// HTTP pages.
+    pub http: bool,
+    /// GSC / provider import.
+    pub obs: bool,
+    /// WVQ / Playwright render snapshot.
+    pub render: bool,
+}
+
+pub fn axes(findings: &[Finding], coverage: Coverage) -> Vec<AxisScore> {
     let named = [
         ("technical_discoverability", FindingFamily::Crawl),
         ("indexability", FindingFamily::Idx),
@@ -21,30 +35,23 @@ pub fn axes(findings: &[Finding], has_source: bool, has_http: bool, has_obs: boo
     ];
     named
         .into_iter()
-        .map(|(axis, family)| score(findings, axis, family, has_source, has_http, has_obs))
-        .chain([render_axis(findings, has_source)])
+        .map(|(axis, family)| score(findings, axis, family, coverage))
+        .chain([render_axis(findings, coverage.render)])
         .collect()
 }
 
-fn score(
-    findings: &[Finding],
-    axis: &str,
-    family: FindingFamily,
-    has_source: bool,
-    has_http: bool,
-    has_obs: bool,
-) -> AxisScore {
+fn score(findings: &[Finding], axis: &str, family: FindingFamily, coverage: Coverage) -> AxisScore {
     let subset: Vec<_> = findings
         .iter()
         .filter(|item| item.family == family)
         .collect();
-    let unmeasured = (family == FindingFamily::Obs && !has_obs && subset.is_empty())
+    let unmeasured = (family == FindingFamily::Obs && !coverage.obs && subset.is_empty())
         || (family == FindingFamily::Ai && subset.is_empty())
-        || (family == FindingFamily::Prog && !has_source && subset.is_empty())
+        || (family == FindingFamily::Prog && !coverage.source && subset.is_empty())
         || (matches!(
             family,
             FindingFamily::A11y | FindingFamily::Security | FindingFamily::Perf
-        ) && !has_http
+        ) && !coverage.http
             && subset.is_empty());
     AxisScore {
         axis: axis.into(),
@@ -64,13 +71,13 @@ fn score(
     }
 }
 
-fn render_axis(findings: &[Finding], has_source: bool) -> AxisScore {
+fn render_axis(findings: &[Finding], has_render: bool) -> AxisScore {
     AxisScore {
         axis: "render_reconciliation".into(),
         errors: count(findings, FindingFamily::Render, Severity::Error),
         warnings: count(findings, FindingFamily::Render, Severity::Warn),
         infos: count(findings, FindingFamily::Render, Severity::Info),
-        unmeasured: !has_source,
+        unmeasured: !has_render,
     }
 }
 

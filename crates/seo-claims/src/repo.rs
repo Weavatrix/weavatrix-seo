@@ -83,9 +83,9 @@ fn record_facts(signals: &mut RepoSignals, relative: &str, source: &str) {
                 .iter()
                 .filter(|pack| !pack.facts.is_empty() && source.contains(pack.facts[0].field))
                 .filter(|pack| {
-                    !pack::all()
-                        .iter()
-                        .any(|other| other.id != pack.id && pack::file_belongs(other, relative, source))
+                    !pack::all().iter().any(|other| {
+                        other.id != pack.id && pack::file_belongs(other, relative, source)
+                    })
                 })
                 .map(|pack| pack.id),
         );

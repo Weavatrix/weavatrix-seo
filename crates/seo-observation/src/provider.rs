@@ -104,10 +104,9 @@ mod tests {
 
     #[test]
     fn bing_and_logs_keep_their_provider() {
-        let bing = from_any(
-            r#"{"provider":"bing","rows":[{"url":"https://x.test/","impressions":9}]}"#,
-        )
-        .expect("bing");
+        let bing =
+            from_any(r#"{"provider":"bing","rows":[{"url":"https://x.test/","impressions":9}]}"#)
+                .expect("bing");
         assert_eq!(bing.rows[0].provider, "bing");
         assert_eq!(bing.rows[0].evidence.source, EvidenceSource::Provider);
         let logs = from_any(r#"{"provider":"logs","rows":[{"url":"https://x.test/","hits":40}]}"#)

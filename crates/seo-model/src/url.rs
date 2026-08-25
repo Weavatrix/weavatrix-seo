@@ -1,8 +1,8 @@
 //! Absolute HTTP(S) URL identity used as the crawl key.
 
 use crate::url_parse::{
-    host_for_origin, normalize_path, parent_path, split_authority, split_host_port, split_path_query,
-    split_scheme,
+    host_for_origin, normalize_path, parent_path, split_authority, split_host_port,
+    split_path_query, split_scheme,
 };
 use crate::{Result, SeoError};
 use serde::{Deserialize, Serialize};

@@ -61,3 +61,51 @@ fn history_roundtrip_diffs_added_url() {
     assert_ne!(small.inventory.snapshot_id, full.inventory.snapshot_id);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[test]
+fn worktree_dirs_diff_predicted_routes() {
+    let fixture =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../seo-nextjs/tests/fixtures");
+    let head_dir = std::env::temp_dir().join(format!("wvx-seo-wt-head-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&head_dir);
+    copy_tree(&fixture, &head_dir);
+    let extra = head_dir.join("src/app/about/page.tsx");
+    std::fs::create_dir_all(extra.parent().expect("parent")).expect("about dir");
+    std::fs::write(&extra, "export default function About() { return null; }\n")
+        .expect("about page");
+    let delta = diff_paths(
+        fixture.to_string_lossy().as_ref(),
+        head_dir.to_string_lossy().as_ref(),
+    )
+    .expect("diff");
+    assert!(delta.comparable, "{delta:?}");
+    assert!(!delta.unmeasured, "{delta:?}");
+    assert!(
+        delta
+            .routes_added
+            .iter()
+            .any(|route| route.contains("about")),
+        "{delta:?}"
+    );
+    let _ = std::fs::remove_dir_all(head_dir);
+}
+
+#[test]
+fn git_shas_without_snapshots_stay_unmeasured() {
+    let delta = diff_paths("aaaaaaaa", "bbbbbbbb").expect("diff");
+    assert!(!delta.comparable);
+    assert!(delta.unmeasured);
+}
+
+fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
+    std::fs::create_dir_all(to).expect("mkdir");
+    for entry in std::fs::read_dir(from).expect("read") {
+        let entry = entry.expect("entry");
+        let dest = to.join(entry.file_name());
+        if entry.file_type().expect("type").is_dir() {
+            copy_tree(&entry.path(), &dest);
+        } else {
+            let _ = std::fs::copy(entry.path(), dest);
+        }
+    }
+}

@@ -64,9 +64,10 @@ fn similar_intent_pages_are_cannibalization_candidates() {
     );
     let plan = plan_from(&report);
     assert!(
-        plan.actions
-            .iter()
-            .any(|action| matches!(action.kind, PlanKind::Link | PlanKind::Improve | PlanKind::Consolidate)),
+        plan.actions.iter().any(|action| matches!(
+            action.kind,
+            PlanKind::Link | PlanKind::Improve | PlanKind::Consolidate
+        )),
         "{:?}",
         plan.actions
     );

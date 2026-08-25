@@ -1,6 +1,6 @@
 //! Assemble findings and opportunities for one audit.
 
-use crate::axes::axes;
+use crate::axes::{Coverage, axes};
 use crate::graph;
 use crate::observe;
 use crate::request::AuditRequest;
@@ -16,7 +16,7 @@ use weavatrix_seo_observation::{
 use weavatrix_seo_opportunity::{opportunities, rank};
 use weavatrix_seo_programmatic::{SafetyVerdict, compile, thin_city_variants};
 use weavatrix_seo_quality::audit as quality_audit;
-use weavatrix_seo_render::unmeasured as render_unmeasured;
+use weavatrix_seo_render::{load as load_render, reconcile as reconcile_render};
 use weavatrix_seo_rules::audit as rule_audit;
 use weavatrix_seo_semantic::analyze as analyze_semantic;
 use weavatrix_seo_source::SourceSurface;
@@ -61,12 +61,26 @@ pub fn assemble(
         .unwrap_or_else(observations_unmeasured);
     findings.extend(observe::decorate(&observations, &inventory, &mut items));
     let items = rank(items);
-    let _ = render_unmeasured();
+    let render = request
+        .render
+        .as_deref()
+        .and_then(|path| load_render(path).ok());
+    let has_render = render
+        .as_ref()
+        .is_some_and(weavatrix_seo_render::RenderSnapshot::connected);
+    if let Some(snapshot) = &render {
+        let (_report, render_findings) = reconcile_render(&inventory, snapshot);
+        findings.extend(render_findings);
+        graph::bind_render(&mut inventory, snapshot);
+    }
     let axes = axes(
         &findings,
-        surface.is_some(),
-        !inventory.pages.is_empty(),
-        observations.connected,
+        Coverage {
+            source: surface.is_some(),
+            http: !inventory.pages.is_empty(),
+            obs: observations.connected,
+            render: has_render,
+        },
     );
     AuditReport {
         inventory,

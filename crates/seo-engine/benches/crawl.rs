@@ -15,11 +15,26 @@ use std::time::Instant;
 use weavatrix_seo::{AuditRequest, run_audit};
 
 fn main() {
+    let a = serve(pages());
+    let b = serve(alt_pages());
+    measure("origin-a", &a.site, 32);
+    measure("origin-b", &b.site, 8);
+    probe_external_crawlers(&a.site);
+    println!("live fixture origins are not probed from this bench");
+    a.stop.store(true, Ordering::SeqCst);
+    b.stop.store(true, Ordering::SeqCst);
+}
+
+struct Origin {
+    site: String,
+    stop: Arc<AtomicBool>,
+}
+
+fn serve(pages: BTreeMap<String, String>) -> Origin {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     let addr = listener.local_addr().expect("addr");
     let stop = Arc::new(AtomicBool::new(false));
     let flag = Arc::clone(&stop);
-    let pages = pages();
     thread::spawn(move || {
         listener.set_nonblocking(true).expect("nonblocking");
         while !flag.load(Ordering::SeqCst) {
@@ -45,22 +60,26 @@ fn main() {
             }
         }
     });
-    let site = format!("http://{addr}/");
+    Origin {
+        site: format!("http://{addr}/"),
+        stop,
+    }
+}
+
+fn measure(label: &str, site: &str, max_pages: usize) {
     let started = Instant::now();
     let report = run_audit(&AuditRequest {
-        site: Some(site.clone()),
-        max_pages: Some(32),
+        site: Some(site.to_owned()),
+        max_pages: Some(max_pages),
         workers: Some(4),
         ..AuditRequest::default()
     })
     .expect("audit");
-    stop.store(true, Ordering::SeqCst);
-    let elapsed = started.elapsed();
     println!(
-        "weavatrix-seo site-only {} pages in {elapsed:?}",
-        report.inventory.counts.crawled
+        "weavatrix-seo {label} {} pages in {:?}",
+        report.inventory.counts.crawled,
+        started.elapsed()
     );
-    probe_external_crawlers(&site);
     black_box(report);
 }
 
@@ -102,6 +121,21 @@ fn pages() -> BTreeMap<String, String> {
     pages.insert(
         "/".into(),
         format!("<html><head><title>Home</title></head><body>{links}</body></html>"),
+    );
+    pages
+}
+
+fn alt_pages() -> BTreeMap<String, String> {
+    let mut pages = BTreeMap::new();
+    pages.insert("/robots.txt".into(), "User-agent: *\nAllow: /\n".into());
+    pages.insert(
+        "/".into(),
+        "<html><head><title>Alt</title></head><body><h1>Alt</h1><a href=\"/x\">x</a></body></html>"
+            .into(),
+    );
+    pages.insert(
+        "/x".into(),
+        "<html><head><title>X</title></head><body><h1>X</h1></body></html>".into(),
     );
     pages
 }

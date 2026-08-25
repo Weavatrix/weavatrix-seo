@@ -39,7 +39,9 @@ fn hops(source: &str, section: &str) -> Vec<ConfigHop> {
     let Some(start) = source.find(section) else {
         return Vec::new();
     };
-    let window = source.get(start..start.saturating_add(4000)).unwrap_or(&source[start..]);
+    let window = source
+        .get(start..start.saturating_add(4000))
+        .unwrap_or(&source[start..]);
     let mut hops = Vec::new();
     let mut rest = window;
     while let Some(at) = rest.find("source:") {
@@ -55,7 +57,8 @@ fn hops(source: &str, section: &str) -> Vec<ConfigHop> {
         let Some(destination) = quoted(dest_rest) else {
             break;
         };
-        let status = if window[..window.len().saturating_sub(rest.len())].contains("permanent: true")
+        let status = if window[..window.len().saturating_sub(rest.len())]
+            .contains("permanent: true")
             || rest.contains("permanent: true")
         {
             Some(308)

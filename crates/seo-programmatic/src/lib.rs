@@ -161,17 +161,16 @@ mod tests {
     fn strips_city_token_from_shared_copy() {
         let family = city_family("/category/electrician/vancouver-wa");
         assert_eq!(
-            family.as_ref().map(|(key, city)| (key.as_str(), city.as_str())),
+            family
+                .as_ref()
+                .map(|(key, city)| (key.as_str(), city.as_str())),
             Some(("category/electrician", "vancouver-wa"))
         );
         let left = strip_city(
             "Electrician in Vancouver WA. Licensed. Same facts.",
             "vancouver-wa",
         );
-        let right = strip_city(
-            "Electrician in Camas WA. Licensed. Same facts.",
-            "camas-wa",
-        );
+        let right = strip_city("Electrician in Camas WA. Licensed. Same facts.", "camas-wa");
         assert_eq!(left, right);
     }
 }

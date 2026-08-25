@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+mod schema;
+
 use mcport::{ConcurrentMcpServer, RuntimeConfig, ToolReply, json};
 use serde::Deserialize;
 use std::time::Duration;
@@ -73,6 +75,8 @@ struct SiteInput {
     #[serde(default)]
     #[allow(dead_code)]
     scope: Option<String>,
+    #[serde(default)]
+    render: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -106,37 +110,37 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
         .typed_tool(
             "seo_inventory",
             "Build the search surface inventory for a site, repo, or hybrid run.",
-            schema_site(),
+            schema::site(),
             move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "inventory"),
         )
         .typed_tool(
             "seo_audit",
             "Return bounded findings by axis, severity, and evidence.",
-            schema_site(),
+            schema::site(),
             move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "audit"),
         )
         .typed_tool(
             "seo_opportunities",
             "Return gaps and construction opportunities, not current errors.",
-            schema_site(),
+            schema::site(),
             move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "opportunities"),
         )
         .typed_tool(
             "seo_plan",
             "Produce a target search-architecture plan with acceptance conditions.",
-            schema_site(),
+            schema::site(),
             move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "plan"),
         )
         .typed_tool(
             "seo_compare",
             "Compare an owned site against public competitor origins.",
-            schema_site(),
+            schema::site(),
             move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "compare"),
         )
         .typed_tool(
             "seo_diff",
             "Compare two revision-bound snapshots or audit JSON files.",
-            schema_diff(),
+            schema::diff(),
             move |_ctx, input: DiffInput| match (input.base.as_deref(), input.head.as_deref()) {
                 (Some(base), Some(head)) => match diff_paths(base, head) {
                     Ok(delta) => ToolReply::structured(delta),
@@ -152,7 +156,7 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
         .typed_tool(
             "seo_explain",
             "Explain one finding or opportunity with its evidence chain.",
-            schema_explain(),
+            schema::explain(),
             move |_ctx, input: ExplainInput| {
                 let Some(site) = input.site else {
                     return ToolReply::error("seo_explain requires site");
@@ -170,6 +174,7 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
                     gsc: None,
                     observations: None,
                     history: None,
+                    render: None,
                 };
                 match run_audit(&request) {
                     Ok(report) => match explain(&report, &input.id) {
@@ -239,6 +244,7 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         gsc: None,
         observations: None,
         history: None,
+        render: input.render.clone(),
     };
     match run_audit(&request) {
         Ok(report) => match view {
@@ -249,49 +255,4 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         },
         Err(error) => ToolReply::error(error.to_string()),
     }
-}
-
-fn schema_site() -> mcport::Value {
-    json!({
-        "type": "object",
-        "properties": {
-            "mode": { "type": "string", "description": "site, repo, hybrid, or compare." },
-            "site": { "type": "string", "description": "Absolute http(s) URL." },
-            "repo": { "type": "string", "description": "Repository path." },
-            "competitor": { "type": "string", "description": "Public competitor origin." },
-            "competitors": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Public competitor origins."
-            },
-            "max_pages": { "type": "integer", "minimum": 1, "description": "Crawl page cap." },
-            "scope": { "type": "string", "description": "Optional URL glob." }
-        },
-        "additionalProperties": false
-    })
-}
-
-fn schema_explain() -> mcport::Value {
-    json!({
-        "type": "object",
-        "properties": {
-            "id": { "type": "string", "description": "Finding fingerprint or code." },
-            "site": { "type": "string", "description": "Site used to rebuild the audit." },
-            "max_pages": { "type": "integer", "minimum": 1 }
-        },
-        "required": ["id"],
-        "additionalProperties": false
-    })
-}
-
-fn schema_diff() -> mcport::Value {
-    json!({
-        "type": "object",
-        "properties": {
-            "repo": { "type": "string" },
-            "base": { "type": "string", "description": "Base snapshot or audit JSON path." },
-            "head": { "type": "string", "description": "Head snapshot or audit JSON path." }
-        },
-        "additionalProperties": false
-    })
 }

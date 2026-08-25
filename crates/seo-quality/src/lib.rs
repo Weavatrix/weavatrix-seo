@@ -14,15 +14,9 @@ use weavatrix_seo_model::{Finding, Indexability, Inventory};
 #[must_use]
 pub fn audit(inventory: &Inventory) -> Vec<Finding> {
     let mut findings = Vec::new();
-    for page in inventory
-        .pages
-        .iter()
-        .filter(|page| {
-            page.status == 200
-                && page.indexability == Indexability::Indexable
-                && page.media.is_html()
-        })
-    {
+    for page in inventory.pages.iter().filter(|page| {
+        page.status == 200 && page.indexability == Indexability::Indexable && page.media.is_html()
+    }) {
         heading::audit(page, &mut findings);
         open_graph::audit(page, &mut findings);
         accessibility::audit(page, &mut findings);

@@ -58,7 +58,9 @@ pub fn audit_origin(inventory: &Inventory, findings: &mut Vec<Finding>) {
         if sample.header(header).is_some() {
             continue;
         }
-        findings.push(origin_finding(sample, header, *number, *severity, summary, why, action));
+        findings.push(origin_finding(
+            sample, header, *number, *severity, summary, why, action,
+        ));
     }
 }
 

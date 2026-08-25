@@ -44,7 +44,11 @@ impl Locator {
 
     /// Source span locator.
     #[must_use]
-    pub fn source_span(path: impl Into<String>, start_line: Option<u32>, end_line: Option<u32>) -> Self {
+    pub fn source_span(
+        path: impl Into<String>,
+        start_line: Option<u32>,
+        end_line: Option<u32>,
+    ) -> Self {
         Self::Source {
             path: path.into(),
             start_line,

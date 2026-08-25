@@ -65,8 +65,7 @@ pub fn evaluate(report: &AuditReport, baseline: Option<&Baseline>) -> GateVerdic
             continue;
         }
         let still_measured = measured.iter().any(|item| item == url)
-            || url.is_empty()
-                && !config_shrank(baseline, report);
+            || url.is_empty() && !config_shrank(baseline, report);
         if still_measured {
             resolved.push(fp.clone());
         } else {
@@ -176,7 +175,10 @@ mod tests {
             config_digest: String::new(),
             repo_revision: None,
             measured_urls: vec!["https://other.test/".into()],
-            issues: vec![("WVX-SEO-CLAIM-001:deadbeef".into(), "https://other.test/".into())],
+            issues: vec![(
+                "WVX-SEO-CLAIM-001:deadbeef".into(),
+                "https://other.test/".into(),
+            )],
             incomplete: 0,
         };
         let verdict = evaluate(&report, Some(&baseline));

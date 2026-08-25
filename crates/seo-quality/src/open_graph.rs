@@ -3,7 +3,11 @@
 use weavatrix_seo_model::{ExtractedPage, Finding, FindingFamily, Locator, Severity};
 
 pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
-    if page.og_title.as_ref().is_none_or(|value| value.trim().is_empty()) {
+    if page
+        .og_title
+        .as_ref()
+        .is_none_or(|value| value.trim().is_empty())
+    {
         findings.push(
             Finding::new(
                 FindingFamily::Meta,
@@ -21,7 +25,11 @@ pub fn audit(page: &ExtractedPage, findings: &mut Vec<Finding>) {
             ),
         );
     }
-    if page.og_image.as_ref().is_none_or(|value| value.trim().is_empty()) {
+    if page
+        .og_image
+        .as_ref()
+        .is_none_or(|value| value.trim().is_empty())
+    {
         findings.push(
             Finding::new(
                 FindingFamily::Meta,

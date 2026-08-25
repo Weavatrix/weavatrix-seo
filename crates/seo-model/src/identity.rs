@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Policy identifier shipped with this crate. Bump with the crate version
 /// whenever finding semantics change.
-pub const POLICY_VERSION: &str = "0.1.0";
+pub const POLICY_VERSION: &str = "0.1.1";
 
 /// Origin identity for one site (`scheme://host[:port]`).
 #[must_use]
@@ -26,10 +26,7 @@ pub fn new_run_id(seed: &str) -> String {
 /// the same origin never collapse into one snapshot.
 #[must_use]
 pub fn snapshot_digest(run_id: &str, seed: &str, measured: &str) -> String {
-    ContentHash::of_str(&format!(
-        "{run_id}\n{seed}\n{POLICY_VERSION}\n{measured}"
-    ))
-    .hex()
+    ContentHash::of_str(&format!("{run_id}\n{seed}\n{POLICY_VERSION}\n{measured}")).hex()
 }
 
 /// Config digest used by the CI gate to decide comparability.

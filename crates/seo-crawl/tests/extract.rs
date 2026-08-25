@@ -82,7 +82,9 @@ fn heading_and_body_buffers_stay_separate() {
         "<html><body><p>One</p><h2>Mid</h2><p>Two</p><h3>End</h3><p>Three</p></body></html>",
     );
     assert_eq!(draft.heading_text, "Mid End");
-    assert!(draft.text.contains("One") && draft.text.contains("Two") && draft.text.contains("Three"));
+    assert!(
+        draft.text.contains("One") && draft.text.contains("Two") && draft.text.contains("Three")
+    );
     assert!(!draft.text.contains("Mid"));
 }
 

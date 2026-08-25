@@ -1,8 +1,6 @@
 //! Attach GSC demand to opportunities and emit unmeasured URL observations.
 
-use weavatrix_seo_model::{
-    Finding, FindingFamily, Inventory, Locator, Opportunity, Severity,
-};
+use weavatrix_seo_model::{Finding, FindingFamily, Inventory, Locator, Opportunity, Severity};
 use weavatrix_seo_observation::{ObservationSnapshot, axes_for};
 
 pub fn decorate(
@@ -32,9 +30,9 @@ pub fn decorate(
         if row.impressions < 50 {
             continue;
         }
-        let known = measured.iter().any(|url| {
-            url.trim_end_matches('/') == row.url.trim_end_matches('/')
-        });
+        let known = measured
+            .iter()
+            .any(|url| url.trim_end_matches('/') == row.url.trim_end_matches('/'));
         if known {
             continue;
         }

@@ -23,7 +23,9 @@ fn fixture() -> BTreeMap<String, Page> {
             html(
                 &format!("Electrician in {name}"),
                 &format!("<link rel=\"canonical\" href=\"{path}\">"),
-                &format!("<h1>Electrician in {name}</h1><p>Licensed electrician. Same facts for every city.</p>"),
+                &format!(
+                    "<h1>Electrician in {name}</h1><p>Licensed electrician. Same facts for every city.</p>"
+                ),
             ),
         )
     };

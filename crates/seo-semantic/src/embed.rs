@@ -17,7 +17,11 @@ pub fn embed(text: &str) -> Option<Vec<f32>> {
         saw = true;
         let hex = ContentHash::of_str(&token).hex();
         let index = usize::from_str_radix(&hex[..4], 16).unwrap_or(0) % DIM;
-        let sign = if hex.as_bytes()[4] & 1 == 0 { 1.0 } else { -1.0 };
+        let sign = if hex.as_bytes()[4] & 1 == 0 {
+            1.0
+        } else {
+            -1.0
+        };
         values[index] += sign;
     }
     saw.then_some(values)

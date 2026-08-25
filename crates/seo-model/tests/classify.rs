@@ -4,7 +4,12 @@ use weavatrix_seo_model::{
     AbsoluteUrl, ContentHash, Evidence, ExtractedPage, Indexability, MediaKind, RedirectHop,
 };
 
-fn base(url: &str, status: u16, canonical: Option<&str>, redirects: Vec<RedirectHop>) -> ExtractedPage {
+fn base(
+    url: &str,
+    status: u16,
+    canonical: Option<&str>,
+    redirects: Vec<RedirectHop>,
+) -> ExtractedPage {
     let parsed = AbsoluteUrl::parse(url).unwrap();
     ExtractedPage {
         url: parsed.clone(),

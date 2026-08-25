@@ -26,7 +26,8 @@ fn hybrid_binds_url_to_route_and_metadata_symbol() {
     );
     assert!(
         report.inventory.facts.iter().any(|fact| {
-            fact.relation == Relation::MetadataFrom && fact.target_kind == SearchNodeKind::SourceSymbol
+            fact.relation == Relation::MetadataFrom
+                && fact.target_kind == SearchNodeKind::SourceSymbol
         }),
         "{:?}",
         report.inventory.facts

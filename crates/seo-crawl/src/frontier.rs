@@ -191,9 +191,8 @@ mod tests {
         let mut frontier = Frontier::default();
         frontier.seed(AbsoluteUrl::parse("https://x.test/").unwrap());
         for index in 0..8 {
-            frontier.push_sitemap(
-                AbsoluteUrl::parse(&format!("https://x.test/blog/{index}")).unwrap(),
-            );
+            frontier
+                .push_sitemap(AbsoluteUrl::parse(&format!("https://x.test/blog/{index}")).unwrap());
         }
         let first = frontier.pop_batch(5);
         assert_eq!(first.len(), 1);
@@ -207,8 +206,7 @@ mod tests {
     fn sitemap_only_cities_are_sampled() {
         let mut frontier = Frontier::default();
         frontier.seed(AbsoluteUrl::parse("https://x.test/").unwrap());
-        let first =
-            AbsoluteUrl::parse("https://x.test/category/electrician/vancouver-wa").unwrap();
+        let first = AbsoluteUrl::parse("https://x.test/category/electrician/vancouver-wa").unwrap();
         let second = AbsoluteUrl::parse("https://x.test/category/electrician/camas-wa").unwrap();
         let third =
             AbsoluteUrl::parse("https://x.test/category/electrician/ridgefield-wa").unwrap();

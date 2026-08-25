@@ -138,7 +138,12 @@ pub const US_WA: PolicyPack = PolicyPack {
     id: "marketplace.contractor.us-wa",
     market: Market::UsWa,
     jurisdiction: "US-WA",
-    markers: &["washington", "us-wa", "southwest washington", "clark county"],
+    markers: &[
+        "washington",
+        "us-wa",
+        "southwest washington",
+        "clark county",
+    ],
     entities: US_WA_ENTITIES,
     claims: LICENSE_CLAIMS,
     facts: LICENSE_FACTS,

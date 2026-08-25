@@ -52,10 +52,16 @@ pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
         && (base.policy_version.is_empty()
             || head.policy_version.is_empty()
             || base.policy_version == head.policy_version);
-    let base_pages: BTreeMap<&str, &crate::StoredPage> =
-        base.pages.iter().map(|page| (page.url.as_str(), page)).collect();
-    let head_pages: BTreeMap<&str, &crate::StoredPage> =
-        head.pages.iter().map(|page| (page.url.as_str(), page)).collect();
+    let base_pages: BTreeMap<&str, &crate::StoredPage> = base
+        .pages
+        .iter()
+        .map(|page| (page.url.as_str(), page))
+        .collect();
+    let head_pages: BTreeMap<&str, &crate::StoredPage> = head
+        .pages
+        .iter()
+        .map(|page| (page.url.as_str(), page))
+        .collect();
     let mut urls_added = Vec::new();
     let mut urls_removed = Vec::new();
     let mut urls_changed = Vec::new();
@@ -148,9 +154,7 @@ pub fn diff_paths(base: &str, head: &str) -> Result<SearchDiff, String> {
 mod tests {
     use super::diff;
     use crate::{StoredFinding, StoredPage, StoredSnapshot};
-    use weavatrix_seo_model::{
-        AnalysisMode, ContentHash, Indexability, InventoryCounts, Severity,
-    };
+    use weavatrix_seo_model::{AnalysisMode, ContentHash, Indexability, InventoryCounts, Severity};
 
     fn snap(site: &str, urls: &[&str], errors: &[&str]) -> StoredSnapshot {
         StoredSnapshot {
@@ -193,8 +197,16 @@ mod tests {
 
     #[test]
     fn added_url_and_resolved_error() {
-        let base = snap("https://x.test/", &["https://x.test/", "https://x.test/old"], &["err-a"]);
-        let mut head = snap("https://x.test/", &["https://x.test/", "https://x.test/new"], &[]);
+        let base = snap(
+            "https://x.test/",
+            &["https://x.test/", "https://x.test/old"],
+            &["err-a"],
+        );
+        let mut head = snap(
+            "https://x.test/",
+            &["https://x.test/", "https://x.test/new"],
+            &[],
+        );
         head.snapshot_id = "h".into();
         let delta = diff(&base, &head);
         assert!(delta.comparable);
