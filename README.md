@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.0.7` is the truth-and-safety release: snapshot-bound evidence, URL/redirect identity, MCP network policy, and a comparable CI baseline.
+`0.0.8` adds the Search Evidence Graph: live URLs bind to route families, producing symbols with source spans, schema objects, and revisions. Market/claim rules are policy packs (`marketplace.contractor.us-wa` first). Next.js reads `next.config` and producer spans.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.7"
+weavatrix-seo = "0.0.8"
 ```
 
 ## CLI
@@ -117,6 +117,7 @@ snapshot_id:     measured crawl, not the seed URL
 run_id:          one analysis invocation
 policy_version:  finding semantics for this release
 revision:        git worktree when a repo is in scope
+graph:           URL ─RENDERED_BY→ route ─METADATA_FROM→ symbol@span
 ```
 
 Rules:

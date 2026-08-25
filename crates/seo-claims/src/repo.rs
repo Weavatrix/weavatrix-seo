@@ -1,29 +1,55 @@
-//! Repository scan for market packs and license facts.
+//! Repository scan for policy packs and license facts.
 
-use crate::license::false_facts;
-use crate::market::{Market, foreign_entities};
+use crate::license::fact_is_false;
+use crate::market::foreign_entities;
+use crate::pack::{self, Market};
 use std::fs;
 use weavatrix_scan::scan_repository;
 use weavatrix_seo_model::{
     Evidence, EvidenceKind, EvidenceSource, Finding, FindingFamily, Locator, Severity,
 };
 
-/// Source contamination and license facts from a repository.
-pub struct RepoSignals {
-    /// `license_verified` appears in source.
+/// Per-pack source facts.
+#[derive(Debug, Clone, Default)]
+pub struct PackFacts {
+    /// Fact field appears.
     pub license_field: bool,
-    /// A false literal was found.
+    /// A false literal was found in this pack.
     pub license_false: bool,
+    /// File that set the false fact, with optional line.
+    pub false_at: Option<(String, Option<u32>)>,
+}
+
+/// Source contamination and pack facts from a repository.
+pub struct RepoSignals {
+    /// Pack id → facts.
+    pub packs: Vec<(&'static str, PackFacts)>,
     /// Market findings already localized to files.
     pub findings: Vec<Finding>,
+}
+
+impl RepoSignals {
+    /// False-fact locations for packs that actually assigned false.
+    #[must_use]
+    pub fn pack_false(&self) -> Vec<(&'static str, String, Option<u32>)> {
+        self.packs
+            .iter()
+            .filter_map(|(id, facts)| {
+                let (path, line) = facts.false_at.clone()?;
+                Some((*id, path, line))
+            })
+            .collect()
+    }
 }
 
 /// Walks the repository with weavatrix-scan and reads text files.
 #[must_use]
 pub fn scan(repo: &str) -> RepoSignals {
     let mut signals = RepoSignals {
-        license_field: false,
-        license_false: false,
+        packs: pack::all()
+            .iter()
+            .map(|pack| (pack.id, PackFacts::default()))
+            .collect(),
         findings: Vec::new(),
     };
     let Ok(report) = scan_repository(repo) else {
@@ -37,53 +63,82 @@ pub fn scan(repo: &str) -> RepoSignals {
         let Ok(source) = fs::read_to_string(&file.absolute) else {
             continue;
         };
-        if source.contains("license_verified") {
-            signals.license_field = true;
+        record_facts(&mut signals, &relative, &source);
+        if pack::file_belongs(&pack::US_WA, &relative, &source) {
+            record_foreign(&mut signals, &relative, &source);
         }
-        if false_facts(&source) {
-            signals.license_false = true;
-        }
-        let owned = if relative.contains("washington")
-            || relative.contains("us-wa")
-            || source.to_ascii_lowercase().contains("southwest washington")
-        {
-            Market::UsWa
-        } else {
-            continue;
-        };
-        let hits = foreign_entities(&source, owned);
-        if hits.is_empty() {
-            continue;
-        }
-        let subject = format!("{relative}:{}", hits.join(","));
-        signals.findings.push(
-            Finding::new(
-                FindingFamily::Market,
-                1,
-                Severity::Error,
-                &subject,
-                format!("{relative} mixes {hits:?} into a Washington market pack"),
-                Locator::Source {
-                    path: relative,
-                    start_line: None,
-                },
-                Evidence {
-                    kind: EvidenceKind::Deterministic,
-                    source: EvidenceSource::Repo,
-                    confidence: weavatrix_seo_model::Confidence::Exact,
-                    snapshot_id: None,
-                    revision: None,
-                    policy_version: None,
-                },
-            )
-            .explained(
-                "A US/Washington SEO module contains Israeli market entities.",
-                "Split Israeli city/intent packs from the Washington renderer.",
-                "The owning source file no longer names the foreign entities.",
-            ),
-        );
     }
     signals
+}
+
+fn record_facts(signals: &mut RepoSignals, relative: &str, source: &str) {
+    let mut owners: Vec<&str> = pack::all()
+        .iter()
+        .filter(|pack| pack::file_belongs(pack, relative, source))
+        .map(|pack| pack.id)
+        .collect();
+    if owners.is_empty() {
+        owners.extend(
+            pack::all()
+                .iter()
+                .filter(|pack| !pack.facts.is_empty() && source.contains(pack.facts[0].field))
+                .filter(|pack| {
+                    !pack::all()
+                        .iter()
+                        .any(|other| other.id != pack.id && pack::file_belongs(other, relative, source))
+                })
+                .map(|pack| pack.id),
+        );
+    }
+    for id in owners {
+        let Some((_, facts)) = signals.packs.iter_mut().find(|(pack, _)| *pack == id) else {
+            continue;
+        };
+        if source.contains("license_verified") {
+            facts.license_field = true;
+        }
+        if fact_is_false(source, "license_verified") {
+            facts.license_false = true;
+            if facts.false_at.is_none() {
+                let line = source
+                    .lines()
+                    .position(|row| fact_is_false(row, "license_verified"))
+                    .map(|index| u32::try_from(index + 1).unwrap_or(0));
+                facts.false_at = Some((relative.to_owned(), line));
+            }
+        }
+    }
+}
+
+fn record_foreign(signals: &mut RepoSignals, relative: &str, source: &str) {
+    let hits = foreign_entities(source, Market::UsWa);
+    if hits.is_empty() {
+        return;
+    }
+    let subject = format!("{relative}:{}", hits.join(","));
+    signals.findings.push(
+        Finding::new(
+            FindingFamily::Market,
+            1,
+            Severity::Error,
+            &subject,
+            format!("{relative} mixes {hits:?} into pack {}", pack::US_WA.id),
+            Locator::source_span(relative, None, None),
+            Evidence {
+                kind: EvidenceKind::Deterministic,
+                source: EvidenceSource::Repo,
+                confidence: weavatrix_seo_model::Confidence::Exact,
+                snapshot_id: None,
+                revision: None,
+                policy_version: None,
+            },
+        )
+        .explained(
+            "A US/Washington SEO module contains entities from another market pack.",
+            "Split foreign city/intent packs from the Washington renderer.",
+            "The owning source file no longer names the foreign entities.",
+        ),
+    );
 }
 
 fn is_test(path: &str) -> bool {

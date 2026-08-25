@@ -1,85 +1,12 @@
-//! Market packs and cross-market entity contamination.
+//! Market inference and cross-pack entity contamination.
 
+use crate::pack;
 use weavatrix_seo_model::{
     AbsoluteUrl, Evidence, EvidenceKind, EvidenceSource, Finding, FindingFamily, Inventory,
     Locator, Severity,
 };
 
-/// Declared or inferred public market of a page.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Market {
-    /// Southwest Washington / US.
-    UsWa,
-    /// Israel.
-    Israel,
-    /// Not classified.
-    Unknown,
-}
-
-#[derive(Clone, Copy)]
-struct Entity {
-    token: &'static str,
-    label: &'static str,
-    market: Market,
-}
-
-const ENTITIES: &[Entity] = &[
-    Entity {
-        token: "IEC",
-        label: "Israel Electric Corporation",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Hevrat HaHashmal",
-        label: "Hevrat HaHashmal",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Gush Dan",
-        label: "Gush Dan",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Shabbat",
-        label: "Shabbat",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Israel Electric",
-        label: "Israel Electric",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "חשמלאי",
-        label: "Hebrew electrician title",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "מוסמך",
-        label: "Hebrew licensed-trade title",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Negev",
-        label: "Negev",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Ministry of Energy",
-        label: "Israeli energy regulator phrasing",
-        market: Market::Israel,
-    },
-    Entity {
-        token: "Washington State L&I",
-        label: "Washington L&I",
-        market: Market::UsWa,
-    },
-    Entity {
-        token: "Clark County",
-        label: "Clark County",
-        market: Market::UsWa,
-    },
-];
+pub use crate::pack::Market;
 
 /// Infers the page market from host, path, language, and body.
 #[must_use]
@@ -109,13 +36,18 @@ pub fn infer_market(url: &AbsoluteUrl, html_lang: Option<&str>, text: &str) -> M
 /// Finds entities that belong to a different market than `owned`.
 #[must_use]
 pub fn foreign_entities(text: &str, owned: Market) -> Vec<&'static str> {
-    if owned == Market::Unknown {
+    let Some(owned_pack) = pack::for_market(owned) else {
         return Vec::new();
-    }
+    };
     let mut hits = Vec::new();
-    for entity in ENTITIES {
-        if entity.market != owned && contains_token(text, entity.token) {
-            hits.push(entity.label);
+    for pack in pack::all() {
+        if pack.id == owned_pack.id {
+            continue;
+        }
+        for entity in pack.entities {
+            if contains_token(text, entity.token) {
+                hits.push(entity.label);
+            }
         }
     }
     if owned == Market::UsWa
@@ -174,7 +106,7 @@ pub fn audit_pages(inventory: &Inventory) -> Vec<Finding> {
     findings
 }
 
-fn page_haystack(page: &weavatrix_seo_model::ExtractedPage) -> String {
+pub(crate) fn page_haystack(page: &weavatrix_seo_model::ExtractedPage) -> String {
     let mut out = String::new();
     if let Some(title) = &page.title {
         out.push_str(title);

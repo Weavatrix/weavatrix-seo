@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod axes;
+mod graph;
 mod html;
 mod plan;
 mod report;

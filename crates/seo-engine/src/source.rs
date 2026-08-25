@@ -36,10 +36,7 @@ pub fn source_findings(
                         Severity::Info,
                         &family.pattern,
                         format!("route {} is SOURCE_ONLY in this crawl budget", family.pattern),
-                        Locator::Source {
-                            path: family.owner.clone().unwrap_or_default(),
-                            start_line: None,
-                        },
+                        Locator::source_span(family.owner.clone().unwrap_or_default(), None, None),
                         evidence.clone(),
                     )
                     .explained(
@@ -87,10 +84,7 @@ pub fn source_findings(
                 Severity::Warn,
                 "sitemap.ts",
                 "no App Router sitemap.ts was found",
-                Locator::Source {
-                    path: String::new(),
-                    start_line: None,
-                },
+                Locator::source_span(String::new(), None, None),
                 evidence,
             )
             .explained(
@@ -122,10 +116,7 @@ pub fn programmatic_findings(surface: &SourceSurface) -> Vec<Finding> {
                 severity,
                 &family.pattern,
                 format!("programmatic family {}", family.pattern),
-                Locator::Source {
-                    path: family.owner.clone().unwrap_or_default(),
-                    start_line: None,
-                },
+                Locator::source_span(family.owner.clone().unwrap_or_default(), None, None),
                 Evidence {
                     kind: EvidenceKind::Deterministic,
                     source: EvidenceSource::Repo,

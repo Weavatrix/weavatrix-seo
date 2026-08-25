@@ -22,10 +22,13 @@ pub fn pattern_from_page(rest: &str) -> Option<String> {
         if segment.is_empty() {
             continue;
         }
-        if segment.starts_with('(') && segment.ends_with(')') {
+        if segment.starts_with('@') {
             continue;
         }
-        if segment.starts_with('@') {
+        if intercepting_inner(segment).is_some() {
+            continue;
+        }
+        if segment.starts_with('(') && segment.ends_with(')') {
             continue;
         }
         parts.push(normalize_segment(segment)?);
@@ -35,6 +38,25 @@ pub fn pattern_from_page(rest: &str) -> Option<String> {
     } else {
         Some(format!("/{}", parts.join("/")))
     }
+}
+
+fn intercepting_inner(segment: &str) -> Option<&str> {
+    let rest = segment.strip_prefix('(')?;
+    let rest = rest
+        .strip_prefix("....")
+        .or_else(|| rest.strip_prefix("..."))
+        .or_else(|| rest.strip_prefix(".."))
+        .or_else(|| rest.strip_prefix('.'))?;
+    let name = rest.strip_prefix(')')?;
+    if name.is_empty() { None } else { Some(name) }
+}
+
+/// Intercepting segment in a page path remainder, if any.
+#[must_use]
+pub fn intercepting_in(rest: &str) -> Option<String> {
+    rest.split('/')
+        .find_map(intercepting_inner)
+        .map(ToOwned::to_owned)
 }
 
 fn normalize_segment(segment: &str) -> Option<String> {
@@ -121,5 +143,10 @@ mod tests {
         ));
         assert!(matches("/:locale/about", "/about"));
         assert!(matches("/:locale", "/"));
+        assert_eq!(
+            super::intercepting_in("[locale]/photo/(.)modal/page.tsx").as_deref(),
+            Some("modal")
+        );
+        assert!(super::intercepting_in("[locale]/(shop)/page.tsx").is_none());
     }
 }

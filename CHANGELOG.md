@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.8 - 2026-08-25
+
+- Heterogeneous Search Evidence Graph: URLs bind to route families, source symbols, schema objects, and revisions (`RENDERED_BY`, `GENERATED_BY`, `METADATA_FROM`, `DECLARES`, `CHANGED_BY`).
+- Policy packs (`marketplace.contractor.us-wa` / `.il`) own entities and claims. Kablay is the first fixture pack, not core engine regexes. A false fact only contradicts claims of the same pack.
+- Next.js adapter reads `next.config.*` (`basePath`, `trailingSlash`, redirects/rewrites), records metadata/`generateStaticParams`/JSON-LD/helper spans, and distinguishes intercepting routes from route groups.
+- Internal links keep surrounding heading context and template frequency when the same shape repeats.
+
 ## 0.0.7 - 2026-08-25
 
 - Snapshot, run, policy, and revision identities: every HTTP fact is bound to the measured crawl, not the seed URL.

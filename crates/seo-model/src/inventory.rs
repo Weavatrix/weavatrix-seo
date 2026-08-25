@@ -1,7 +1,8 @@
 //! Search-surface inventory.
 
 use crate::{
-    AbsoluteUrl, ExtractedPage, FetchObservation, GraphEdge, POLICY_VERSION, snapshot_digest,
+    AbsoluteUrl, ExtractedPage, FactEdge, FetchObservation, GraphEdge, POLICY_VERSION, SearchNode,
+    snapshot_digest,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
@@ -67,8 +68,14 @@ pub struct Inventory {
     pub hosts: Vec<String>,
     /// Extracted pages keyed by final URL string.
     pub pages: Vec<ExtractedPage>,
-    /// Graph edges.
+    /// URL-to-URL crawl edges.
     pub edges: Vec<GraphEdge>,
+    /// Heterogeneous Search Evidence Graph nodes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nodes: Vec<SearchNode>,
+    /// Heterogeneous fact edges (route, symbol, claim, schema).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub facts: Vec<FactEdge>,
     /// Fetch attempts that did not yield a usable body.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub observations: Vec<FetchObservation>,
@@ -98,6 +105,8 @@ impl Inventory {
             hosts: Vec::new(),
             pages: Vec::new(),
             edges: Vec::new(),
+            nodes: Vec::new(),
+            facts: Vec::new(),
             observations: Vec::new(),
             predicted_routes: Vec::new(),
             sitemap_discovered: 0,
@@ -154,6 +163,10 @@ impl Inventory {
         for observation in &mut self.observations {
             observation.evidence.snapshot_id = Some(snapshot.clone());
             observation.evidence.policy_version = Some(POLICY_VERSION.to_owned());
+        }
+        for fact in &mut self.facts {
+            fact.evidence.snapshot_id = Some(snapshot.clone());
+            fact.evidence.policy_version = Some(POLICY_VERSION.to_owned());
         }
         self
     }

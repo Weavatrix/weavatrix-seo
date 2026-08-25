@@ -116,6 +116,8 @@ impl Crawl {
             hosts: vec![seed.host().to_owned()],
             pages,
             edges,
+            nodes: Vec::new(),
+            facts: Vec::new(),
             observations,
             predicted_routes: Vec::new(),
             sitemap_discovered: sitemap_set.len(),

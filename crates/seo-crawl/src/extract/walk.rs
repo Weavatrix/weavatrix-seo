@@ -32,6 +32,7 @@ pub struct Walker<'source> {
     stack: Vec<String>,
     controls: ControlRecorder,
     open_link: Option<OpenLink>,
+    last_heading: String,
 }
 
 impl<'source> Walker<'source> {
@@ -50,6 +51,7 @@ impl<'source> Walker<'source> {
             stack: Vec::new(),
             controls: ControlRecorder::default(),
             open_link: None,
+            last_heading: String::new(),
         }
     }
 
@@ -179,6 +181,7 @@ impl<'source> Walker<'source> {
             if !text.is_empty() {
                 self.draft.heading_text.push_str(&text);
                 self.draft.heading_text.push(' ');
+                self.last_heading.clone_from(&text);
                 self.draft.headings.push(Heading { level, text });
             }
         }
@@ -207,10 +210,15 @@ impl<'source> Walker<'source> {
             return;
         };
         let anchor = collapse(&open.anchor);
+        let context = if self.last_heading.is_empty() {
+            None
+        } else {
+            Some(self.last_heading.clone())
+        };
         self.draft.link_refs.push(LinkRef {
             href: open.href,
             anchor: if anchor.is_empty() { None } else { Some(anchor) },
-            context: None,
+            context,
             rel: open.rel,
             location: open.location,
         });

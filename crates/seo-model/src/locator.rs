@@ -21,6 +21,8 @@ pub enum Locator {
     Source {
         path: String,
         start_line: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        end_line: Option<u32>,
     },
 }
 
@@ -37,6 +39,16 @@ impl Locator {
         Self::Header {
             url: url.to_string(),
             name: name.into(),
+        }
+    }
+
+    /// Source span locator.
+    #[must_use]
+    pub fn source_span(path: impl Into<String>, start_line: Option<u32>, end_line: Option<u32>) -> Self {
+        Self::Source {
+            path: path.into(),
+            start_line,
+            end_line,
         }
     }
 

@@ -4,12 +4,14 @@
 
 mod license;
 mod market;
+mod pack;
 mod repo;
 
 use weavatrix_seo_model::{Evidence, EvidenceSource, Finding, Inventory};
 
 pub use license::{audit_claims, false_facts, page_claims};
-pub use market::{Market, audit_pages, foreign_entities, infer_market};
+pub use market::{audit_pages, foreign_entities, infer_market};
+pub use pack::{Market, PolicyPack, US_WA, all as packs};
 pub use repo::{RepoSignals, scan as scan_repo};
 
 /// Combined live + repo integrity pass.
@@ -19,13 +21,9 @@ pub fn audit(inventory: &Inventory, repo: Option<&str>) -> Vec<Finding> {
     let signals = repo.map(scan_repo);
     if let Some(signals) = &signals {
         findings.extend(signals.findings.clone());
-        findings.extend(audit_claims(
-            inventory,
-            signals.license_false,
-            signals.license_field,
-        ));
+        findings.extend(audit_claims(inventory, &signals.pack_false()));
     } else {
-        findings.extend(audit_claims(inventory, false, false));
+        findings.extend(audit_claims(inventory, &[]));
     }
     findings
 }

@@ -108,6 +108,19 @@ fn link_keeps_anchor_rel_and_nav_location() {
 }
 
 #[test]
+fn link_context_is_last_heading() {
+    let draft = extract_html(
+        r#"<html><body><h2>Guides</h2><p>See <a href="/guide">the guide</a>.</p></body></html>"#,
+    );
+    let link = draft
+        .link_refs
+        .iter()
+        .find(|item| item.href == "/guide")
+        .expect("link");
+    assert_eq!(link.context.as_deref(), Some("Guides"));
+}
+
+#[test]
 fn arbitrary_script_is_not_payload_rsc_is() {
     let draft = extract_html(
         r#"<html><body>

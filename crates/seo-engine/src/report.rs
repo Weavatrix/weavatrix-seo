@@ -1,10 +1,11 @@
 //! Assemble findings and opportunities for one audit.
 
 use crate::axes::axes;
+use crate::graph;
 use crate::plan_from;
 use crate::request::AuditRequest;
 use crate::source::{programmatic_findings, source_findings};
-use weavatrix_seo_architecture::analyze as analyze_architecture;
+use weavatrix_seo_architecture::{analyze as analyze_architecture, annotate_templates};
 use weavatrix_seo_claims::audit as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
 use weavatrix_seo_content::exact_duplicates;
@@ -19,10 +20,12 @@ use weavatrix_seo_source::SourceSurface;
 
 pub fn assemble(
     request: &AuditRequest,
-    inventory: Inventory,
+    mut inventory: Inventory,
     surface: Option<&SourceSurface>,
     competitors: &[(String, Inventory)],
 ) -> AuditReport {
+    annotate_templates(&mut inventory);
+    graph::bind(&mut inventory, surface);
     let mut findings = rule_audit(&inventory);
     let (architecture, architecture_findings) = analyze_architecture(&inventory);
     findings.extend(architecture_findings);

@@ -1,45 +1,32 @@
-//! Public license claims versus `license_verified` facts.
+//! Public claims bound to pack facts, not a repo-wide boolean.
 
+use crate::pack::{self, ClaimRule, PolicyPack};
+use crate::market::{infer_market, page_haystack};
 use weavatrix_seo_model::{
     Evidence, EvidenceKind, EvidenceSource, Finding, FindingFamily, Inventory, Locator, Severity,
 };
 
-const CLAIM_PHRASES: &[&str] = &[
-    "license verified",
-    "licenseverification",
-    "licenseverified",
-    "licensed professional",
-    "licensed electrician",
-    "licensed contractor",
-    "document/license verification",
-    "license verification badges",
-];
-
-/// Scans crawled pages for public license claims.
+/// Scans crawled pages for public claims from the owning pack.
 #[must_use]
-pub fn page_claims(inventory: &Inventory) -> Vec<(String, String)> {
+pub fn page_claims(inventory: &Inventory) -> Vec<(String, String, &'static PolicyPack, ClaimRule)> {
     let mut claims = Vec::new();
     for page in &inventory.pages {
         if page.status >= 400 {
             continue;
         }
-        let mut hay = page.text.clone();
-        hay.push(' ');
-        hay.push_str(&page.heading_text);
-        hay.push(' ');
-        hay.push_str(&page.payload);
-        if let Some(title) = &page.title {
-            hay.push(' ');
-            hay.push_str(title);
-        }
-        for block in &page.json_ld {
-            hay.push(' ');
-            hay.push_str(&block.raw);
-        }
+        let hay = page_haystack(page);
+        let market = infer_market(&page.url, page.html_lang.as_deref(), &hay);
+        let Some(pack) = pack::for_market(market) else {
+            continue;
+        };
         let hay_compact = compact(&hay);
-        for phrase in CLAIM_PHRASES {
-            if hay_compact.contains(&compact(phrase)) {
-                claims.push((page.url.to_string(), (*phrase).to_owned()));
+        for rule in pack.claims {
+            if rule
+                .phrases
+                .iter()
+                .any(|phrase| hay_compact.contains(&compact(phrase)))
+            {
+                claims.push((page.url.to_string(), rule.id.to_owned(), pack, *rule));
                 break;
             }
         }
@@ -47,44 +34,60 @@ pub fn page_claims(inventory: &Inventory) -> Vec<(String, String)> {
     claims
 }
 
-/// Repo facts: `license_verified` assigned false.
+/// Whether source assigns the pack fact to false.
 #[must_use]
 pub fn false_facts(source: &str) -> bool {
     let compact = compact(source);
-    compact.contains("license_verified:false")
-        || compact.contains("license_verified=false")
-        || compact.contains("licenseverified:false")
+    pack::all().iter().any(|pack| {
+        pack.facts.iter().any(|fact| {
+            fact.false_literals
+                .iter()
+                .any(|literal| compact.contains(literal))
+        })
+    })
 }
 
-/// Builds claim findings from live pages and optional repo source.
+/// Whether `source` assigns `field` to false.
 #[must_use]
-pub fn audit_claims(inventory: &Inventory, repo_false: bool, repo_field: bool) -> Vec<Finding> {
+pub fn fact_is_false(source: &str, field: &str) -> bool {
+    let compact = compact(source);
+    pack::all().iter().any(|pack| {
+        pack.facts.iter().any(|fact| {
+            fact.field == field
+                && fact
+                    .false_literals
+                    .iter()
+                    .any(|literal| compact.contains(literal))
+        })
+    })
+}
+
+/// Builds claim findings: live claim of pack P vs false fact in a file of pack P.
+#[must_use]
+pub fn audit_claims(
+    inventory: &Inventory,
+    pack_false: &[(&'static str, String, Option<u32>)],
+) -> Vec<Finding> {
     let claims = page_claims(inventory);
-    let _ = repo_field;
     if claims.is_empty() {
         return Vec::new();
     }
     let mut findings = Vec::new();
-    if repo_false {
-        let subject = claims.first().map_or_else(
-            || "license_verified:false".into(),
-            |(url, phrase)| format!("{url}:{phrase}"),
-        );
-        let locator = claims.first().map_or(
-            Locator::Source {
-                path: String::new(),
-                start_line: None,
-            },
-            |(url, _)| Locator::Url(url.clone()),
-        );
+    for (url, phrase, pack, rule) in claims {
+        let Some((_, path, line)) = pack_false.iter().find(|(id, _, _)| *id == pack.id) else {
+            continue;
+        };
         findings.push(
             Finding::new(
                 FindingFamily::Claim,
                 1,
                 Severity::Error,
-                &subject,
-                "public license claim is contradicted by license_verified=false",
-                locator,
+                &format!("{url}:{phrase}"),
+                format!(
+                    "public {} claim on {url} is contradicted by {}=false in pack {}",
+                    rule.id, rule.requires_fact, pack.id
+                ),
+                Locator::Url(url.clone()),
                 Evidence {
                     kind: EvidenceKind::Deterministic,
                     source: EvidenceSource::Repo,
@@ -94,17 +97,19 @@ pub fn audit_claims(inventory: &Inventory, repo_false: bool, repo_field: bool) -
                     policy_version: Some(inventory.policy_version.clone()),
                 },
             )
+            .with_affected([path.clone()])
             .explained(
-                "The public surface talks about verified/licensed trades while source data can set license_verified to false.",
+                "The public surface of this market pack claims a credential that source data marks false.",
                 "Stop emitting verified language unless the underlying fact is true, or hide the badge when the field is false.",
-                "No indexable page claims license verification unless the domain fact is true.",
+                "No indexable page in this pack claims the credential unless the domain fact is true.",
             ),
         );
+        let _ = line;
     }
     findings
 }
 
-fn compact(text: &str) -> String {
+pub(crate) fn compact(text: &str) -> String {
     text.chars()
         .filter(|ch| !ch.is_whitespace())
         .flat_map(char::to_lowercase)
@@ -116,7 +121,7 @@ mod tests {
     use super::{audit_claims, false_facts, page_claims};
     use weavatrix_seo_model::{
         AbsoluteUrl, AnalysisMode, ContentHash, Evidence, ExtractedPage, Indexability, Inventory,
-        InventoryCounts,
+        InventoryCounts, MediaKind,
     };
 
     #[test]
@@ -128,7 +133,7 @@ mod tests {
             status: 200,
             redirects: Vec::new(),
             content_type: None,
-            media: weavatrix_seo_model::MediaKind::Html,
+            media: MediaKind::Html,
             canonical: None,
             robots: Vec::new(),
             title: Some("Electrician".into()),
@@ -174,11 +179,28 @@ mod tests {
             incomplete: 0,
         };
         assert!(!page_claims(&inventory).is_empty());
+        assert!(
+            audit_claims(&inventory, &[("marketplace.contractor.il", "il.ts".into(), None)])
+                .is_empty()
+        );
+        assert!(
+            !audit_claims(
+                &inventory,
+                &[("marketplace.contractor.us-wa", "data.ts".into(), Some(12))]
+            )
+            .is_empty()
+        );
     }
 
     #[test]
     fn repo_field_alone_is_not_a_contradiction() {
         let inventory = Inventory::blank(AnalysisMode::Site);
-        assert!(audit_claims(&inventory, true, true).is_empty());
+        assert!(
+            audit_claims(
+                &inventory,
+                &[("marketplace.contractor.us-wa", "x.ts".into(), None)]
+            )
+            .is_empty()
+        );
     }
 }

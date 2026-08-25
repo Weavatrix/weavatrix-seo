@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+mod template;
+
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use weavatrix_graph::{
     Confidence, Edge, EdgeKind, EvidenceKind, GraphBuilder, Node, NodeKind, Provenance, page_rank,
@@ -105,6 +107,11 @@ pub fn analyze(inventory: &Inventory) -> (Architecture, Vec<Finding>) {
         pages.push(metrics);
     }
     (Architecture { pages }, findings)
+}
+
+/// Marks repeated template links on the crawl graph.
+pub fn annotate_templates(inventory: &mut Inventory) {
+    template::annotate(inventory);
 }
 
 fn depths(inventory: &Inventory, seed: Option<&AbsoluteUrl>) -> BTreeMap<AbsoluteUrl, u32> {
