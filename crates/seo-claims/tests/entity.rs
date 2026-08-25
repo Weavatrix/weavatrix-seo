@@ -85,6 +85,35 @@ fn schema_that_names_the_entity_is_quiet() {
 }
 
 #[test]
+fn shared_chrome_entities_collapse_to_origin() {
+    let mut inventory = Inventory::blank(AnalysisMode::Site);
+    inventory.pages = vec![
+        page("https://kablay.us/", "Southwest Washington. Vancouver WA.", Vec::new()),
+        page(
+            "https://kablay.us/blog",
+            "Southwest Washington. Vancouver WA.",
+            Vec::new(),
+        ),
+        page(
+            "https://kablay.us/about",
+            "Southwest Washington. Vancouver WA.",
+            Vec::new(),
+        ),
+        page(
+            "https://kablay.us/help",
+            "Southwest Washington. Vancouver WA.",
+            Vec::new(),
+        ),
+    ];
+    let items: Vec<_> = audit_entities(&inventory)
+        .into_iter()
+        .filter(|item| item.code == "WVX-SEO-ENTITY-001")
+        .collect();
+    assert_eq!(items.len(), 1, "{items:?}");
+    assert!(items[0].summary.contains("shared chrome"), "{:?}", items[0]);
+}
+
+#[test]
 fn city_family_without_producer_is_entity_002() {
     let mut inventory = Inventory::blank(AnalysisMode::Repo);
     inventory.predicted_routes = vec!["/:locale/category/:city".into()];

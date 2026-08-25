@@ -2,6 +2,7 @@
 
 use crate::market::{contains_token, infer_market, page_haystack};
 use crate::pack;
+use std::collections::BTreeMap;
 use weavatrix_seo_model::{
     Evidence, EvidenceKind, EvidenceSource, ExtractedPage, Finding, FindingFamily, Indexability,
     Inventory, Locator, Severity, glob_match,
@@ -28,7 +29,9 @@ pub fn audit(inventory: &Inventory) -> Vec<Finding> {
 }
 
 fn undeclared(inventory: &Inventory, findings: &mut Vec<Finding>) {
-    for page in indexable(inventory) {
+    let pages: Vec<&ExtractedPage> = indexable(inventory).collect();
+    let mut per_page: Vec<(&ExtractedPage, Vec<&str>)> = Vec::new();
+    for page in &pages {
         let hay = page_haystack(page);
         let market = infer_market(&page.url, page.html_lang.as_deref(), &hay);
         let Some(pack) = pack::for_market(market) else {
@@ -49,7 +52,58 @@ fn undeclared(inventory: &Inventory, findings: &mut Vec<Finding>) {
         }
         missing.sort_unstable();
         missing.dedup();
-        let subject = format!("{}:{}", page.url, missing.join(","));
+        per_page.push((*page, missing));
+    }
+    let threshold = chrome_threshold(pages.len());
+    let mut freq: BTreeMap<&str, usize> = BTreeMap::new();
+    for (_, missing) in &per_page {
+        for label in missing {
+            *freq.entry(*label).or_insert(0) += 1;
+        }
+    }
+    let chrome: Vec<&str> = freq
+        .iter()
+        .filter(|(_, count)| **count >= threshold)
+        .map(|(label, _)| *label)
+        .collect();
+    if !chrome.is_empty()
+        && let Some((sample, _)) = per_page.first()
+    {
+        let host = sample.url.host();
+        let urls: Vec<String> = per_page
+            .iter()
+            .filter(|(_, missing)| missing.iter().any(|label| chrome.contains(label)))
+            .map(|(page, _)| page.url.to_string())
+            .collect();
+        findings.push(
+            Finding::new(
+                FindingFamily::Entity,
+                1,
+                Severity::Warn,
+                &format!("{host}:chrome:{}", chrome.join(",")),
+                format!(
+                    "{host} names {chrome:?} across shared chrome without declaring those entities in JSON-LD"
+                ),
+                Locator::dom(&sample.url, "script[type='application/ld+json']"),
+                evidence(inventory, sample.evidence.source),
+            )
+            .with_affected(urls)
+            .explained(
+                "The same pack entities appear on most pages (nav/footer), but no schema node names them.",
+                "Declare those entities once on the origin Organization/WebSite JSON-LD.",
+                "Shared pack entity labels appear in origin JSON-LD, not only in chrome copy.",
+            ),
+        );
+    }
+    for (page, missing) in per_page {
+        let unique: Vec<&str> = missing
+            .into_iter()
+            .filter(|label| !chrome.contains(label))
+            .collect();
+        if unique.is_empty() {
+            continue;
+        }
+        let subject = format!("{}:{}", page.url, unique.join(","));
         findings.push(
             Finding::new(
                 FindingFamily::Entity,
@@ -58,7 +112,7 @@ fn undeclared(inventory: &Inventory, findings: &mut Vec<Finding>) {
                 &subject,
                 format!(
                     "{} names {:?} without declaring those entities in JSON-LD",
-                    page.url, missing
+                    page.url, unique
                 ),
                 Locator::dom(&page.url, "script[type='application/ld+json']"),
                 evidence(inventory, page.evidence.source),
@@ -69,6 +123,14 @@ fn undeclared(inventory: &Inventory, findings: &mut Vec<Finding>) {
                 "Each named pack entity appears in a JSON-LD node on the page.",
             ),
         );
+    }
+}
+
+fn chrome_threshold(pages: usize) -> usize {
+    if pages < 3 {
+        usize::MAX
+    } else {
+        pages.div_ceil(2)
     }
 }
 

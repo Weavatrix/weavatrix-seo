@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.11 - 2026-08-25
+
+- Shared chrome entities (nav/footer city names on most pages) collapse to one origin `WVX-SEO-ENTITY-001`. Page-unique undeclared entities stay per URL.
+
 ## 0.1.10 - 2026-08-25
 
 - HSTS/CSP origin facts: `max-age=0` or missing max-age is `WVX-SEO-SEC-006`. Mixed HTML responses are `SEC-007`.
