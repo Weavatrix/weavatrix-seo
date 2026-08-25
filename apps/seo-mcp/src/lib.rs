@@ -164,6 +164,7 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
                     ci: false,
                     baseline: None,
                     allow_private: false,
+                    gsc: None,
                 };
                 match run_audit(&request) {
                     Ok(report) => match explain(&report, &input.id) {
@@ -230,12 +231,13 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         ci: false,
         baseline: None,
         allow_private: false,
+        gsc: None,
     };
     match run_audit(&request) {
         Ok(report) => match view {
             "inventory" => ToolReply::structured(&report.inventory),
             "opportunities" | "compare" => ToolReply::structured(&report.opportunities),
-            "plan" => ToolReply::structured(plan_from(&report.opportunities)),
+            "plan" => ToolReply::structured(plan_from(&report)),
             _ => ToolReply::structured(&report),
         },
         Err(error) => ToolReply::error(error.to_string()),

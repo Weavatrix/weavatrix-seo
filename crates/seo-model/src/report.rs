@@ -18,6 +18,51 @@ pub struct AxisScore {
     pub unmeasured: bool,
 }
 
+/// Priority axes for one opportunity. Missing values are unmeasured.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct OpportunityAxes {
+    /// Search demand (impressions-derived). `None` is unmeasured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub demand: Option<u16>,
+    /// Current visibility gap.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visibility_gap: Option<u16>,
+    /// Business value when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub business_value: Option<u16>,
+    /// Conversion potential when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_potential: Option<u16>,
+    /// Topical fit to the owned graph.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topical_fit: Option<u16>,
+    /// Internal-graph leverage (orphan, depth, cornerstone).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graph_leverage: Option<u16>,
+    /// Confidence of the recommendation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<u16>,
+    /// Implementation cost. Higher is harder.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub implementation_cost: Option<u16>,
+    /// Risk of the change.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub risk: Option<u16>,
+}
+
+impl OpportunityAxes {
+    /// Sort key: measured demand first, then gap and leverage.
+    #[must_use]
+    pub fn rank_key(&self) -> (u8, u16, u16, u16) {
+        (
+            u8::from(self.demand.is_some()),
+            self.demand.unwrap_or(0),
+            self.visibility_gap.unwrap_or(0),
+            self.graph_leverage.unwrap_or(0),
+        )
+    }
+}
+
 /// Gap or construction opportunity. Distinct from a current defect.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Opportunity {
@@ -35,6 +80,9 @@ pub struct Opportunity {
     pub subject: String,
     /// Whether demand data was measured.
     pub demand: String,
+    /// Separate priority axes. Never collapsed into one SEO score.
+    #[serde(default)]
+    pub axes: OpportunityAxes,
 }
 
 impl Opportunity {
@@ -62,7 +110,18 @@ impl Opportunity {
             action: action.into(),
             subject,
             demand: "UNMEASURED".into(),
+            axes: OpportunityAxes::default(),
         }
+    }
+
+    /// Attaches priority axes.
+    #[must_use]
+    pub fn with_axes(mut self, axes: OpportunityAxes) -> Self {
+        if let Some(demand) = axes.demand {
+            self.demand = format!("impressions:{demand}");
+        }
+        self.axes = axes;
+        self
     }
 }
 

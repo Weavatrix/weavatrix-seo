@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+mod compile;
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use weavatrix_seo_model::{
@@ -38,6 +40,8 @@ pub struct PageMatrix {
     /// Verdict.
     pub verdict: SafetyVerdict,
 }
+
+pub use compile::compile;
 
 /// Default compiler output before route generators are wired.
 #[must_use]

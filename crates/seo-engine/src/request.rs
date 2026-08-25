@@ -35,6 +35,9 @@ pub struct AuditRequest {
     /// Local/staging opt-in. MCP defaults to false.
     #[serde(default = "default_allow_private")]
     pub allow_private: bool,
+    /// Optional GSC export JSON.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gsc: Option<String>,
 }
 
 fn default_allow_private() -> bool {
@@ -53,6 +56,7 @@ impl Default for AuditRequest {
             ci: false,
             baseline: None,
             allow_private: true,
+            gsc: None,
         }
     }
 }
@@ -130,6 +134,7 @@ pub fn request_config_digest(request: &AuditRequest) -> String {
         } else {
             "public"
         },
+        request.gsc.as_deref().unwrap_or("no-gsc"),
     ])
 }
 

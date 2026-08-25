@@ -5,6 +5,7 @@
 mod axes;
 mod graph;
 mod html;
+mod observe;
 mod plan;
 mod report;
 mod request;
@@ -13,7 +14,7 @@ mod source;
 mod text;
 
 pub use html::render_html;
-pub use plan::{PlanAction, SearchPlan, plan_from};
+pub use plan::{PlanAction, PlanKind, SearchPlan, plan_from};
 pub use request::{AuditRequest, EngineError};
 pub use run::{explain, run_audit, run_inventory};
 pub use text::render_text;

@@ -35,5 +35,5 @@ pub use media::MediaKind;
 pub use node::{FactEdge, SearchNode, SearchNodeKind, route_id, symbol_id, url_id};
 pub use observation::{FetchObservation, FetchOutcome};
 pub use page::{Alternate, ExtractedPage, Heading, ImageRef, Indexability, JsonLd, RedirectHop};
-pub use report::{AuditReport, AxisScore, Opportunity};
+pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
 pub use url::{AbsoluteUrl, Scheme};

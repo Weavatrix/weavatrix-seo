@@ -2,7 +2,7 @@
 
 use weavatrix_seo_model::{AxisScore, Finding, FindingFamily, Severity};
 
-pub fn axes(findings: &[Finding], has_source: bool, has_http: bool) -> Vec<AxisScore> {
+pub fn axes(findings: &[Finding], has_source: bool, has_http: bool, has_obs: bool) -> Vec<AxisScore> {
     let named = [
         ("technical_discoverability", FindingFamily::Crawl),
         ("indexability", FindingFamily::Idx),
@@ -21,7 +21,7 @@ pub fn axes(findings: &[Finding], has_source: bool, has_http: bool) -> Vec<AxisS
     ];
     named
         .into_iter()
-        .map(|(axis, family)| score(findings, axis, family, has_source, has_http))
+        .map(|(axis, family)| score(findings, axis, family, has_source, has_http, has_obs))
         .chain([render_axis(findings, has_source)])
         .collect()
 }
@@ -32,13 +32,14 @@ fn score(
     family: FindingFamily,
     has_source: bool,
     has_http: bool,
+    has_obs: bool,
 ) -> AxisScore {
     let subset: Vec<_> = findings
         .iter()
         .filter(|item| item.family == family)
         .collect();
-    let unmeasured = (matches!(family, FindingFamily::Obs | FindingFamily::Ai)
-        && subset.is_empty())
+    let unmeasured = (family == FindingFamily::Obs && !has_obs && subset.is_empty())
+        || (family == FindingFamily::Ai && subset.is_empty())
         || (family == FindingFamily::Prog && !has_source && subset.is_empty())
         || (matches!(
             family,

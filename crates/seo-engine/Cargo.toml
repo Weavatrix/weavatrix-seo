@@ -33,6 +33,7 @@ weavatrix-seo-claims = { workspace = true }
 weavatrix-seo-observation = { workspace = true }
 weavatrix-seo-competitor = { workspace = true }
 weavatrix-seo-programmatic = { workspace = true }
+weavatrix-seo-semantic = { workspace = true }
 serde = { workspace = true }
 blazingly-json = { workspace = true }
 

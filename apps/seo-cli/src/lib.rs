@@ -28,7 +28,7 @@ pub fn usage() -> String {
     "weavatrix-seo — Weavatrix SEO
 
 Usage:
-  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--public-only] [--json]
+  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--gsc PATH] [--public-only] [--json]
   weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--workers N] [--json]
   weavatrix-seo opportunities --site URL [--max-pages N] [--json]
   weavatrix-seo plan --site URL [--max-pages N] [--json]
@@ -81,7 +81,7 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
         "inventory" if json => encode(&report.inventory)?,
         "audit" if json => encode(&report)?,
         "opportunities" if json => encode(&report.opportunities)?,
-        "plan" if json => encode(&plan_from(&report.opportunities))?,
+        "plan" if json => encode(&plan_from(&report))?,
         "compare" if json => encode(&report.opportunities)?,
         "explain" => {
             let id = positionals
@@ -112,7 +112,7 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
         }
         "plan" => {
             let mut text = String::new();
-            for item in plan_from(&report.opportunities).actions {
+            for item in plan_from(&report).actions {
                 let _ = writeln!(text, "{} {}", item.kind, item.subject);
             }
             text
@@ -166,6 +166,7 @@ fn request(
     let ci = flags.contains_key("ci");
     let baseline = flags.get("baseline").cloned();
     let allow_private = !flags.contains_key("public-only");
+    let gsc = flags.get("gsc").cloned();
     let competitors = flags
         .get("competitor")
         .map(|value| {
@@ -198,6 +199,7 @@ fn request(
         ci,
         baseline,
         allow_private,
+        gsc,
     })
 }
 

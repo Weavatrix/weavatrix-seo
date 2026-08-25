@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.9 - 2026-08-25
+
+- Semantic pass: first-party lexical embeddings through `weavatrix-semantic` (SEO policy, directed links, AnchorMatcher). Evidence is `INFERRED`.
+- Near-duplicate intent is cannibalization (`WVX-SEO-CANN-001`); missing topical links are `WVX-SEO-LINK-004`.
+- GSC is the first observation provider via `--gsc PATH` JSON export. Demand and visibility-gap axes rank opportunities. Uncrawled GSC URLs are `WVX-SEO-OBS-001`.
+- `seo_plan` compiles CREATE/IMPROVE/CONSOLIDATE/LINK/NOINDEX/DELETE with evidence, acceptance, and verification. Still read-only.
+- Programmatic compiler scores route families (`SAFE_TO_GENERATE` … `UNMEASURED`) from predicted patterns and measured URLs, including sitemap-only variants.
+- Rendered DOM stays unmeasured. Do not treat this release as a browser crawler.
+
 ## 0.0.8 - 2026-08-25
 
 - Heterogeneous Search Evidence Graph: URLs bind to route families, source symbols, schema objects, and revisions (`RENDERED_BY`, `GENERATED_BY`, `METADATA_FROM`, `DECLARES`, `CHANGED_BY`).

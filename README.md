@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.0.8` adds the Search Evidence Graph: live URLs bind to route families, producing symbols with source spans, schema objects, and revisions. Market/claim rules are policy packs (`marketplace.contractor.us-wa` first). Next.js reads `next.config` and producer spans.
+`0.0.9` adds intelligence on top of the graph: inferred semantic clusters and internal-link recommendations, GSC demand import, opportunity axes, a real `seo_plan` compiler, and programmatic family verdicts. Rendered DOM stays unmeasured.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.8"
+weavatrix-seo = "0.0.9"
 ```
 
 ## CLI
@@ -76,6 +76,7 @@ weavatrix-seo = "0.0.8"
 weavatrix-seo audit --site https://example.com
 weavatrix-seo audit --site https://example.com --workers 5 --html report.html --ci --baseline previous.json
 weavatrix-seo audit --site https://example.com --public-only --json
+weavatrix-seo plan --site https://example.com --gsc gsc.json --json
 weavatrix-seo inventory --site https://example.com
 weavatrix-seo opportunities --site https://example.com
 weavatrix-seo plan --site https://example.com
@@ -83,7 +84,7 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` imports a Search Console JSON export (`rows` with `query`, `url`, `clicks`, `impressions`, `position`). Missing GSC is `unmeasured`, not a pass.
 
 Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
 

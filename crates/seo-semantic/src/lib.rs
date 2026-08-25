@@ -1,10 +1,16 @@
-//! Builds `weavatrix-semantic` page profiles. Does not run cosine similarity.
+//! Semantic inference over crawled pages via weavatrix-semantic.
 
 #![forbid(unsafe_code)]
+
+mod analyze;
+mod embed;
 
 use weavatrix_graph::NodeId;
 use weavatrix_semantic::{SemanticError, SeoPage};
 use weavatrix_seo_model::{Indexability, Inventory};
+
+pub use analyze::{SemanticPass, analyze};
+pub use embed::MODEL;
 
 /// Converts crawled pages into SEO link-policy profiles.
 ///

@@ -1,9 +1,13 @@
-//! Provider observation contracts. No global index is built here.
+//! Provider observation contracts. GSC is the first import.
 
 #![forbid(unsafe_code)]
 
+mod gsc;
+
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{Evidence, EvidenceSource};
+
+pub use gsc::{disconnected, from_json, load};
 
 /// One query-URL observation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,6 +20,15 @@ pub struct Observation {
     pub provider: String,
     /// Evidence. Never promoted to deterministic.
     pub evidence: Evidence,
+    /// Clicks when the provider supplied them.
+    #[serde(default)]
+    pub clicks: u32,
+    /// Impressions when the provider supplied them.
+    #[serde(default)]
+    pub impressions: u32,
+    /// Average position when known (whole ranks).
+    #[serde(default)]
+    pub position: u32,
 }
 
 /// Snapshot of imported observations.
@@ -40,4 +53,34 @@ pub fn unmeasured() -> ObservationSnapshot {
 #[must_use]
 pub fn unmeasured_evidence() -> Evidence {
     Evidence::unmeasured(EvidenceSource::Provider)
+}
+
+/// Demand/visibility for one URL from a snapshot.
+#[must_use]
+pub fn axes_for(snapshot: &ObservationSnapshot, url: &str) -> (Option<u16>, Option<u16>) {
+    if !snapshot.connected {
+        return (None, None);
+    }
+    let mut impressions = 0_u32;
+    let mut best_position = 0_u32;
+    for row in snapshot.rows.iter().filter(|row| urls_match(&row.url, url)) {
+        impressions = impressions.saturating_add(row.impressions);
+        if row.position > 0 && (best_position == 0 || row.position < best_position) {
+            best_position = row.position;
+        }
+    }
+    if impressions == 0 && best_position == 0 {
+        return (None, None);
+    }
+    let demand = u16::try_from((impressions / 10).min(100)).unwrap_or(100);
+    let gap = if best_position > 10 {
+        u16::try_from(((best_position - 10) * 5).min(100)).unwrap_or(100)
+    } else {
+        0
+    };
+    (Some(demand), Some(gap))
+}
+
+fn urls_match(left: &str, right: &str) -> bool {
+    left.trim_end_matches('/') == right.trim_end_matches('/')
 }

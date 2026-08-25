@@ -2,7 +2,7 @@
 
 use crate::axes::axes;
 use crate::graph;
-use crate::plan_from;
+use crate::observe;
 use crate::request::AuditRequest;
 use crate::source::{programmatic_findings, source_findings};
 use weavatrix_seo_architecture::{analyze as analyze_architecture, annotate_templates};
@@ -10,12 +10,13 @@ use weavatrix_seo_claims::audit as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
 use weavatrix_seo_content::exact_duplicates;
 use weavatrix_seo_model::{AuditReport, Inventory};
-use weavatrix_seo_observation::unmeasured as observations_unmeasured;
-use weavatrix_seo_opportunity::opportunities;
-use weavatrix_seo_programmatic::thin_city_variants;
+use weavatrix_seo_observation::{load as load_gsc, unmeasured as observations_unmeasured};
+use weavatrix_seo_opportunity::{opportunities, rank};
+use weavatrix_seo_programmatic::{SafetyVerdict, compile, thin_city_variants};
 use weavatrix_seo_quality::audit as quality_audit;
 use weavatrix_seo_render::unmeasured as render_unmeasured;
 use weavatrix_seo_rules::audit as rule_audit;
+use weavatrix_seo_semantic::analyze as analyze_semantic;
 use weavatrix_seo_source::SourceSurface;
 
 pub fn assemble(
@@ -33,22 +34,80 @@ pub fn assemble(
     findings.extend(exact_duplicates(&inventory));
     findings.extend(thin_city_variants(&inventory));
     findings.extend(integrity_audit(&inventory, request.repo.as_deref()));
+    let predicted = surface.map_or_else(
+        || inventory.predicted_routes.clone(),
+        weavatrix_seo_source::SourceSurface::patterns,
+    );
     if let Some(surface) = &surface {
         findings.extend(source_findings(&inventory, surface));
         findings.extend(programmatic_findings(surface));
     }
+    let matrices = compile(&inventory, &predicted);
+    let semantic = analyze_semantic(&inventory, &architecture);
+    findings.extend(semantic.findings);
     let mut items = opportunities(&inventory, &architecture);
+    items.extend(semantic.opportunities);
+    items.extend(matrix_opportunities(&matrices));
     if request.mode == weavatrix_seo_model::AnalysisMode::Compare {
         items.extend(compare_inventories(&inventory, competitors));
     }
+    let observations = request
+        .gsc
+        .as_deref()
+        .and_then(|path| load_gsc(path).ok())
+        .unwrap_or_else(observations_unmeasured);
+    findings.extend(observe::decorate(&observations, &inventory, &mut items));
+    let items = rank(items);
     let _ = render_unmeasured();
-    let _ = observations_unmeasured();
-    let _ = plan_from(&items);
-    let axes = axes(&findings, surface.is_some(), !inventory.pages.is_empty());
+    let axes = axes(
+        &findings,
+        surface.is_some(),
+        !inventory.pages.is_empty(),
+        observations.connected,
+    );
     AuditReport {
         inventory,
         findings,
         axes,
         opportunities: items,
     }
+}
+
+fn matrix_opportunities(
+    matrices: &[weavatrix_seo_programmatic::PageMatrix],
+) -> Vec<weavatrix_seo_model::Opportunity> {
+    let mut items = Vec::new();
+    for matrix in matrices {
+        let (kind, summary, action) = match matrix.verdict {
+            SafetyVerdict::Consolidate => (
+                "cannibal",
+                format!("{} variants should be consolidated", matrix.family),
+                "Merge thin combinations or add unique facts per URL.",
+            ),
+            SafetyVerdict::Unmeasured if matrix.family.contains(':') => (
+                "create_family",
+                format!("{} is predicted but unmeasured", matrix.family),
+                "Generate a representative URL only after unique facts exist.",
+            ),
+            SafetyVerdict::SafeIfRequirementsMet => (
+                "create_family",
+                format!("{} needs unique facts before expansion", matrix.family),
+                "Add unique local facts, then generate the rest of the matrix.",
+            ),
+            SafetyVerdict::NoindexByDefault => (
+                "noindex",
+                format!("{} should stay out of the index by default", matrix.family),
+                "Keep the family noindexed until unique value is proven.",
+            ),
+            _ => continue,
+        };
+        items.push(weavatrix_seo_model::Opportunity::unmeasured_demand(
+            kind,
+            matrix.family.clone(),
+            summary,
+            "Programmatic compiler verdict from measured URLs and predicted families.",
+            action,
+        ));
+    }
+    items
 }

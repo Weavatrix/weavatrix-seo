@@ -14,6 +14,7 @@ categories = ["development-tools"]
 
 [dependencies]
 weavatrix-seo-model = { workspace = true }
+weavatrix-seo-architecture = { workspace = true }
 weavatrix-semantic = { workspace = true }
 weavatrix-graph = { workspace = true }
 
