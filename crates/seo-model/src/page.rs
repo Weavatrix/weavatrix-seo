@@ -61,7 +61,7 @@ pub struct ImageRef {
 }
 
 /// Parsed JSON-LD document or a syntax failure.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct JsonLd {
     /// Raw script body.
     pub raw: String,
@@ -69,6 +69,12 @@ pub struct JsonLd {
     pub types: Vec<String>,
     /// True when the script was valid JSON.
     pub valid_json: bool,
+    /// `@id` values on Organization/WebSite nodes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ids: Vec<String>,
+    /// `sameAs` values on Organization/WebSite nodes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub same_as: Vec<String>,
 }
 
 /// One crawled URL after extraction.

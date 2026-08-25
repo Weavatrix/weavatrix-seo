@@ -44,30 +44,33 @@ fn bind_revision(inventory: &mut Inventory, evidence: &Evidence) {
 }
 
 fn bind_pages(inventory: &mut Inventory, evidence: &Evidence) {
+    let mut schema: Vec<(String, String, String)> = Vec::new();
     for page in &inventory.pages {
+        let url = page.url.to_string();
         inventory.nodes.push(SearchNode::new(
             SearchNodeKind::Url,
-            url_id(&page.url.to_string()),
-            page.url.to_string(),
+            url_id(&url),
+            url.clone(),
         ));
         for block in &page.json_ld {
-            for type_name in &block.types {
-                let schema_id = format!("schema:{}#{type_name}", page.url);
-                inventory.nodes.push(SearchNode::new(
-                    SearchNodeKind::SchemaObject,
-                    schema_id.clone(),
-                    type_name.clone(),
-                ));
-                inventory.facts.push(FactEdge::new(
-                    url_id(&page.url.to_string()),
-                    SearchNodeKind::Url,
-                    schema_id,
-                    SearchNodeKind::SchemaObject,
-                    Relation::Declares,
-                    evidence.clone(),
-                ));
+            if block.ids.is_empty() {
+                for type_name in &block.types {
+                    schema.push((
+                        url.clone(),
+                        format!("schema:{url}#{type_name}"),
+                        type_name.clone(),
+                    ));
+                }
+            } else {
+                for id in &block.ids {
+                    let label = block.types.first().cloned().unwrap_or_else(|| id.clone());
+                    schema.push((url.clone(), id.clone(), label));
+                }
             }
         }
+    }
+    for (url, schema_id, label) in schema {
+        bind_schema(inventory, &url, &schema_id, &label, evidence);
     }
 }
 
@@ -200,4 +203,26 @@ fn bind_symbol(
         )
         .at(symbol.locator()),
     );
+}
+
+fn bind_schema(
+    inventory: &mut Inventory,
+    page_url: &str,
+    schema_id: &str,
+    label: &str,
+    evidence: &Evidence,
+) {
+    inventory.nodes.push(SearchNode::new(
+        SearchNodeKind::SchemaObject,
+        schema_id,
+        label,
+    ));
+    inventory.facts.push(FactEdge::new(
+        url_id(page_url),
+        SearchNodeKind::Url,
+        schema_id.to_owned(),
+        SearchNodeKind::SchemaObject,
+        Relation::Declares,
+        evidence.clone(),
+    ));
 }

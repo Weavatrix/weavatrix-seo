@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+mod cite;
 mod entity;
 mod license;
 mod local;
@@ -11,6 +12,7 @@ mod repo;
 
 use weavatrix_seo_model::{Evidence, EvidenceSource, Finding, Inventory};
 
+pub use cite::audit as audit_cite;
 pub use entity::audit as audit_entities;
 pub use license::{audit_claims, false_facts, page_claims};
 pub use local::audit as audit_local;
@@ -31,6 +33,7 @@ pub fn audit(inventory: &Inventory, repo: Option<&str>) -> Vec<Finding> {
     }
     findings.extend(audit_entities(inventory));
     findings.extend(audit_local(inventory));
+    findings.extend(audit_cite(inventory));
     findings
 }
 

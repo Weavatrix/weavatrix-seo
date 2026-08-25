@@ -48,7 +48,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.1.7"
+version = "0.1.8"
 edition = "2024"
 rust-version = "1.88"
 authors = ["Sergii Ziborov <sergii.ziborov@gmail.com>"]
@@ -58,26 +58,26 @@ repository = "https://github.com/Weavatrix/weavatrix-seo"
 readme = "README.md"
 
 [workspace.dependencies]
-weavatrix-seo-model = { path = "crates/seo-model", version = "0.1.7" }
-weavatrix-seo-http = { path = "crates/seo-http", version = "0.1.7" }
-weavatrix-seo-crawl = { path = "crates/seo-crawl", version = "0.1.7" }
-weavatrix-seo-render = { path = "crates/seo-render", version = "0.1.7" }
-weavatrix-seo-source = { path = "crates/seo-source", version = "0.1.7" }
-weavatrix-seo-nextjs = { path = "crates/seo-nextjs", version = "0.1.7" }
-weavatrix-seo-rules = { path = "crates/seo-rules", version = "0.1.7" }
-weavatrix-seo-quality = { path = "crates/seo-quality", version = "0.1.7" }
-weavatrix-seo-gate = { path = "crates/seo-gate", version = "0.1.7" }
-weavatrix-seo-content = { path = "crates/seo-content", version = "0.1.7" }
-weavatrix-seo-semantic = { path = "crates/seo-semantic", version = "0.1.7" }
-weavatrix-seo-architecture = { path = "crates/seo-architecture", version = "0.1.7" }
-weavatrix-seo-programmatic = { path = "crates/seo-programmatic", version = "0.1.7" }
-weavatrix-seo-claims = { path = "crates/seo-claims", version = "0.1.7" }
-weavatrix-seo-opportunity = { path = "crates/seo-opportunity", version = "0.1.7" }
-weavatrix-seo-observation = { path = "crates/seo-observation", version = "0.1.7" }
-weavatrix-seo-competitor = { path = "crates/seo-competitor", version = "0.1.7" }
-weavatrix-seo-history = { path = "crates/seo-history", version = "0.1.7" }
-weavatrix-seo = { path = "crates/seo-engine", version = "0.1.7" }
-weavatrix-seo-mcp = { path = "apps/seo-mcp", version = "0.1.7" }
+weavatrix-seo-model = { path = "crates/seo-model", version = "0.1.8" }
+weavatrix-seo-http = { path = "crates/seo-http", version = "0.1.8" }
+weavatrix-seo-crawl = { path = "crates/seo-crawl", version = "0.1.8" }
+weavatrix-seo-render = { path = "crates/seo-render", version = "0.1.8" }
+weavatrix-seo-source = { path = "crates/seo-source", version = "0.1.8" }
+weavatrix-seo-nextjs = { path = "crates/seo-nextjs", version = "0.1.8" }
+weavatrix-seo-rules = { path = "crates/seo-rules", version = "0.1.8" }
+weavatrix-seo-quality = { path = "crates/seo-quality", version = "0.1.8" }
+weavatrix-seo-gate = { path = "crates/seo-gate", version = "0.1.8" }
+weavatrix-seo-content = { path = "crates/seo-content", version = "0.1.8" }
+weavatrix-seo-semantic = { path = "crates/seo-semantic", version = "0.1.8" }
+weavatrix-seo-architecture = { path = "crates/seo-architecture", version = "0.1.8" }
+weavatrix-seo-programmatic = { path = "crates/seo-programmatic", version = "0.1.8" }
+weavatrix-seo-claims = { path = "crates/seo-claims", version = "0.1.8" }
+weavatrix-seo-opportunity = { path = "crates/seo-opportunity", version = "0.1.8" }
+weavatrix-seo-observation = { path = "crates/seo-observation", version = "0.1.8" }
+weavatrix-seo-competitor = { path = "crates/seo-competitor", version = "0.1.8" }
+weavatrix-seo-history = { path = "crates/seo-history", version = "0.1.8" }
+weavatrix-seo = { path = "crates/seo-engine", version = "0.1.8" }
+weavatrix-seo-mcp = { path = "apps/seo-mcp", version = "0.1.8" }
 
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 

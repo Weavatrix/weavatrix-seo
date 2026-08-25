@@ -74,6 +74,7 @@ fn schema_that_names_the_entity_is_quiet() {
             raw: r#"{"@type":"Service","areaServed":"Clark County, Southwest Washington"}"#.into(),
             types: vec!["Service".into()],
             valid_json: true,
+            ..JsonLd::default()
         }],
     )];
     assert!(

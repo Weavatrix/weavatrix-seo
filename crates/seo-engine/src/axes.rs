@@ -48,7 +48,7 @@ fn score(findings: &[Finding], axis: &str, family: FindingFamily, coverage: Cove
         .filter(|item| item.family == family)
         .collect();
     let unmeasured = (family == FindingFamily::Obs && !coverage.obs && subset.is_empty())
-        || (family == FindingFamily::Ai && subset.is_empty())
+        || (family == FindingFamily::Ai && subset.is_empty() && !coverage.http && !coverage.source)
         || (family == FindingFamily::Prog && !coverage.source && subset.is_empty())
         || (matches!(
             family,

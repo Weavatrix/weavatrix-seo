@@ -127,6 +127,7 @@ fn site_audit_finds_broken_orphan_duplicate_and_sitemap_noindex() {
     assert!(codes.contains(&"WVX-SEO-LINK-002"), "{codes:?}");
     assert!(codes.contains(&"WVX-SEO-DUP-001"), "{codes:?}");
     assert!(codes.contains(&"WVX-SEO-SITEMAP-002"), "{codes:?}");
+    assert!(codes.contains(&"WVX-SEO-AI-001"), "{codes:?}");
     assert!(
         report
             .opportunities

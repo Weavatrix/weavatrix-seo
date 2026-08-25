@@ -62,6 +62,17 @@ fn reads_title_canonical_links_and_json_ld() {
 }
 
 #[test]
+fn reads_organization_citation_id() {
+    let draft = extract_html(
+        r#"<html><head><script type="application/ld+json">{"@type":"Organization","@id":"https://x.test/#org","sameAs":["https://x.com/x"]}</script></head><body><h1>Home</h1></body></html>"#,
+    );
+    let block = draft.json_ld.first().expect("jsonld");
+    assert!(block.types.iter().any(|kind| kind == "Organization"));
+    assert_eq!(block.ids, ["https://x.test/#org"]);
+    assert_eq!(block.same_as, ["https://x.com/x"]);
+}
+
+#[test]
 fn empty_alt_is_present_missing_alt_is_none() {
     let draft = extract_html(
         r#"<html><body>

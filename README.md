@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.7` flags city Place/Service JSON-LD with no `areaServed`/address (`LOCAL-001`), plus pack entities missing from schema (`ENTITY-001`/`002`). SEO does not own a browser.
+`0.1.8` measures AI-search citation identity (`AI-001`–`003`): publisher `@id`/`sameAs`, FAQPage for FAQ copy, and FAQ producers in source. Entity/local graph from 0.1.6–0.1.7 stays. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -42,7 +42,7 @@ repository source
 - exact-duplicate detection and thin programmatic city variants
 - HTML report (`--html PATH`) plus JSON
 - `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
-- market-entity contamination, license claim/fact contradictions, and undeclared pack entities
+- market-entity contamination, license claim/fact contradictions, undeclared pack entities, and AI citation identity
 
 `.weavatrix/seo.json` is optional. When present, `indexability.include` / `exclude` decide which route families may be CREATE/SOURCE_ONLY; otherwise private chrome (`/admin`, `/auth`, …) is excluded.
 
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.7"
+weavatrix-seo = "0.1.8"
 ```
 
 ## CLI

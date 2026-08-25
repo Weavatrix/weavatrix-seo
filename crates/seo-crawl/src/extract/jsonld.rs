@@ -5,52 +5,92 @@ use weavatrix_seo_model::JsonLd;
 
 pub(super) fn parse_json_ld(raw: String) -> JsonLd {
     match blazingly_json::from_str::<Value>(&raw) {
-        Ok(value) => JsonLd {
-            types: collect_types(&value),
-            valid_json: true,
-            raw,
-        },
+        Ok(value) => {
+            let mut types = Vec::new();
+            let mut ids = Vec::new();
+            let mut same_as = Vec::new();
+            walk(&value, &mut types, &mut ids, &mut same_as);
+            types.sort();
+            types.dedup();
+            ids.sort();
+            ids.dedup();
+            same_as.sort();
+            same_as.dedup();
+            JsonLd {
+                types,
+                valid_json: true,
+                ids,
+                same_as,
+                raw,
+            }
+        }
         Err(_) => JsonLd {
-            types: Vec::new(),
             valid_json: false,
             raw,
+            ..JsonLd::default()
         },
     }
 }
 
-fn collect_types(value: &Value) -> Vec<String> {
-    let mut types = Vec::new();
-    push_types(value, &mut types);
-    types.sort();
-    types.dedup();
-    types
-}
-
-fn push_types(value: &Value, types: &mut Vec<String>) {
+fn walk(value: &Value, types: &mut Vec<String>, ids: &mut Vec<String>, same_as: &mut Vec<String>) {
     match value {
         Value::Array(items) => {
             for item in items {
-                push_types(item, types);
+                walk(item, types, ids, same_as);
             }
         }
         Value::Object(object) => {
-            if let Some(kind) = object.get("@type") {
-                match kind {
-                    Value::String(text) => types.push(text.clone()),
-                    Value::Array(items) => {
-                        for item in items {
-                            if let Value::String(text) = item {
-                                types.push(text.clone());
-                            }
-                        }
-                    }
-                    _ => {}
+            let kinds = type_names(object.get("@type"));
+            types.extend(kinds.iter().cloned());
+            if kinds.iter().any(|kind| is_cite_type(kind)) {
+                if let Some(Value::String(id)) = object.get("@id") {
+                    ids.push(id.clone());
                 }
+                push_same_as(object.get("sameAs"), same_as);
             }
-            if let Some(graph) = object.get("@graph") {
-                push_types(graph, types);
+            for nested in object.values() {
+                walk(nested, types, ids, same_as);
             }
         }
         _ => {}
     }
+}
+
+fn type_names(value: Option<&Value>) -> Vec<String> {
+    match value {
+        Some(Value::String(text)) => vec![text.clone()],
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(|item| match item {
+                Value::String(text) => Some(text.clone()),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn push_same_as(value: Option<&Value>, same_as: &mut Vec<String>) {
+    match value {
+        Some(Value::String(text)) => same_as.push(text.clone()),
+        Some(Value::Array(items)) => {
+            for item in items {
+                if let Value::String(text) = item {
+                    same_as.push(text.clone());
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_cite_type(kind: &str) -> bool {
+    let short = kind
+        .rsplit('/')
+        .next()
+        .unwrap_or(kind)
+        .rsplit(':')
+        .next()
+        .unwrap_or(kind);
+    short.eq_ignore_ascii_case("organization") || short.eq_ignore_ascii_case("website")
 }

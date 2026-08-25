@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.8 - 2026-08-25
+
+- AI-search citation: Organization/WebSite without `@id`/`sameAs` is `WVX-SEO-AI-001`. FAQ copy without FAQPage is `AI-002`. FAQ source producers without schema are `AI-003`.
+- JSON-LD extraction keeps Organization/WebSite `@id` and `sameAs`; the evidence graph binds those ids.
+
 ## 0.1.7 - 2026-08-25
 
 - Local graph: city URLs that declare Place/Service JSON-LD without `areaServed` or an address are `WVX-SEO-LOCAL-001`. Missing types stay `ENTITY-002`.

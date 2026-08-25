@@ -28,6 +28,7 @@ fn page(url: &str, raw: &str, types: &[&str]) -> ExtractedPage {
             raw: raw.into(),
             types: types.iter().map(|item| (*item).to_owned()).collect(),
             valid_json: true,
+            ..JsonLd::default()
         }],
         text: "City landing".into(),
         heading_text: String::new(),
