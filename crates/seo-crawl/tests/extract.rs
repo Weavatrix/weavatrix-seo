@@ -62,6 +62,14 @@ fn reads_title_canonical_links_and_json_ld() {
 }
 
 #[test]
+fn reads_csp_http_equiv() {
+    let draft = extract_html(
+        r#"<html><head><meta http-equiv="Content-Security-Policy" content="default-src self"></head><body><h1>Home</h1></body></html>"#,
+    );
+    assert_eq!(draft.csp_meta.as_deref(), Some("default-src self"));
+}
+
+#[test]
 fn reads_organization_citation_id() {
     let draft = extract_html(
         r#"<html><head><script type="application/ld+json">{"@type":"Organization","@id":"https://x.test/#org","sameAs":["https://x.com/x"]}</script></head><body><h1>Home</h1></body></html>"#,

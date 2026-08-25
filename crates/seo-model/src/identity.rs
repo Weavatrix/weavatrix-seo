@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Policy identifier shipped with this crate. Bump with the crate version
 /// whenever finding semantics change.
-pub const POLICY_VERSION: &str = "0.1.9";
+pub const POLICY_VERSION: &str = "0.1.10";
 
 /// Origin identity for one site (`scheme://host[:port]`).
 #[must_use]

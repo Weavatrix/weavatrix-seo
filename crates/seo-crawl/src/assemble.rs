@@ -12,6 +12,7 @@ const KEPT_HEADERS: &[&str] = &[
     "cache-control",
     "content-encoding",
     "content-security-policy",
+    "content-security-policy-report-only",
     "permissions-policy",
     "referrer-policy",
     "strict-transport-security",
@@ -26,12 +27,19 @@ pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
     if let Some(header) = fetched.header("x-robots-tag") {
         robots.push(header.to_owned());
     }
-    let headers = fetched
+    let mut headers = fetched
         .headers
         .iter()
         .filter(|(name, _)| KEPT_HEADERS.contains(&name.as_str()))
         .cloned()
-        .collect();
+        .collect::<Vec<_>>();
+    if let Some(csp) = draft.csp_meta.clone()
+        && !headers
+            .iter()
+            .any(|(name, _)| name == "content-security-policy")
+    {
+        headers.push(("content-security-policy".into(), csp));
+    }
     ExtractedPage {
         url: fetched.url.clone(),
         requested: fetched.url.clone(),

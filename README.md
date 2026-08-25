@@ -32,12 +32,12 @@ repository source
 
 ## Status
 
-`0.1.9` expands the source impact cone through relative imports of SEO helpers, so a data module edit still names `families_impacted`. AI citation identity from 0.1.8 stays. SEO does not own a browser.
+`0.1.10` measures HSTS/CSP as origin facts: disabled max-age, mixed HTML responses, `frame-ancestors` vs X-Frame-Options, and meta CSP. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
 - response metadata, canonical, hreflang, schema, links, headings, images, Open Graph
-- deterministic technical audit plus H1 / a11y / security-header / performance checks
+- deterministic technical audit plus H1 / a11y / origin security-header values / performance checks
 - internal-link architecture (depth, orphans, authority)
 - exact-duplicate detection and thin programmatic city variants
 - HTML report (`--html PATH`) plus JSON
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.9"
+weavatrix-seo = "0.1.10"
 ```
 
 ## CLI

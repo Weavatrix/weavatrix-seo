@@ -50,6 +50,8 @@ pub struct ExtractedPageDraft {
     pub has_main: bool,
     /// Controls without an accessible name.
     pub unlabeled_controls: usize,
+    /// `meta http-equiv=Content-Security-Policy`.
+    pub csp_meta: Option<String>,
 }
 
 /// Extracts SEO-visible fields from HTML.

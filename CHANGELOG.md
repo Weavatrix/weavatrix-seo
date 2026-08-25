@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.10 - 2026-08-25
+
+- HSTS/CSP origin facts: `max-age=0` or missing max-age is `WVX-SEO-SEC-006`. Mixed HTML responses are `SEC-007`.
+- CSP `frame-ancestors` satisfies clickjacking, so missing X-Frame-Options is quiet. Meta `http-equiv` CSP counts. Report-Only is not enforcing.
+
 ## 0.1.9 - 2026-08-25
 
 - Impact cone follows relative imports of SEO helpers (`weavatrix-parse`). Editing `cities.ts` imported by `citySeo.ts` names the `:city` family even though the helper file did not change.

@@ -6,6 +6,11 @@ use weavatrix_seo_model::Alternate;
 
 pub fn apply_meta(draft: &mut ExtractedPageDraft, tag: &Tag) {
     let content = attr(tag, "content");
+    if let Some(equiv) = attr(tag, "http-equiv")
+        && equiv.eq_ignore_ascii_case("content-security-policy")
+    {
+        draft.csp_meta.clone_from(&content);
+    }
     if let Some(name) = attr(tag, "name") {
         match name.to_ascii_lowercase().as_str() {
             "description" => draft.description.clone_from(&content),
