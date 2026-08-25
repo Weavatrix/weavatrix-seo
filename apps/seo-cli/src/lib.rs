@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use weavatrix_seo::{
-    AnalysisMode, AuditRequest, evaluate_gate, explain, load_fingerprints, plan_from, render_html,
+    AnalysisMode, AuditRequest, evaluate_gate, explain, load_baseline, plan_from, render_html,
     render_text, run_audit,
 };
 
@@ -28,7 +28,7 @@ pub fn usage() -> String {
     "weavatrix-seo — Weavatrix SEO
 
 Usage:
-  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--json]
+  weavatrix-seo audit --site URL [--repo PATH] [--max-pages N] [--workers N] [--html PATH] [--ci] [--baseline PATH] [--public-only] [--json]
   weavatrix-seo inventory --site URL [--repo PATH] [--max-pages N] [--workers N] [--json]
   weavatrix-seo opportunities --site URL [--max-pages N] [--json]
   weavatrix-seo plan --site URL [--max-pages N] [--json]
@@ -129,7 +129,7 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
         let baseline = request
             .baseline
             .as_deref()
-            .map(load_fingerprints)
+            .map(load_baseline)
             .transpose()?;
         code = evaluate_gate(&report, baseline.as_ref()).code;
     }
@@ -165,6 +165,7 @@ fn request(
         .transpose()?;
     let ci = flags.contains_key("ci");
     let baseline = flags.get("baseline").cloned();
+    let allow_private = !flags.contains_key("public-only");
     let competitors = flags
         .get("competitor")
         .map(|value| {
@@ -196,6 +197,7 @@ fn request(
         workers,
         ci,
         baseline,
+        allow_private,
     })
 }
 
@@ -215,7 +217,7 @@ fn split(args: &[String]) -> Result<ParsedArgs, String> {
     let mut index = 1;
     while index < args.len() {
         let item = &args[index];
-        if item == "--json" || item == "--ci" {
+        if item == "--json" || item == "--ci" || item == "--public-only" {
             flags.insert(item.trim_start_matches('-').to_owned(), "true".into());
             index += 1;
             continue;

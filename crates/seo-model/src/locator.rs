@@ -48,4 +48,17 @@ impl Locator {
             path: path.into(),
         }
     }
+
+    /// Primary URL or source path used by the CI baseline.
+    #[must_use]
+    pub fn subject_url(&self) -> &str {
+        match self {
+            Self::Url(url)
+            | Self::Header { url, .. }
+            | Self::Dom { url, .. }
+            | Self::JsonLd { url, .. } => url,
+            Self::Sitemap { loc, .. } => loc,
+            Self::Source { path, .. } => path,
+        }
+    }
 }

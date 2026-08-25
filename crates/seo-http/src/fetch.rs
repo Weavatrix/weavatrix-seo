@@ -9,7 +9,8 @@ use crate::request::write_get;
 use crate::response::{ParsedResponse, read_response};
 use crate::{FetchBudget, Result};
 use std::sync::Arc;
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
 use weavatrix_seo_model::{AbsoluteUrl, RedirectHop};
 
 /// One fetched URL after following redirects.
@@ -67,17 +68,19 @@ impl Fetcher {
     ///
     /// # Errors
     ///
-    /// Returns transport, TLS, or budget failure.
+    /// Returns transport, TLS, policy, or budget failure.
     pub fn get(&self, url: &AbsoluteUrl) -> Result<FetchResponse> {
+        self.budget.policy.check_url(url)?;
         let started = Instant::now();
         let mut current = url.clone();
         let mut redirects = Vec::new();
         for _ in 0..=self.budget.max_redirects {
-            let parsed = self.exchange(&current)?;
+            let parsed = self.exchange_with_retry(&current)?;
             if (300..400).contains(&parsed.status)
                 && let Some(location) = parsed.header("location")
             {
                 let next = current.join(location)?;
+                self.budget.policy.check_url(&next)?;
                 if redirects
                     .iter()
                     .any(|hop: &RedirectHop| hop.to == next.to_string())
@@ -113,6 +116,19 @@ impl Fetcher {
         Err(crate::HttpError::Transport("too many redirects".into()))
     }
 
+    fn exchange_with_retry(&self, url: &AbsoluteUrl) -> Result<ParsedResponse> {
+        let mut attempts = 0;
+        loop {
+            let parsed = self.exchange(url)?;
+            if matches!(parsed.status, 429 | 503) && attempts < self.budget.max_retries {
+                attempts += 1;
+                thread::sleep(retry_after(&parsed, attempts));
+                continue;
+            }
+            return Ok(parsed);
+        }
+    }
+
     fn exchange(&self, url: &AbsoluteUrl) -> Result<ParsedResponse> {
         let origin = Origin::of(url);
         if let Some(mut conn) = self.pool.checkout(&origin)
@@ -121,7 +137,7 @@ impl Fetcher {
             self.maybe_checkin(origin, conn, &parsed);
             return Ok(parsed);
         }
-        let mut conn = open(&origin, &self.dns, self.budget.timeout)?;
+        let mut conn = open(&origin, &self.dns, self.budget.timeout, self.budget.policy)?;
         let parsed = self.roundtrip(&mut conn, url)?;
         self.maybe_checkin(origin, conn, &parsed);
         Ok(parsed)
@@ -140,6 +156,18 @@ impl Fetcher {
             self.pool.checkin(origin, conn);
         }
     }
+}
+
+fn retry_after(parsed: &ParsedResponse, attempt: u32) -> Duration {
+    let header = parsed.header("retry-after").and_then(|value| {
+        value
+            .trim()
+            .parse::<u64>()
+            .ok()
+            .map(Duration::from_secs)
+    });
+    let wait = header.unwrap_or_else(|| Duration::from_millis(200 * u64::from(attempt)));
+    wait.min(Duration::from_secs(5))
 }
 
 fn millis(started: Instant) -> u32 {

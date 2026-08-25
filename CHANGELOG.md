@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.0.7 - 2026-08-25
+
+- Snapshot, run, policy, and revision identities: every HTTP fact is bound to the measured crawl, not the seed URL.
+- Fetch failures (DNS, TLS, timeout, body-limit, robots, SSRF) stay as observations and increment incomplete coverage.
+- URL identity keeps `/foo` vs `/foo/`; query-only joins resolve against the current path; IPv6 hosts keep brackets.
+- Redirect hops are their own pages/edges; the final 200 stays indexable. Relative canonicals resolve against the page URL.
+- MCP/competitor fetches are public-only; CLI loopback/staging needs no extra flag, `--public-only` tightens it.
+- DNS tries multiple addresses; `429`/`503` honour a capped `Retry-After`.
+- HTML-only findings do not run on PDF/JSON/image bodies. Claim/market haystacks use visible text, JSON-LD, and recognized RSC — not arbitrary script.
+- `license_verified=false` elsewhere in the repo is not a contradiction without a live public claim.
+- CI baseline is comparable (origin/mode/policy/measured URLs); unmeasured errors are coverage regressions, not resolved.
+
 ## 0.0.6 - 2026-08-25
 
 - Accessible-name: button inner text and submit `value` count; empty `alt` stays decorative.

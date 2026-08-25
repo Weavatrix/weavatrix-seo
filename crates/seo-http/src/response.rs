@@ -1,5 +1,6 @@
 //! HTTP/1.1 response decoder. Identity and chunked bodies.
 
+use crate::connect::map_io;
 use crate::{HttpError, Result};
 use std::io::Read;
 
@@ -103,16 +104,14 @@ fn read_body(
             )));
         }
         let mut body = vec![0_u8; length];
-        reader
-            .read_exact(&mut body)
-            .map_err(|error| HttpError::Transport(error.to_string()))?;
+        reader.read_exact(&mut body).map_err(|error| map_io(&error))?;
         return Ok((body, true));
     }
     let mut body = Vec::new();
     reader
         .take(u64::try_from(max_body.saturating_add(1)).unwrap_or(u64::MAX))
         .read_to_end(&mut body)
-        .map_err(|error| HttpError::Transport(error.to_string()))?;
+        .map_err(|error| map_io(&error))?;
     if body.len() > max_body {
         return Err(HttpError::Budget("response body exceeds budget".into()));
     }
@@ -136,14 +135,10 @@ fn read_chunked(reader: &mut impl Read, max_body: usize) -> Result<Vec<u8>> {
             return Err(HttpError::Budget("chunked body exceeds budget".into()));
         }
         let mut chunk = vec![0_u8; size];
-        reader
-            .read_exact(&mut chunk)
-            .map_err(|error| HttpError::Transport(error.to_string()))?;
+        reader.read_exact(&mut chunk).map_err(|error| map_io(&error))?;
         body.extend_from_slice(&chunk);
         let mut crlf = [0_u8; 2];
-        reader
-            .read_exact(&mut crlf)
-            .map_err(|error| HttpError::Transport(error.to_string()))?;
+        reader.read_exact(&mut crlf).map_err(|error| map_io(&error))?;
     }
     Ok(body)
 }
@@ -152,9 +147,7 @@ fn read_until(reader: &mut impl Read, needle: &[u8], max: usize) -> Result<Vec<u
     let mut buffer = Vec::new();
     let mut byte = [0_u8; 1];
     while buffer.len() < max {
-        let read = reader
-            .read(&mut byte)
-            .map_err(|error| HttpError::Transport(error.to_string()))?;
+        let read = reader.read(&mut byte).map_err(|error| map_io(&error))?;
         if read == 0 {
             return Err(HttpError::Transport("unexpected end of response".into()));
         }

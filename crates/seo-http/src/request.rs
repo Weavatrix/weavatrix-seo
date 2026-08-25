@@ -1,6 +1,6 @@
 //! HTTP/1.1 request writer.
 
-use crate::{HttpError, Result};
+use crate::Result;
 use std::io::Write;
 use weavatrix_seo_model::AbsoluteUrl;
 
@@ -10,15 +10,24 @@ use weavatrix_seo_model::AbsoluteUrl;
 ///
 /// Returns [`HttpError::Transport`] on write failure.
 pub fn write_get(stream: &mut impl Write, url: &AbsoluteUrl, user_agent: &str) -> Result<()> {
-    let host = match url.port() {
-        Some(port) => format!("{}:{port}", url.host()),
-        None => url.host().to_owned(),
-    };
+    let host = host_header(url);
     let request = format!(
         "GET {} HTTP/1.1\r\nHost: {host}\r\nUser-Agent: {user_agent}\r\nAccept: */*\r\nAccept-Encoding: gzip, deflate\r\nConnection: keep-alive\r\n\r\n",
         url.request_target()
     );
     stream
         .write_all(request.as_bytes())
-        .map_err(|error| HttpError::Transport(error.to_string()))
+        .map_err(|error| crate::connect::map_io(&error))
+}
+
+fn host_header(url: &AbsoluteUrl) -> String {
+    let host = if url.host().contains(':') {
+        format!("[{}]", url.host())
+    } else {
+        url.host().to_owned()
+    };
+    match url.port() {
+        Some(port) => format!("{host}:{port}"),
+        None => host,
+    }
 }

@@ -5,10 +5,18 @@ use super::document::ExtractedPageDraft;
 use super::jsonld::parse_json_ld;
 use super::meta::{apply_link, apply_meta};
 use super::tag::{
-    Tag, attr, attr_raw, in_heading, is_boilerplate, is_skip_text, is_void, unquote,
+    Tag, attr, attr_raw, in_heading, in_main, is_app_data, is_boilerplate, is_skip_text, is_void,
+    looks_like_rsc, read_tag, rel_tokens,
 };
 use weavatrix_parse::token::{Token, TokenKind};
-use weavatrix_seo_model::{Heading, ImageRef};
+use weavatrix_seo_model::{Heading, ImageRef, LinkLocation, LinkRef};
+
+struct OpenLink {
+    href: String,
+    rel: Vec<String>,
+    location: LinkLocation,
+    anchor: String,
+}
 
 pub struct Walker<'source> {
     source: &'source str,
@@ -17,12 +25,13 @@ pub struct Walker<'source> {
     skip_depth: usize,
     in_title: bool,
     json_ld: bool,
-    capture_script: bool,
-    json_buf: String,
+    app_data: bool,
+    script_buf: String,
     text_buf: String,
     draft: ExtractedPageDraft,
     stack: Vec<String>,
     controls: ControlRecorder,
+    open_link: Option<OpenLink>,
 }
 
 impl<'source> Walker<'source> {
@@ -34,12 +43,13 @@ impl<'source> Walker<'source> {
             skip_depth: 0,
             in_title: false,
             json_ld: false,
-            capture_script: false,
-            json_buf: String::new(),
+            app_data: false,
+            script_buf: String::new(),
             text_buf: String::new(),
             draft: ExtractedPageDraft::default(),
             stack: Vec::new(),
             controls: ControlRecorder::default(),
+            open_link: None,
         }
     }
 
@@ -53,12 +63,9 @@ impl<'source> Walker<'source> {
             self.index += 1;
         }
         self.flush_text();
-        self.draft.text = self
-            .draft
-            .text
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
+        self.draft.text = collapse(&self.draft.text);
+        self.draft.heading_text = collapse(&self.draft.heading_text);
+        self.draft.main_text = collapse(&self.draft.main_text);
         self.draft.unlabeled_controls = self.controls.unlabeled();
     }
 
@@ -67,10 +74,11 @@ impl<'source> Walker<'source> {
     }
 
     fn tag(&mut self) {
-        let Some(tag) = self.read_tag() else {
+        let Some((tag, next)) = read_tag(self.source, self.tokens, self.index) else {
             self.index += 1;
             return;
         };
+        self.index = next;
         if tag.closing {
             self.close(&tag.name);
             return;
@@ -82,6 +90,9 @@ impl<'source> Walker<'source> {
     }
 
     fn open(&mut self, tag: &Tag) {
+        if matches!(tag.name.as_str(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
+            self.flush_text();
+        }
         self.stack.push(tag.name.clone());
         match tag.name.as_str() {
             "html" => {
@@ -97,13 +108,8 @@ impl<'source> Walker<'source> {
             "script" => self.open_script(tag),
             "style" | "noscript" => {
                 self.skip_depth += 1;
-                self.capture_script = false;
             }
-            "a" => {
-                if let Some(href) = attr(tag, "href") {
-                    self.draft.links.push(href);
-                }
-            }
+            "a" => self.open_anchor(tag),
             "img" => self.draft.images.push(image(tag)),
             "input" | "select" | "textarea" | "button" => {
                 let in_label = self.stack.iter().any(|name| name == "label");
@@ -124,11 +130,31 @@ impl<'source> Walker<'source> {
         if attr(tag, "type").is_some_and(|value| value.eq_ignore_ascii_case("application/ld+json"))
         {
             self.json_ld = true;
-            self.json_buf.clear();
-        } else {
-            self.skip_depth += 1;
-            self.capture_script = true;
+            self.script_buf.clear();
+            return;
         }
+        self.skip_depth += 1;
+        self.app_data = is_app_data(tag);
+        self.script_buf.clear();
+    }
+
+    fn open_anchor(&mut self, tag: &Tag) {
+        let Some(href) = attr(tag, "href") else {
+            return;
+        };
+        self.draft.links.push(href.clone());
+        let rel = rel_tokens(tag);
+        let location = if rel.iter().any(|token| token == "breadcrumb") {
+            LinkLocation::Breadcrumb
+        } else {
+            LinkLocation::from_stack(&self.stack)
+        };
+        self.open_link = Some(OpenLink {
+            href,
+            rel,
+            location,
+            anchor: String::new(),
+        });
     }
 
     fn close(&mut self, name: &str) {
@@ -138,20 +164,21 @@ impl<'source> Walker<'source> {
         if name == "title" {
             self.in_title = false;
         }
-        if name == "script" && self.json_ld {
-            self.json_ld = false;
-            self.draft
-                .json_ld
-                .push(parse_json_ld(std::mem::take(&mut self.json_buf)));
+        if name == "a" {
+            self.close_anchor();
+        }
+        if name == "script" {
+            self.close_script();
         }
         if matches!(name, "script" | "style" | "noscript") && self.skip_depth > 0 && !self.json_ld {
             self.skip_depth -= 1;
         }
         if matches!(name, "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
             let level = name.as_bytes()[1] - b'0';
-            let text = std::mem::take(&mut self.text_buf);
-            let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+            let text = collapse(&std::mem::take(&mut self.text_buf));
             if !text.is_empty() {
+                self.draft.heading_text.push_str(&text);
+                self.draft.heading_text.push(' ');
                 self.draft.headings.push(Heading { level, text });
             }
         }
@@ -160,19 +187,45 @@ impl<'source> Walker<'source> {
         }
     }
 
+    fn close_script(&mut self) {
+        let body = std::mem::take(&mut self.script_buf);
+        if self.json_ld {
+            self.json_ld = false;
+            self.draft.json_ld.push(parse_json_ld(body));
+            return;
+        }
+        if self.app_data || looks_like_rsc(&body) {
+            self.draft.payload.push_str(&body);
+        } else {
+            self.draft.arbitrary_script.push_str(&body);
+        }
+        self.app_data = false;
+    }
+
+    fn close_anchor(&mut self) {
+        let Some(open) = self.open_link.take() else {
+            return;
+        };
+        let anchor = collapse(&open.anchor);
+        self.draft.link_refs.push(LinkRef {
+            href: open.href,
+            anchor: if anchor.is_empty() { None } else { Some(anchor) },
+            context: None,
+            rel: open.rel,
+            location: open.location,
+        });
+    }
+
     fn text_token(&mut self) {
         let Some(token) = self.tokens.get(self.index) else {
             return;
         };
         let text = token.text(self.source);
-        if self.json_ld {
-            self.json_buf.push_str(text);
+        if self.json_ld || self.in_script() {
+            self.script_buf.push_str(text);
             return;
         }
         if self.skip_depth > 0 {
-            if self.capture_script {
-                self.draft.payload.push_str(text);
-            }
             return;
         }
         if token.kind == TokenKind::Punctuation {
@@ -181,8 +234,12 @@ impl<'source> Walker<'source> {
         if self.in_title {
             let current = self.draft.title.get_or_insert_with(String::new);
             current.push_str(text);
-            *current = current.split_whitespace().collect::<Vec<_>>().join(" ");
+            *current = collapse(current);
             return;
+        }
+        if let Some(open) = &mut self.open_link {
+            open.anchor.push_str(text);
+            open.anchor.push(' ');
         }
         self.controls.text(text);
         if in_heading(&self.stack) || !is_boilerplate(&self.stack) {
@@ -195,62 +252,21 @@ impl<'source> Walker<'source> {
         if !self.text_buf.trim().is_empty() && !in_heading(&self.stack) {
             self.draft.text.push_str(&self.text_buf);
             self.draft.text.push(' ');
+            if in_main(&self.stack) {
+                self.draft.main_text.push_str(&self.text_buf);
+                self.draft.main_text.push(' ');
+            }
         }
         self.text_buf.clear();
+    }
+
+    fn in_script(&self) -> bool {
+        self.stack.last().is_some_and(|name| name == "script")
     }
 
     fn punct(&self, mark: &str) -> bool {
         self.tokens.get(self.index).is_some_and(|token| {
             token.kind == TokenKind::Punctuation && token.text(self.source) == mark
-        })
-    }
-
-    fn text_at(&self, index: usize) -> &str {
-        self.tokens
-            .get(index)
-            .map_or("", |token| token.text(self.source))
-    }
-
-    fn read_tag(&mut self) -> Option<Tag> {
-        let mut index = self.index + 1;
-        let closing = self.tokens.get(index).is_some_and(|token| {
-            token.kind == TokenKind::Punctuation && token.text(self.source) == "/"
-        });
-        if closing {
-            index += 1;
-        }
-        let name = self.text_at(index).to_ascii_lowercase();
-        if name.is_empty() {
-            return None;
-        }
-        index += 1;
-        let mut attrs = Vec::new();
-        while index < self.tokens.len() {
-            if self.tokens[index].kind == TokenKind::Punctuation && self.text_at(index) == ">" {
-                index += 1;
-                break;
-            }
-            if self.tokens[index].kind == TokenKind::Identifier {
-                let key = self.text_at(index).to_ascii_lowercase();
-                index += 1;
-                let mut value = String::new();
-                if self.tokens.get(index).is_some_and(|token| {
-                    token.kind == TokenKind::Punctuation && token.text(self.source) == "="
-                }) {
-                    index += 1;
-                    value = unquote(self.text_at(index));
-                    index += 1;
-                }
-                attrs.push((key, value));
-                continue;
-            }
-            index += 1;
-        }
-        self.index = index;
-        Some(Tag {
-            name,
-            attrs,
-            closing,
         })
     }
 }
@@ -265,4 +281,8 @@ fn image(tag: &Tag) -> ImageRef {
         alt: attr_raw(tag, "alt"),
         hidden,
     }
+}
+
+fn collapse(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
 }

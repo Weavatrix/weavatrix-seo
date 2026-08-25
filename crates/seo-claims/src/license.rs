@@ -25,6 +25,8 @@ pub fn page_claims(inventory: &Inventory) -> Vec<(String, String)> {
         }
         let mut hay = page.text.clone();
         hay.push(' ');
+        hay.push_str(&page.heading_text);
+        hay.push(' ');
         hay.push_str(&page.payload);
         if let Some(title) = &page.title {
             hay.push(' ');
@@ -58,11 +60,12 @@ pub fn false_facts(source: &str) -> bool {
 #[must_use]
 pub fn audit_claims(inventory: &Inventory, repo_false: bool, repo_field: bool) -> Vec<Finding> {
     let claims = page_claims(inventory);
-    if claims.is_empty() && !repo_field {
+    let _ = repo_field;
+    if claims.is_empty() {
         return Vec::new();
     }
     let mut findings = Vec::new();
-    if repo_false && (!claims.is_empty() || repo_field) {
+    if repo_false {
         let subject = claims.first().map_or_else(
             || "license_verified:false".into(),
             |(url, phrase)| format!("{url}:{phrase}"),
@@ -86,9 +89,9 @@ pub fn audit_claims(inventory: &Inventory, repo_false: bool, repo_field: bool) -
                     kind: EvidenceKind::Deterministic,
                     source: EvidenceSource::Repo,
                     confidence: weavatrix_seo_model::Confidence::High,
-                    snapshot_id: None,
-                    revision: None,
-                    policy_version: None,
+                    snapshot_id: Some(inventory.snapshot_id.clone()),
+                    revision: inventory.repo_revision.clone(),
+                    policy_version: Some(inventory.policy_version.clone()),
                 },
             )
             .explained(
@@ -110,7 +113,7 @@ fn compact(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{false_facts, page_claims};
+    use super::{audit_claims, false_facts, page_claims};
     use weavatrix_seo_model::{
         AbsoluteUrl, AnalysisMode, ContentHash, Evidence, ExtractedPage, Indexability, Inventory,
         InventoryCounts,
@@ -125,6 +128,7 @@ mod tests {
             status: 200,
             redirects: Vec::new(),
             content_type: None,
+            media: weavatrix_seo_model::MediaKind::Html,
             canonical: None,
             robots: Vec::new(),
             title: Some("Electrician".into()),
@@ -133,10 +137,14 @@ mod tests {
             alternates: Vec::new(),
             headings: Vec::new(),
             links: Vec::new(),
+            link_refs: Vec::new(),
             images: Vec::new(),
             json_ld: Vec::new(),
             text: "document/license verification badges".into(),
+            heading_text: String::new(),
+            main_text: String::new(),
             payload: String::new(),
+            arbitrary_script: String::new(),
             og_title: None,
             og_description: None,
             og_image: None,
@@ -151,25 +159,26 @@ mod tests {
             linked_from_page: true,
             evidence: Evidence::http(),
         };
-        let inventory = Inventory {
-            mode: AnalysisMode::Site,
-            snapshot_id: "x".into(),
-            site: Some("https://kablay.us/".into()),
-            repo: None,
-            hosts: vec!["kablay.us".into()],
-            pages: vec![page],
-            edges: Vec::new(),
-            predicted_routes: Vec::new(),
-            sitemap_discovered: 0,
-            counts: InventoryCounts {
-                crawled: 1,
-                fetched: 1,
-                redirected: 0,
-                errors: 0,
-                sitemap_urls: 0,
-                indexable: 1,
-            },
+        let mut inventory = Inventory::blank(AnalysisMode::Site);
+        inventory.snapshot_id = "x".into();
+        inventory.site = Some("https://kablay.us/".into());
+        inventory.hosts = vec!["kablay.us".into()];
+        inventory.pages = vec![page];
+        inventory.counts = InventoryCounts {
+            crawled: 1,
+            fetched: 1,
+            redirected: 0,
+            errors: 0,
+            sitemap_urls: 0,
+            indexable: 1,
+            incomplete: 0,
         };
         assert!(!page_claims(&inventory).is_empty());
+    }
+
+    #[test]
+    fn repo_field_alone_is_not_a_contradiction() {
+        let inventory = Inventory::blank(AnalysisMode::Site);
+        assert!(audit_claims(&inventory, true, true).is_empty());
     }
 }

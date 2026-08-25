@@ -20,11 +20,21 @@ impl Frontier {
     }
 
     /// Enqueues a sitemap loc without blocking link discovery.
+    /// City variants are sampled even when they are sitemap-only.
     pub fn push_sitemap(&mut self, url: AbsoluteUrl) {
         if !self.scheduled.insert(url.clone()) {
             return;
         }
+        if self.sample_city(&url) {
+            self.urgent.push_back((url, 0));
+            return;
+        }
         self.sitemap.push_back((url, 0));
+    }
+
+    /// Marks a URL as seen without enqueueing (redirect hops, already fetched).
+    pub fn remember(&mut self, url: AbsoluteUrl) {
+        self.scheduled.insert(url);
     }
 
     /// Enqueues a hyperlink. Promotes a sitemap-only URL into the hot lane.
@@ -46,14 +56,23 @@ impl Frontier {
         if is_landing(url) {
             return Lane::Urgent;
         }
-        if let Some(family) = city_family(url) {
-            let taken = self.sampled_cities.entry(family).or_insert(0);
-            if *taken < 2 {
-                *taken += 1;
-                return Lane::Urgent;
-            }
+        if self.sample_city(url) {
+            return Lane::Urgent;
         }
         Lane::Linked
+    }
+
+    fn sample_city(&mut self, url: &AbsoluteUrl) -> bool {
+        let Some(family) = city_family(url) else {
+            return false;
+        };
+        let taken = self.sampled_cities.entry(family).or_insert(0);
+        if *taken < 2 {
+            *taken += 1;
+            true
+        } else {
+            false
+        }
     }
 
     fn push_lane(&mut self, lane: Lane, url: AbsoluteUrl, depth: u32) {
@@ -182,6 +201,27 @@ mod tests {
         let rest = frontier.pop_batch(5);
         assert_eq!(rest.len(), 5);
         assert!(rest.iter().all(|(url, _)| url.path().starts_with("/blog/")));
+    }
+
+    #[test]
+    fn sitemap_only_cities_are_sampled() {
+        let mut frontier = Frontier::default();
+        frontier.seed(AbsoluteUrl::parse("https://x.test/").unwrap());
+        let first =
+            AbsoluteUrl::parse("https://x.test/category/electrician/vancouver-wa").unwrap();
+        let second = AbsoluteUrl::parse("https://x.test/category/electrician/camas-wa").unwrap();
+        let third =
+            AbsoluteUrl::parse("https://x.test/category/electrician/ridgefield-wa").unwrap();
+        frontier.push_sitemap(first.clone());
+        frontier.push_sitemap(second.clone());
+        frontier.push_sitemap(third.clone());
+        let _home = frontier.pop_batch(1);
+        let sampled = frontier.pop_batch(2);
+        assert_eq!(sampled.len(), 2);
+        assert!(sampled.iter().any(|(url, _)| *url == first));
+        assert!(sampled.iter().any(|(url, _)| *url == second));
+        let rest = frontier.pop_batch(4);
+        assert!(rest.iter().any(|(url, _)| *url == third));
     }
 
     #[test]

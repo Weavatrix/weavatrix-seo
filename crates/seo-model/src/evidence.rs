@@ -114,10 +114,37 @@ impl Evidence {
         }
     }
 
+    /// Observed HTTP fact (success or recorded failure).
+    #[must_use]
+    pub fn http_observed() -> Self {
+        Self {
+            kind: EvidenceKind::Observed,
+            source: EvidenceSource::Http,
+            confidence: Confidence::Exact,
+            snapshot_id: None,
+            revision: None,
+            policy_version: None,
+        }
+    }
+
     /// Binds the evidence to a crawl snapshot.
     #[must_use]
     pub fn with_snapshot(mut self, snapshot_id: impl Into<String>) -> Self {
         self.snapshot_id = Some(snapshot_id.into());
+        self
+    }
+
+    /// Binds a git revision / worktree digest.
+    #[must_use]
+    pub fn with_revision(mut self, revision: impl Into<String>) -> Self {
+        self.revision = Some(revision.into());
+        self
+    }
+
+    /// Binds the policy identifier.
+    #[must_use]
+    pub fn with_policy(mut self, policy_version: impl Into<String>) -> Self {
+        self.policy_version = Some(policy_version.into());
         self
     }
 }

@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.0.6` ships the site-only vertical plus Next.js repo prediction:
+`0.0.7` is the truth-and-safety release: snapshot-bound evidence, URL/redirect identity, MCP network policy, and a comparable CI baseline.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -67,7 +67,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.0.6"
+weavatrix-seo = "0.0.7"
 ```
 
 ## CLI
@@ -75,6 +75,7 @@ weavatrix-seo = "0.0.6"
 ```bash
 weavatrix-seo audit --site https://example.com
 weavatrix-seo audit --site https://example.com --workers 5 --html report.html --ci --baseline previous.json
+weavatrix-seo audit --site https://example.com --public-only --json
 weavatrix-seo inventory --site https://example.com
 weavatrix-seo opportunities --site https://example.com
 weavatrix-seo plan --site https://example.com
@@ -82,7 +83,9 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares error fingerprints to a previous JSON report.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set.
+
+Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
 
 ## MCP
 
@@ -106,10 +109,14 @@ Run `weavatrix-seo mcp` or the `weavatrix-seo-mcp` binary.
 Every fact carries:
 
 ```text
-kind:        DETERMINISTIC | OBSERVED | EXTERNAL | INFERRED | UNMEASURED
-source:      repo | http | rendered_dom | sitemap | logs | gsc | provider | semantic
-locator:     URL, header, DOM, source span
-confidence:  exact | high | medium | low
+kind:            DETERMINISTIC | OBSERVED | EXTERNAL | INFERRED | UNMEASURED
+source:          repo | http | rendered_dom | sitemap | logs | gsc | provider | semantic
+locator:         URL, header, DOM, source span
+confidence:      exact | high | medium | low
+snapshot_id:     measured crawl, not the seed URL
+run_id:          one analysis invocation
+policy_version:  finding semantics for this release
+revision:        git worktree when a repo is in scope
 ```
 
 Rules:

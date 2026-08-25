@@ -25,13 +25,13 @@ fn client_config() -> Arc<ClientConfig> {
 ///
 /// # Errors
 ///
-/// Returns [`HttpError::Transport`] when the handshake fails.
+/// Returns [`HttpError::Tls`] when the handshake fails.
 pub fn wrap(host: &str, stream: TcpStream) -> Result<StreamOwned<ClientConnection, TcpStream>> {
     let server_name = host
         .to_owned()
         .try_into()
-        .map_err(|_| HttpError::Transport(format!("invalid TLS host: {host}")))?;
+        .map_err(|_| HttpError::Tls(format!("invalid TLS host: {host}")))?;
     let connection = ClientConnection::new(client_config(), server_name)
-        .map_err(|error| HttpError::Transport(error.to_string()))?;
+        .map_err(|error| HttpError::Tls(error.to_string()))?;
     Ok(StreamOwned::new(connection, stream))
 }

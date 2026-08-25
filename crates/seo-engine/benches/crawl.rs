@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Instant;
-use weavatrix_seo::{AnalysisMode, AuditRequest, run_audit};
+use weavatrix_seo::{AuditRequest, run_audit};
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
@@ -48,14 +48,10 @@ fn main() {
     let site = format!("http://{addr}/");
     let started = Instant::now();
     let report = run_audit(&AuditRequest {
-        mode: AnalysisMode::Site,
         site: Some(site.clone()),
-        repo: None,
-        competitors: Vec::new(),
         max_pages: Some(32),
         workers: Some(4),
-        ci: false,
-        baseline: None,
+        ..AuditRequest::default()
     })
     .expect("audit");
     stop.store(true, Ordering::SeqCst);

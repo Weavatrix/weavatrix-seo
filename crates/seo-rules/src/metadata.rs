@@ -9,7 +9,11 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
     for page in inventory
         .pages
         .iter()
-        .filter(|page| page.status == 200 && page.indexability == Indexability::Indexable)
+        .filter(|page| {
+            page.status == 200
+                && page.indexability == Indexability::Indexable
+                && page.media.is_html()
+        })
     {
         match &page.title {
             Some(title) if !title.trim().is_empty() => titles.push((page, title.clone())),

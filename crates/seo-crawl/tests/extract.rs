@@ -75,3 +75,49 @@ fn button_inner_text_counts_as_accessible_name() {
     );
     assert_eq!(draft.unlabeled_controls, 1);
 }
+
+#[test]
+fn heading_and_body_buffers_stay_separate() {
+    let draft = extract_html(
+        "<html><body><p>One</p><h2>Mid</h2><p>Two</p><h3>End</h3><p>Three</p></body></html>",
+    );
+    assert_eq!(draft.heading_text, "Mid End");
+    assert!(draft.text.contains("One") && draft.text.contains("Two") && draft.text.contains("Three"));
+    assert!(!draft.text.contains("Mid"));
+}
+
+#[test]
+fn link_keeps_anchor_rel_and_nav_location() {
+    let draft = extract_html(
+        r#"<html><body><nav><a href="/about" rel="nofollow">About us</a></nav><main><a href="/post">Read</a></main></body></html>"#,
+    );
+    let nav = draft
+        .link_refs
+        .iter()
+        .find(|link| link.href == "/about")
+        .expect("nav link");
+    assert_eq!(nav.anchor.as_deref(), Some("About us"));
+    assert!(nav.rel.iter().any(|token| token == "nofollow"));
+    assert_eq!(nav.location, weavatrix_seo_model::LinkLocation::Nav);
+    let body = draft
+        .link_refs
+        .iter()
+        .find(|link| link.href == "/post")
+        .expect("body link");
+    assert_eq!(body.location, weavatrix_seo_model::LinkLocation::Contextual);
+}
+
+#[test]
+fn arbitrary_script_is_not_payload_rsc_is() {
+    let draft = extract_html(
+        r#"<html><body>
+        <script>const unitPiece = "IEC";</script>
+        <script id="__NEXT_DATA__" type="application/json">{"iec":"Hevrat"}</script>
+        <p>Visible</p>
+        </body></html>"#,
+    );
+    assert!(draft.arbitrary_script.contains("IEC"));
+    assert!(!draft.payload.contains("IEC"));
+    assert!(draft.payload.contains("Hevrat"));
+    assert!(draft.text.contains("Visible"));
+}

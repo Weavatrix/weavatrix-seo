@@ -352,7 +352,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "blazingly-json",
  "serde",
@@ -375,7 +375,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-architecture"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-graph",
  "weavatrix-seo-model",
@@ -383,7 +383,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-claims"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "serde",
  "weavatrix-scan",
@@ -392,7 +392,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-cli"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "blazingly-json",
  "serde",
@@ -402,21 +402,21 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-competitor"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-content"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-crawl"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "blazingly-json",
  "weavatrix-parse",
@@ -426,15 +426,16 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-gate"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "blazingly-json",
+ "serde",
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-http"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "flate2",
  "rustls",
@@ -444,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-mcp"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "mcport",
  "serde",
@@ -454,14 +455,14 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-model"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "weavatrix-seo-nextjs"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-parse",
  "weavatrix-scan",
@@ -471,7 +472,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-observation"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "serde",
  "weavatrix-seo-model",
@@ -479,7 +480,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-opportunity"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-seo-architecture",
  "weavatrix-seo-model",
@@ -487,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-programmatic"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "serde",
  "weavatrix-seo-model",
@@ -495,28 +496,28 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-quality"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-render"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-rules"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-seo-model",
 ]
 
 [[package]]
 name = "weavatrix-seo-semantic"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "weavatrix-graph",
  "weavatrix-semantic",
@@ -525,7 +526,7 @@ dependencies = [
 
 [[package]]
 name = "weavatrix-seo-source"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "serde",
  "weavatrix-seo-model",

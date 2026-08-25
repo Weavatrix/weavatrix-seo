@@ -1,21 +1,8 @@
 //! Worker batching over the frontier.
 
-use crate::frontier::Frontier;
-use crate::{CrawlError, FetchResponse, Fetcher, Result, Robots};
+use crate::{CrawlError, FetchResponse, Fetcher, Result};
 use std::thread;
 use weavatrix_seo_model::AbsoluteUrl;
-
-pub fn pop_allowed(
-    frontier: &mut Frontier,
-    robots: &Robots,
-    count: usize,
-) -> Vec<(AbsoluteUrl, u32)> {
-    frontier
-        .pop_batch(count)
-        .into_iter()
-        .filter(|(url, _)| robots.allows(url))
-        .collect()
-}
 
 pub fn fetch_batch(
     fetcher: &Fetcher,

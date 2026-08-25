@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use weavatrix_seo::{AnalysisMode, AuditRequest, run_audit};
+use weavatrix_seo::{AuditRequest, run_audit};
 
 mod common;
 
@@ -71,14 +71,10 @@ fn fixture() -> BTreeMap<String, Page> {
 fn link_priority_reaches_electrician_and_flags_market() {
     let site = spawn(fixture());
     let report = run_audit(&AuditRequest {
-        mode: AnalysisMode::Site,
         site: Some(format!("{}/", site.base)),
-        repo: None,
-        competitors: Vec::new(),
         max_pages: Some(8),
         workers: Some(4),
-        ci: false,
-        baseline: None,
+        ..AuditRequest::default()
     })
     .expect("audit");
     assert!(

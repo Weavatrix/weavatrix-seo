@@ -5,7 +5,7 @@ use crate::frontier::Frontier;
 use crate::FetchResponse;
 use std::collections::BTreeMap;
 use weavatrix_seo_model::{
-    AbsoluteUrl, ContentHash, Evidence, ExtractedPage, GraphEdge, Indexability, Relation,
+    AbsoluteUrl, ContentHash, Evidence, ExtractedPage, GraphEdge, Indexability, MediaKind, Relation,
 };
 
 const KEPT_HEADERS: &[&str] = &[
@@ -21,6 +21,7 @@ const KEPT_HEADERS: &[&str] = &[
 ];
 
 pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool) -> ExtractedPage {
+    let media = MediaKind::classify(fetched.header("content-type"), &fetched.body);
     let mut robots = draft.robots;
     if let Some(header) = fetched.header("x-robots-tag") {
         robots.push(header.to_owned());
@@ -33,10 +34,11 @@ pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
         .collect();
     ExtractedPage {
         url: fetched.url.clone(),
-        requested: fetched.requested.clone(),
+        requested: fetched.url.clone(),
         status: fetched.status,
-        redirects: fetched.redirects.clone(),
+        redirects: Vec::new(),
         content_type: fetched.header("content-type").map(ToOwned::to_owned),
+        media,
         canonical: draft.canonical,
         robots,
         title: draft.title,
@@ -45,10 +47,14 @@ pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
         alternates: draft.alternates,
         headings: draft.headings,
         links: draft.links,
+        link_refs: draft.link_refs,
         images: draft.images,
         json_ld: draft.json_ld,
         text: draft.text,
+        heading_text: draft.heading_text,
+        main_text: draft.main_text,
         payload: draft.payload,
+        arbitrary_script: draft.arbitrary_script,
         og_title: draft.og_title,
         og_description: draft.og_description,
         og_image: draft.og_image,
@@ -63,6 +69,56 @@ pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
         linked_from_page: false,
         evidence: Evidence::http(),
     }
+}
+
+pub fn redirect_page(
+    from: &AbsoluteUrl,
+    to: &AbsoluteUrl,
+    status: u16,
+    in_sitemap: bool,
+) -> ExtractedPage {
+    ExtractedPage {
+        url: from.clone(),
+        requested: from.clone(),
+        status,
+        redirects: vec![weavatrix_seo_model::RedirectHop {
+            from: from.to_string(),
+            to: to.to_string(),
+            status,
+        }],
+        content_type: None,
+        media: MediaKind::Other,
+        canonical: None,
+        robots: Vec::new(),
+        title: None,
+        description: None,
+        html_lang: None,
+        alternates: Vec::new(),
+        headings: Vec::new(),
+        links: Vec::new(),
+        link_refs: Vec::new(),
+        images: Vec::new(),
+        json_ld: Vec::new(),
+        text: String::new(),
+        heading_text: String::new(),
+        main_text: String::new(),
+        payload: String::new(),
+        arbitrary_script: String::new(),
+        og_title: None,
+        og_description: None,
+        og_image: None,
+        headers: Vec::new(),
+        body_bytes: 0,
+        fetch_ms: 0,
+        has_main: false,
+        unlabeled_controls: 0,
+        content_hash: ContentHash::of(&[]),
+        indexability: Indexability::Redirected,
+        in_sitemap,
+        linked_from_page: false,
+        evidence: Evidence::http(),
+    }
+    .finalize()
 }
 
 pub fn record_links(
@@ -83,22 +139,66 @@ pub fn record_links(
             Evidence::http(),
         ));
     }
-    for href in &page.links {
-        let Ok(target) = page.url.join(href) else {
-            continue;
+    let links: Vec<&weavatrix_seo_model::LinkRef> = page.link_refs.iter().collect();
+    if links.is_empty() {
+        for href in &page.links {
+            push_link(page, href, None, seed, depth, max_depth, frontier, edges);
+        }
+        return;
+    }
+    for link in links {
+        push_link(
+            page,
+            &link.href,
+            Some(link),
+            seed,
+            depth,
+            max_depth,
+            frontier,
+            edges,
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn push_link(
+    page: &ExtractedPage,
+    href: &str,
+    link: Option<&weavatrix_seo_model::LinkRef>,
+    seed: &AbsoluteUrl,
+    depth: u32,
+    max_depth: u32,
+    frontier: &mut Frontier,
+    edges: &mut Vec<GraphEdge>,
+) {
+    let Ok(target) = page.url.join(href) else {
+        return;
+    };
+    if !seed.same_origin(&target) {
+        return;
+    }
+    let mut edge = GraphEdge::new(
+        page.url.clone(),
+        target.clone(),
+        Relation::LinksTo,
+        Evidence::http(),
+    );
+    if let Some(link) = link {
+        let rel = if link.rel.is_empty() {
+            None
+        } else {
+            Some(link.rel.join(" "))
         };
-        if !seed.same_origin(&target) {
-            continue;
-        }
-        edges.push(GraphEdge::new(
-            page.url.clone(),
-            target.clone(),
-            Relation::LinksTo,
-            Evidence::http(),
-        ));
-        if depth < max_depth {
-            frontier.push_link(target, depth + 1);
-        }
+        edge = edge.with_link(
+            link.anchor.clone(),
+            rel,
+            Some(link.location),
+            link.context.clone(),
+        );
+    }
+    edges.push(edge);
+    if depth < max_depth {
+        frontier.push_link(target, depth + 1);
     }
 }
 

@@ -8,7 +8,11 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
     for page in inventory
         .pages
         .iter()
-        .filter(|page| page.indexability == Indexability::Indexable && page.status == 200)
+        .filter(|page| {
+            page.indexability == Indexability::Indexable
+                && page.status == 200
+                && page.media.is_html()
+        })
     {
         match &page.canonical {
             None => findings.push(

@@ -1,7 +1,7 @@
 //! Quality axes, thin programmatic cities, and HTML report.
 
 use std::collections::BTreeMap;
-use weavatrix_seo::{AnalysisMode, AuditRequest, render_html, run_audit};
+use weavatrix_seo::{AuditRequest, render_html, run_audit};
 
 mod common;
 
@@ -61,14 +61,10 @@ fn fixture() -> BTreeMap<String, Page> {
 fn quality_and_thin_cities_and_html() {
     let site = spawn(fixture());
     let report = run_audit(&AuditRequest {
-        mode: AnalysisMode::Site,
         site: Some(format!("{}/", site.base)),
-        repo: None,
-        competitors: Vec::new(),
         max_pages: Some(10),
         workers: Some(3),
-        ci: false,
-        baseline: None,
+        ..AuditRequest::default()
     })
     .expect("audit");
     let codes: Vec<_> = report

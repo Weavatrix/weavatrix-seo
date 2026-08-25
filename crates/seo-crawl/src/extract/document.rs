@@ -24,14 +24,22 @@ pub struct ExtractedPageDraft {
     pub headings: Vec<Heading>,
     /// `a[href]` values.
     pub links: Vec<String>,
+    /// Hyperlinks with semantics.
+    pub link_refs: Vec<weavatrix_seo_model::LinkRef>,
     /// Images.
     pub images: Vec<ImageRef>,
     /// JSON-LD blocks.
     pub json_ld: Vec<weavatrix_seo_model::JsonLd>,
-    /// Visible main text.
+    /// Visible body text (not headings).
     pub text: String,
-    /// Script/RSC payload text used for market and claim integrity.
+    /// Concatenated heading text.
+    pub heading_text: String,
+    /// Text collected inside `main`.
+    pub main_text: String,
+    /// Recognized RSC / Next data. May participate in claim/market logic.
     pub payload: String,
+    /// Arbitrary inline JavaScript. Never used as public copy.
+    pub arbitrary_script: String,
     /// Open Graph title.
     pub og_title: Option<String>,
     /// Open Graph description.

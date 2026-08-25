@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_crawl::{Crawl, CrawlBudget, CrawlConfig, CrawlError};
 use weavatrix_seo_model::{
-    AbsoluteUrl, AnalysisMode, ContentHash, Inventory, InventoryCounts, SeoError,
+    AbsoluteUrl, AnalysisMode, Inventory, POLICY_VERSION, SeoError, config_digest, new_run_id,
 };
 
 /// Invocation for one engine run.
@@ -29,9 +29,32 @@ pub struct AuditRequest {
     /// Fail the process on error findings.
     #[serde(default)]
     pub ci: bool,
-    /// Previous audit JSON whose error fingerprints are the baseline.
+    /// Previous audit JSON or baseline artifact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub baseline: Option<String>,
+    /// Local/staging opt-in. MCP defaults to false.
+    #[serde(default = "default_allow_private")]
+    pub allow_private: bool,
+}
+
+fn default_allow_private() -> bool {
+    true
+}
+
+impl Default for AuditRequest {
+    fn default() -> Self {
+        Self {
+            mode: AnalysisMode::Site,
+            site: None,
+            repo: None,
+            competitors: Vec::new(),
+            max_pages: None,
+            workers: None,
+            ci: false,
+            baseline: None,
+            allow_private: true,
+        }
+    }
 }
 
 impl AuditRequest {
@@ -39,14 +62,8 @@ impl AuditRequest {
     #[must_use]
     pub fn site(url: impl Into<String>) -> Self {
         Self {
-            mode: AnalysisMode::Site,
             site: Some(url.into()),
-            repo: None,
-            competitors: Vec::new(),
-            max_pages: None,
-            workers: None,
-            ci: false,
-            baseline: None,
+            ..Self::default()
         }
     }
 }
@@ -65,9 +82,7 @@ pub enum EngineError {
 impl std::fmt::Display for EngineError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Usage(message) | Self::Crawl(CrawlError::Transport(message)) => {
-                write!(formatter, "{message}")
-            }
+            Self::Usage(message) => write!(formatter, "{message}"),
             Self::Url(error) => write!(formatter, "{error}"),
             Self::Crawl(error) => write!(formatter, "{error}"),
         }
@@ -84,6 +99,7 @@ pub fn budget(request: &AuditRequest) -> CrawlBudget {
     if let Some(workers) = request.workers {
         budget = budget.with_workers(workers);
     }
+    budget.allow_private = request.allow_private;
     budget
 }
 
@@ -98,23 +114,36 @@ pub fn crawl_site(site: &str, budget: &CrawlBudget) -> Result<Inventory, EngineE
 }
 
 pub fn empty_repo_inventory(request: &AuditRequest) -> Inventory {
-    Inventory {
-        mode: AnalysisMode::Repo,
-        snapshot_id: ContentHash::of_str(request.repo.as_deref().unwrap_or("repo")).hex(),
-        site: None,
-        repo: request.repo.clone(),
-        hosts: Vec::new(),
-        pages: Vec::new(),
-        edges: Vec::new(),
-        predicted_routes: Vec::new(),
-        sitemap_discovered: 0,
-        counts: InventoryCounts {
-            crawled: 0,
-            fetched: 0,
-            redirected: 0,
-            errors: 0,
-            sitemap_urls: 0,
-            indexable: 0,
+    let seed = request.repo.as_deref().unwrap_or("repo");
+    Inventory::blank(AnalysisMode::Repo)
+        .bind_run(&new_run_id(seed), seed)
+}
+
+pub fn request_config_digest(request: &AuditRequest) -> String {
+    config_digest(&[
+        POLICY_VERSION,
+        &format!("{:?}", request.mode),
+        &request.max_pages.map_or_else(|| "default".into(), |n| n.to_string()),
+        &request.workers.map_or_else(|| "default".into(), |n| n.to_string()),
+        if request.allow_private {
+            "private"
+        } else {
+            "public"
         },
+    ])
+}
+
+pub fn read_revision(repo: &str) -> Option<String> {
+    let git = std::path::Path::new(repo).join(".git");
+    let head = std::fs::read_to_string(git.join("HEAD")).ok()?;
+    let trimmed = head.trim();
+    if let Some(refer) = trimmed.strip_prefix("ref: ") {
+        std::fs::read_to_string(git.join(refer.trim()))
+            .ok()
+            .map(|value| value.trim().to_owned())
+    } else if trimmed.len() >= 7 {
+        Some(trimmed.to_owned())
+    } else {
+        None
     }
 }

@@ -159,9 +159,9 @@ pub fn audit_pages(inventory: &Inventory) -> Vec<Finding> {
                     kind: EvidenceKind::Deterministic,
                     source: EvidenceSource::Http,
                     confidence: weavatrix_seo_model::Confidence::High,
-                    snapshot_id: None,
-                    revision: None,
-                    policy_version: None,
+                    snapshot_id: Some(inventory.snapshot_id.clone()),
+                    revision: inventory.repo_revision.clone(),
+                    policy_version: Some(inventory.policy_version.clone()),
                 },
             )
             .explained(
@@ -185,6 +185,8 @@ fn page_haystack(page: &weavatrix_seo_model::ExtractedPage) -> String {
         out.push(' ');
     }
     out.push_str(&page.text);
+    out.push(' ');
+    out.push_str(&page.heading_text);
     out.push(' ');
     out.push_str(&page.payload);
     for block in &page.json_ld {
@@ -237,5 +239,12 @@ mod tests {
                 && hits.contains(&"Gush Dan")
                 && hits.contains(&"Shabbat")
         );
+    }
+
+    #[test]
+    fn recognized_rsc_payload_can_flag_entities() {
+        let owned = Market::UsWa;
+        let rsc = "{\"company\":\"Hevrat HaHashmal\"}";
+        assert!(foreign_entities(rsc, owned).contains(&"Hevrat HaHashmal"));
     }
 }

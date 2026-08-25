@@ -1,7 +1,7 @@
 //! Crawl bounds. Missing bounds are refused rather than unbounded.
 
 use std::time::Duration;
-use weavatrix_seo_http::FetchBudget;
+use weavatrix_seo_http::{FetchBudget, NetworkPolicy};
 
 /// Hard limits for one crawl snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,6 +20,8 @@ pub struct CrawlBudget {
     pub user_agent: String,
     /// Parallel fetch workers. `1` is sequential.
     pub workers: usize,
+    /// When false, loopback/private/metadata destinations are refused.
+    pub allow_private: bool,
 }
 
 impl Default for CrawlBudget {
@@ -32,6 +34,7 @@ impl Default for CrawlBudget {
             timeout: Duration::from_secs(15),
             user_agent: format!("weavatrix-seo/{}", env!("CARGO_PKG_VERSION")),
             workers: 5,
+            allow_private: true,
         }
     }
 }
@@ -51,6 +54,13 @@ impl CrawlBudget {
         self
     }
 
+    /// Public-only network policy (MCP / competitor).
+    #[must_use]
+    pub const fn public_only(mut self) -> Self {
+        self.allow_private = false;
+        self
+    }
+
     /// Transport budget for `weavatrix-seo-http`.
     #[must_use]
     pub fn fetch_budget(&self) -> FetchBudget {
@@ -60,6 +70,12 @@ impl CrawlBudget {
             timeout: self.timeout,
             user_agent: self.user_agent.clone(),
             pool_size: self.workers.max(1),
+            policy: if self.allow_private {
+                NetworkPolicy::allow_private()
+            } else {
+                NetworkPolicy::public_only()
+            },
+            max_retries: 2,
         }
     }
 }

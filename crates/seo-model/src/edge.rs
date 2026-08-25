@@ -35,6 +35,15 @@ pub struct GraphEdge {
     /// Anchor text when the relation is a hyperlink.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub anchor: Option<String>,
+    /// `rel` tokens joined by space.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rel: Option<String>,
+    /// Document location of the link.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<crate::LinkLocation>,
+    /// Surrounding context.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context: Option<String>,
 }
 
 impl GraphEdge {
@@ -52,6 +61,25 @@ impl GraphEdge {
             relation,
             evidence,
             anchor: None,
+            rel: None,
+            location: None,
+            context: None,
         }
+    }
+
+    /// Attaches hyperlink semantics.
+    #[must_use]
+    pub fn with_link(
+        mut self,
+        anchor: Option<String>,
+        rel: Option<String>,
+        location: Option<crate::LinkLocation>,
+        context: Option<String>,
+    ) -> Self {
+        self.anchor = anchor;
+        self.rel = rel;
+        self.location = location;
+        self.context = context;
+        self
     }
 }

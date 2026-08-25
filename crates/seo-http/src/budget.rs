@@ -1,5 +1,6 @@
 //! Fetch limits. Page caps live in the crawl crate.
 
+use crate::NetworkPolicy;
 use std::time::Duration;
 
 /// Socket, redirect, and body bounds for one fetcher.
@@ -15,6 +16,10 @@ pub struct FetchBudget {
     pub user_agent: String,
     /// Idle keep-alive sockets to retain.
     pub pool_size: usize,
+    /// Network safety policy.
+    pub policy: NetworkPolicy,
+    /// Retries for `429`/`503` with `Retry-After`.
+    pub max_retries: u32,
 }
 
 impl Default for FetchBudget {
@@ -25,6 +30,17 @@ impl Default for FetchBudget {
             timeout: Duration::from_secs(15),
             user_agent: format!("weavatrix-seo/{}", env!("CARGO_PKG_VERSION")),
             pool_size: 5,
+            policy: NetworkPolicy::allow_private(),
+            max_retries: 2,
         }
+    }
+}
+
+impl FetchBudget {
+    /// Public-only policy for MCP and competitor crawls.
+    #[must_use]
+    pub fn public_only(mut self) -> Self {
+        self.policy = NetworkPolicy::public_only();
+        self
     }
 }

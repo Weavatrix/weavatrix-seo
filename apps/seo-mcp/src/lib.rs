@@ -163,6 +163,7 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
                     workers: None,
                     ci: false,
                     baseline: None,
+                    allow_private: false,
                 };
                 match run_audit(&request) {
                     Ok(report) => match explain(&report, &input.id) {
@@ -228,6 +229,7 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         workers: None,
         ci: false,
         baseline: None,
+        allow_private: false,
     };
     match run_audit(&request) {
         Ok(report) => match view {

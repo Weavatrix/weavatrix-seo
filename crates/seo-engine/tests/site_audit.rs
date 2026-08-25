@@ -1,7 +1,7 @@
 //! Site-only vertical: crawl, audit, opportunities.
 
 use std::collections::BTreeMap;
-use weavatrix_seo::{AnalysisMode, AuditRequest, run_audit};
+use weavatrix_seo::{AuditRequest, run_audit};
 
 mod common;
 
@@ -110,14 +110,10 @@ fn fixture() -> BTreeMap<String, Page> {
 fn site_audit_finds_broken_orphan_duplicate_and_sitemap_noindex() {
     let site = spawn(fixture());
     let report = run_audit(&AuditRequest {
-        mode: AnalysisMode::Site,
         site: Some(format!("{}/", site.base)),
-        repo: None,
-        competitors: Vec::new(),
         max_pages: Some(30),
         workers: Some(4),
-        ci: false,
-        baseline: None,
+        ..AuditRequest::default()
     })
     .expect("audit");
     assert!(report.inventory.counts.fetched >= 4, "{report:?}");

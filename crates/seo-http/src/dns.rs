@@ -1,14 +1,16 @@
-//! Process-wide DNS cache. One lookup per origin per crawl.
+//! Process-wide DNS cache. All A/AAAA records are retained.
 
 use crate::{HttpError, Result};
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::Mutex;
 
+const MAX_ADDRS: usize = 4;
+
 /// Cached A/AAAA lookup.
 #[derive(Debug)]
 pub struct DnsCache {
-    inner: Mutex<BTreeMap<(String, u16), SocketAddr>>,
+    inner: Mutex<BTreeMap<(String, u16), Vec<SocketAddr>>>,
 }
 
 impl Default for DnsCache {
@@ -20,32 +22,35 @@ impl Default for DnsCache {
 }
 
 impl DnsCache {
-    /// Resolves `host:port`, caching the first address.
+    /// Resolves `host:port`, caching every address (capped).
     ///
     /// # Errors
     ///
-    /// Returns [`HttpError::Transport`] when DNS fails.
-    pub fn lookup(&self, host: &str, port: u16) -> Result<SocketAddr> {
+    /// Returns [`HttpError::Dns`] when lookup fails or returns nothing.
+    pub fn lookup(&self, host: &str, port: u16) -> Result<Vec<SocketAddr>> {
         let key = (host.to_owned(), port);
-        if let Some(addr) = self
+        if let Some(addrs) = self
             .inner
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .get(&key)
-            .copied()
+            .cloned()
         {
-            return Ok(addr);
+            return Ok(addrs);
         }
-        let addr = (host, port)
+        let mut addrs: Vec<SocketAddr> = (host, port)
             .to_socket_addrs()
-            .map_err(|error| HttpError::Transport(error.to_string()))?
-            .next()
-            .ok_or_else(|| HttpError::Transport(format!("no addresses for {host}")))?;
+            .map_err(|error| HttpError::Dns(error.to_string()))?
+            .collect();
+        addrs.truncate(MAX_ADDRS);
+        if addrs.is_empty() {
+            return Err(HttpError::Dns(format!("no addresses for {host}")));
+        }
         self.inner
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .insert(key, addr);
-        Ok(addr)
+            .insert(key, addrs.clone());
+        Ok(addrs)
     }
 }
 
@@ -59,5 +64,6 @@ mod tests {
         let first = cache.lookup("localhost", 80).expect("dns");
         let second = cache.lookup("localhost", 80).expect("dns");
         assert_eq!(first, second);
+        assert!(!first.is_empty());
     }
 }

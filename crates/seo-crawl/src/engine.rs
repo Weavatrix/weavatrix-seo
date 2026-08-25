@@ -1,15 +1,15 @@
 //! Deterministic BFS crawl over one origin.
 
-use crate::assemble::{mark_inbound, page, record_links};
+use crate::assemble::{mark_inbound, page, record_links, redirect_page};
 use crate::discover::{fetch_robots, fetch_sitemaps};
 use crate::extract::extract_html;
 use crate::frontier::Frontier;
-use crate::schedule::{fetch_batch, pop_allowed};
+use crate::schedule::fetch_batch;
 use crate::{CrawlBudget, Fetcher, Result};
 use std::collections::BTreeSet;
 use weavatrix_seo_model::{
-    AbsoluteUrl, AnalysisMode, ContentHash, Evidence, GraphEdge, Inventory, InventoryCounts,
-    Relation,
+    AbsoluteUrl, AnalysisMode, Evidence, ExtractedPage, FetchObservation, FetchOutcome, GraphEdge,
+    Inventory, MediaKind, Relation, new_run_id,
 };
 
 /// Crawl invocation.
@@ -34,14 +34,15 @@ impl Crawl {
         Self { config }
     }
 
-    /// Runs a site-only inventory.
+    /// Runs a site-only inventory. Fetch failures stay as observations.
     ///
     /// # Errors
     ///
-    /// Returns a transport error when the seed cannot be fetched at all.
+    /// Returns a crawl error only when the seed URL is unusable as identity.
     pub fn inventory(&self) -> Result<Inventory> {
         let fetcher = Fetcher::new(self.config.budget.fetch_budget());
         let seed = &self.config.seed;
+        let run_id = new_run_id(&seed.to_string());
         let robots = fetch_robots(&fetcher, seed);
         let sitemap_urls = fetch_sitemaps(&fetcher, seed, &robots);
         let sitemap_set: BTreeSet<AbsoluteUrl> = sitemap_urls.iter().cloned().collect();
@@ -52,6 +53,7 @@ impl Crawl {
         }
         let mut pages = Vec::new();
         let mut edges = Vec::new();
+        let mut observations = Vec::new();
         for url in &sitemap_urls {
             edges.push(GraphEdge::new(
                 seed.clone(),
@@ -61,51 +63,115 @@ impl Crawl {
             ));
         }
         let workers = self.config.budget.workers.max(1);
-        while pages.len() < self.config.budget.max_pages {
-            let remaining = self.config.budget.max_pages - pages.len();
-            let batch = pop_allowed(&mut frontier, &robots, workers.min(remaining));
-            if batch.is_empty() {
+        while pages.len() + observations.len() < self.config.budget.max_pages {
+            let remaining = self.config.budget.max_pages - pages.len() - observations.len();
+            let raw = frontier.pop_batch(workers.min(remaining));
+            if raw.is_empty() {
                 break;
             }
+            let mut batch = Vec::new();
+            for (url, depth) in raw {
+                if robots.allows(&url) {
+                    batch.push((url, depth));
+                } else {
+                    observations.push(FetchObservation::new(
+                        url.to_string(),
+                        FetchOutcome::RobotsBlocked,
+                        "robots.txt",
+                    ));
+                }
+            }
             for (url, depth, fetched) in fetch_batch(&fetcher, batch) {
-                let Ok(response) = fetched else {
-                    continue;
-                };
-                let draft = extract_html(&response.body);
-                let in_sitemap = sitemap_set.contains(&response.url) || sitemap_set.contains(&url);
-                let extracted = page(&response, draft, in_sitemap).finalize();
-                record_links(
-                    &extracted,
-                    seed,
-                    depth,
-                    self.config.budget.max_depth,
-                    &mut frontier,
-                    &mut edges,
-                );
-                pages.push(extracted);
+                match fetched {
+                    Ok(response) => record_fetch(
+                        seed,
+                        &url,
+                        depth,
+                        &response,
+                        &sitemap_set,
+                        self.config.budget.max_depth,
+                        &mut frontier,
+                        &mut pages,
+                        &mut edges,
+                    ),
+                    Err(error) => observations.push(FetchObservation::new(
+                        url.to_string(),
+                        error.outcome(),
+                        error.to_string(),
+                    )),
+                }
             }
         }
         mark_inbound(&mut pages, &edges);
         pages.sort_by(|left, right| left.url.to_string().cmp(&right.url.to_string()));
         Ok(Inventory {
             mode: AnalysisMode::Site,
-            snapshot_id: ContentHash::of_str(&seed.to_string()).hex(),
+            snapshot_id: String::new(),
+            run_id: String::new(),
+            policy_version: String::new(),
+            config_digest: String::new(),
+            repo_revision: None,
             site: Some(seed.to_string()),
             repo: None,
             hosts: vec![seed.host().to_owned()],
             pages,
             edges,
+            observations,
             predicted_routes: Vec::new(),
             sitemap_discovered: sitemap_set.len(),
-            counts: InventoryCounts {
-                crawled: 0,
-                fetched: 0,
-                redirected: 0,
-                errors: 0,
-                sitemap_urls: sitemap_set.len(),
-                indexable: 0,
-            },
+            counts: weavatrix_seo_model::InventoryCounts::default(),
         }
+        .bind_run(&run_id, &seed.to_string())
         .with_counts())
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_fetch(
+    seed: &AbsoluteUrl,
+    requested: &AbsoluteUrl,
+    depth: u32,
+    response: &crate::FetchResponse,
+    sitemap_set: &BTreeSet<AbsoluteUrl>,
+    max_depth: u32,
+    frontier: &mut Frontier,
+    pages: &mut Vec<ExtractedPage>,
+    edges: &mut Vec<GraphEdge>,
+) {
+    for hop in &response.redirects {
+        let Ok(from) = AbsoluteUrl::parse(&hop.from) else {
+            continue;
+        };
+        let Ok(to) = AbsoluteUrl::parse(&hop.to) else {
+            continue;
+        };
+        frontier.remember(from.clone());
+        if !pages.iter().any(|page| page.url == from) {
+            let in_sitemap = sitemap_set.contains(&from);
+            pages.push(redirect_page(&from, &to, hop.status, in_sitemap));
+            edges.push(GraphEdge::new(
+                from,
+                to,
+                Relation::RedirectsTo,
+                Evidence::http(),
+            ));
+        }
+    }
+    frontier.remember(response.url.clone());
+    if pages.iter().any(|page| page.url == response.url) {
+        return;
+    }
+    if !seed.same_origin(&response.url) {
+        return;
+    }
+    let media = MediaKind::classify(response.header("content-type"), &response.body);
+    let draft = if media.is_html() {
+        extract_html(&response.body)
+    } else {
+        crate::extract::ExtractedPageDraft::default()
+    };
+    let in_sitemap = sitemap_set.contains(&response.url) || sitemap_set.contains(requested);
+    let extracted = page(response, draft, in_sitemap).finalize();
+    record_links(&extracted, seed, depth, max_depth, frontier, edges);
+    pages.push(extracted);
 }

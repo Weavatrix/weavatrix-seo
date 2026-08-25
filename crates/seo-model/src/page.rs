@@ -1,6 +1,6 @@
 //! Extracted HTTP page used as search-surface evidence.
 
-use crate::{AbsoluteUrl, ContentHash, Evidence};
+use crate::{AbsoluteUrl, ContentHash, Evidence, LinkRef, MediaKind};
 use serde::{Deserialize, Serialize};
 
 /// Indexability conclusion from response signals.
@@ -84,6 +84,9 @@ pub struct ExtractedPage {
     pub redirects: Vec<RedirectHop>,
     /// Response `Content-Type`.
     pub content_type: Option<String>,
+    /// Classified body kind.
+    #[serde(default)]
+    pub media: MediaKind,
     /// Canonical href when present.
     pub canonical: Option<String>,
     /// Robots directives from meta and headers.
@@ -100,15 +103,27 @@ pub struct ExtractedPage {
     pub headings: Vec<Heading>,
     /// Internal and external `a[href]` targets.
     pub links: Vec<String>,
+    /// Hyperlinks with anchor/rel/location.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link_refs: Vec<LinkRef>,
     /// Images.
     pub images: Vec<ImageRef>,
     /// JSON-LD blocks.
     pub json_ld: Vec<JsonLd>,
-    /// Extracted main-content text.
+    /// Visible body text (not headings, not chrome).
     pub text: String,
-    /// Script/RSC payload used for market and claim integrity.
+    /// Concatenated heading text. Hashed with `text` as `visible_text`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub heading_text: String,
+    /// Text collected inside `main`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub main_text: String,
+    /// Recognized RSC / Next.js app data. May participate in claim/market logic.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub payload: String,
+    /// Arbitrary inline script. Never serialized; never used as public copy.
+    #[serde(default, skip_serializing)]
+    pub arbitrary_script: String,
     /// Open Graph title.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub og_title: Option<String>,
@@ -133,7 +148,7 @@ pub struct ExtractedPage {
     /// Interactive controls without an accessible name.
     #[serde(default)]
     pub unlabeled_controls: usize,
-    /// Hash of normalized main-content text.
+    /// Hash of normalized `visible_text` (`heading_text` + body `text`).
     pub content_hash: ContentHash,
     /// Indexability from this response.
     pub indexability: Indexability,
@@ -149,9 +164,15 @@ impl ExtractedPage {
     /// Builds a page and derives content hash plus indexability.
     #[must_use]
     pub fn finalize(mut self) -> Self {
-        self.content_hash = ContentHash::of_str(&normalize_text(&self.text));
+        self.content_hash = ContentHash::of_str(&self.visible_text());
         self.indexability = classify(&self);
         self
+    }
+
+    /// Documented hash surface: headings then body, whitespace-normalized.
+    #[must_use]
+    pub fn visible_text(&self) -> String {
+        normalize_text(&format!("{} {}", self.heading_text, self.text))
     }
 
     /// Lowercased response header value.
@@ -166,10 +187,10 @@ impl ExtractedPage {
 }
 
 fn classify(page: &ExtractedPage) -> Indexability {
-    if !page.redirects.is_empty() {
+    if (300..400).contains(&page.status) {
         return Indexability::Redirected;
     }
-    if page.status >= 400 {
+    if page.status >= 400 || page.status == 0 {
         return Indexability::Error;
     }
     if page.robots.iter().any(|value| {
@@ -180,8 +201,9 @@ fn classify(page: &ExtractedPage) -> Indexability {
         return Indexability::Noindex;
     }
     if let Some(canonical) = &page.canonical {
-        if let (Ok(canon), url) = (AbsoluteUrl::parse(canonical), &page.url)
-            && &canon != url
+        let resolved = AbsoluteUrl::parse(canonical).or_else(|_| page.url.join(canonical));
+        if let Ok(canon) = resolved
+            && canon != page.url
         {
             return Indexability::Canonicalized;
         }

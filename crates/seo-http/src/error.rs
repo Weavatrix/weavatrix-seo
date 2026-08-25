@@ -1,22 +1,51 @@
 //! Transport errors.
 
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use weavatrix_seo_model::FetchOutcome;
 
 /// Recoverable HTTP failure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HttpError {
-    /// Socket, TLS handshake, or protocol failure.
+    /// Socket or protocol failure.
     Transport(String),
+    /// DNS lookup failed.
+    Dns(String),
+    /// Connect or read timeout.
+    Timeout(String),
+    /// TLS handshake failed.
+    Tls(String),
     /// HTTPS requested without the `tls` feature.
     TlsDisabled,
     /// Header or body exceeded the configured cap.
     Budget(String),
+    /// Destination refused by [`crate::NetworkPolicy`].
+    Blocked(String),
+}
+
+impl HttpError {
+    /// Maps the error onto a retained fetch outcome.
+    #[must_use]
+    pub const fn outcome(&self) -> FetchOutcome {
+        match self {
+            Self::Dns(_) => FetchOutcome::Dns,
+            Self::Timeout(_) => FetchOutcome::Timeout,
+            Self::Tls(_) | Self::TlsDisabled => FetchOutcome::Tls,
+            Self::Budget(_) => FetchOutcome::BodyLimit,
+            Self::Blocked(_) => FetchOutcome::Blocked,
+            Self::Transport(_) => FetchOutcome::Transport,
+        }
+    }
 }
 
 impl Display for HttpError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
         match self {
-            Self::Transport(message) | Self::Budget(message) => write!(formatter, "{message}"),
+            Self::Transport(message)
+            | Self::Dns(message)
+            | Self::Timeout(message)
+            | Self::Tls(message)
+            | Self::Budget(message)
+            | Self::Blocked(message) => write!(formatter, "{message}"),
             Self::TlsDisabled => write!(formatter, "https URLs require the `tls` feature"),
         }
     }

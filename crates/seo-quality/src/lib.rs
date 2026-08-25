@@ -17,7 +17,11 @@ pub fn audit(inventory: &Inventory) -> Vec<Finding> {
     for page in inventory
         .pages
         .iter()
-        .filter(|page| page.status == 200 && page.indexability == Indexability::Indexable)
+        .filter(|page| {
+            page.status == 200
+                && page.indexability == Indexability::Indexable
+                && page.media.is_html()
+        })
     {
         heading::audit(page, &mut findings);
         open_graph::audit(page, &mut findings);

@@ -1,5 +1,9 @@
 //! Absolute HTTP(S) URL identity used as the crawl key.
 
+use crate::url_parse::{
+    host_for_origin, normalize_path, parent_path, split_authority, split_host_port, split_path_query,
+    split_scheme,
+};
 use crate::{Result, SeoError};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter, Result as FmtResult};
@@ -24,7 +28,9 @@ impl Scheme {
         }
     }
 
-    const fn as_str(self) -> &'static str {
+    /// Wire name, `http` or `https`.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Http => "http",
             Self::Https => "https",
@@ -32,7 +38,10 @@ impl Scheme {
     }
 }
 
-/// Normalized absolute URL. Fragments are dropped. Default ports are omitted.
+/// Absolute URL identity. Fragments are dropped. Default ports are omitted.
+///
+/// Trailing slashes are kept: `/foo` and `/foo/` are distinct until the server
+/// itself redirects or canonicalizes them.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct AbsoluteUrl {
     scheme: Scheme,
@@ -94,7 +103,9 @@ impl AbsoluteUrl {
             return Self::parse(&format!("{}://{rest}", self.scheme.as_str()))
                 .map_err(|_| SeoError::UnresolvableUrl(href.into()));
         }
-        let joined = if href.starts_with('/') {
+        let joined = if let Some(query) = href.strip_prefix('?') {
+            format!("{}{}?{query}", self.origin(), self.path)
+        } else if href.starts_with('/') {
             format!("{}{href}", self.origin())
         } else {
             let base = parent_path(&self.path);
@@ -106,12 +117,13 @@ impl AbsoluteUrl {
         Self::parse(without_fragment).map_err(|_| SeoError::UnresolvableUrl(href.into()))
     }
 
-    /// `scheme://host[:port]`
+    /// `scheme://host[:port]` with IPv6 hosts in brackets.
     #[must_use]
     pub fn origin(&self) -> String {
+        let host = host_for_origin(&self.host);
         match self.port {
-            Some(port) => format!("{}://{}:{port}", self.scheme.as_str(), self.host),
-            None => format!("{}://{}", self.scheme.as_str(), self.host),
+            Some(port) => format!("{}://{host}:{port}", self.scheme.as_str()),
+            None => format!("{}://{host}", self.scheme.as_str()),
         }
     }
 
@@ -121,7 +133,7 @@ impl AbsoluteUrl {
         self.scheme
     }
 
-    /// Lowercased host.
+    /// Lowercased host without IPv6 brackets.
     #[must_use]
     pub fn host(&self) -> &str {
         &self.host
@@ -139,7 +151,7 @@ impl AbsoluteUrl {
         self.port.unwrap_or_else(|| self.scheme.default_port())
     }
 
-    /// Normalized path, always starting with `/`.
+    /// Path, always starting with `/`. Trailing slash is significant.
     #[must_use]
     pub fn path(&self) -> &str {
         &self.path
@@ -172,136 +184,5 @@ impl AbsoluteUrl {
 impl Display for AbsoluteUrl {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
         write!(formatter, "{}{}", self.origin(), self.request_target())
-    }
-}
-
-fn split_scheme(raw: &str) -> Option<(Scheme, &str)> {
-    let (scheme, rest) = raw.split_once("://")?;
-    let scheme = match scheme.to_ascii_lowercase().as_str() {
-        "http" => Scheme::Http,
-        "https" => Scheme::Https,
-        _ => return None,
-    };
-    Some((scheme, rest))
-}
-
-fn split_authority(rest: &str) -> (&str, &str) {
-    match rest.find(['/', '?', '#']) {
-        Some(index) => (&rest[..index], &rest[index..]),
-        None => (rest, "/"),
-    }
-}
-
-fn split_host_port(authority: &str, scheme: Scheme) -> Result<(String, Option<u16>)> {
-    let authority = authority.trim().trim_matches('.');
-    if authority.is_empty() {
-        return Err(SeoError::InvalidUrl(authority.into()));
-    }
-    let (host, port) = if let Some(stripped) = authority.strip_prefix('[') {
-        let (host, rest) = stripped
-            .split_once(']')
-            .ok_or_else(|| SeoError::InvalidUrl(authority.into()))?;
-        let port = match rest.strip_prefix(':') {
-            Some(port) => Some(parse_port(port)?),
-            None if rest.is_empty() => None,
-            None => return Err(SeoError::InvalidUrl(authority.into())),
-        };
-        (host.to_ascii_lowercase(), port)
-    } else if let Some((host, port)) = authority.rsplit_once(':')
-        && !host.is_empty()
-        && port.chars().all(|ch| ch.is_ascii_digit())
-    {
-        (host.to_ascii_lowercase(), Some(parse_port(port)?))
-    } else {
-        (authority.to_ascii_lowercase(), None)
-    };
-    if host.is_empty() {
-        return Err(SeoError::InvalidUrl(authority.into()));
-    }
-    let port = port.filter(|value| *value != scheme.default_port());
-    Ok((host, port))
-}
-
-fn parse_port(value: &str) -> Result<u16> {
-    value
-        .parse()
-        .map_err(|_| SeoError::InvalidUrl(format!(":{value}")))
-}
-
-fn split_path_query(path_and_query: &str) -> (String, Option<String>) {
-    let without_fragment = path_and_query
-        .split_once('#')
-        .map_or(path_and_query, |part| part.0);
-    match without_fragment.split_once('?') {
-        Some((path, query)) => {
-            let query = query.trim();
-            (
-                path.to_owned(),
-                if query.is_empty() {
-                    None
-                } else {
-                    Some(query.to_owned())
-                },
-            )
-        }
-        None => (without_fragment.to_owned(), None),
-    }
-}
-
-fn normalize_path(path: &str) -> String {
-    let mut out = Vec::new();
-    let source = if path.is_empty() { "/" } else { path };
-    for segment in source.split('/') {
-        match segment {
-            "" | "." => {}
-            ".." => {
-                out.pop();
-            }
-            other => out.push(other),
-        }
-    }
-    if out.is_empty() {
-        "/".to_owned()
-    } else {
-        format!("/{}", out.join("/"))
-    }
-}
-
-fn parent_path(path: &str) -> String {
-    match path.rsplit_once('/') {
-        Some(("", _)) | None => "/".to_owned(),
-        Some((parent, _)) => format!("{parent}/"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::AbsoluteUrl;
-
-    #[test]
-    fn drops_fragment_and_default_port() {
-        let url = AbsoluteUrl::parse("HTTPS://Example.COM:443/a/./b/../c#frag").unwrap();
-        assert_eq!(url.to_string(), "https://example.com/a/c");
-    }
-
-    #[test]
-    fn joins_relative_and_root_paths() {
-        let base = AbsoluteUrl::parse("http://example.com/dir/page").unwrap();
-        assert_eq!(
-            base.join("other").unwrap().to_string(),
-            "http://example.com/dir/other"
-        );
-        assert_eq!(
-            base.join("/root").unwrap().to_string(),
-            "http://example.com/root"
-        );
-    }
-
-    #[test]
-    fn rejects_credentials_and_non_http() {
-        assert!(AbsoluteUrl::parse("http://user:pass@example.com/").is_err());
-        assert!(AbsoluteUrl::parse("ftp://example.com/").is_err());
-        let base = AbsoluteUrl::parse("http://example.com/").unwrap();
-        assert!(base.join("mailto:a@b.c").is_err());
     }
 }
