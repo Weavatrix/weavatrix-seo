@@ -34,10 +34,7 @@ fn hashes_relative_import_of_helper() {
     let facts = surface.producer_facts(dir.to_str().unwrap());
     assert!(
         facts.iter().any(|item| item.path.contains("cities")
-            && item
-                .families
-                .iter()
-                .any(|family| family.contains(":city"))),
+            && item.families.iter().any(|family| family.contains(":city"))),
         "{facts:?}"
     );
     let _ = std::fs::remove_dir_all(dir);

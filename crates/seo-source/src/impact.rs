@@ -73,10 +73,7 @@ impl RouteFamily {
     }
 }
 
-fn expand_imports(
-    repo: &str,
-    grouped: &mut BTreeMap<(String, String), BTreeSet<String>>,
-) {
+fn expand_imports(repo: &str, grouped: &mut BTreeMap<(String, String), BTreeSet<String>>) {
     let mut queue: Vec<(String, BTreeSet<String>, u8)> = grouped
         .iter()
         .map(|((path, _), families)| (path.clone(), families.clone(), 0))

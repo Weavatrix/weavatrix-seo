@@ -7,9 +7,11 @@ use weavatrix_seo_model::{
 
 pub fn audit_origin(inventory: &Inventory, findings: &mut Vec<Finding>) {
     let mut by_host: BTreeMap<&str, Vec<&ExtractedPage>> = BTreeMap::new();
-    for page in inventory.pages.iter().filter(|page| {
-        page.status == 200 && page.media.is_html()
-    }) {
+    for page in inventory
+        .pages
+        .iter()
+        .filter(|page| page.status == 200 && page.media.is_html())
+    {
         by_host.entry(page.url.host()).or_default().push(page);
     }
     for pages in by_host.values() {
@@ -64,7 +66,9 @@ fn audit_host(pages: &[&ExtractedPage], findings: &mut Vec<Finding>) {
             "x-frame-options",
             4,
             Severity::Info,
-            pages.iter().all(|page| page.header("x-frame-options").is_none()),
+            pages
+                .iter()
+                .all(|page| page.header("x-frame-options").is_none()),
             "origin is missing X-Frame-Options",
             "Clickjacking protection is an origin header.",
             "Send X-Frame-Options or CSP frame-ancestors.",
@@ -76,7 +80,9 @@ fn audit_host(pages: &[&ExtractedPage], findings: &mut Vec<Finding>) {
         "referrer-policy",
         5,
         Severity::Info,
-        pages.iter().all(|page| page.header("referrer-policy").is_none()),
+        pages
+            .iter()
+            .all(|page| page.header("referrer-policy").is_none()),
         "origin is missing Referrer-Policy",
         "Referrer leakage is an origin privacy and search-surface fact.",
         "Send a Referrer-Policy on the origin.",
@@ -172,7 +178,11 @@ fn origin_finding(
         Locator::header(&sample.url, header),
         Evidence::http(),
     )
-    .explained(why, action, "The header is consistent and effective on the origin.")
+    .explained(
+        why,
+        action,
+        "The header is consistent and effective on the origin.",
+    )
 }
 
 fn has_csp(page: &ExtractedPage) -> bool {
@@ -189,9 +199,10 @@ fn has_nosniff(page: &ExtractedPage) -> bool {
 
 fn csp_frame_ancestors(page: &ExtractedPage) -> bool {
     page.header("content-security-policy").is_some_and(|value| {
-        value.to_ascii_lowercase().split(';').any(|directive| {
-            directive.trim().starts_with("frame-ancestors")
-        })
+        value
+            .to_ascii_lowercase()
+            .split(';')
+            .any(|directive| directive.trim().starts_with("frame-ancestors"))
     })
 }
 

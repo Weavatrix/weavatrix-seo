@@ -1,8 +1,8 @@
 //! Local geo binding on city families. Types without an address stay unlocated.
 
 use weavatrix_seo_model::{
-    Evidence, EvidenceKind, ExtractedPage, Finding, FindingFamily, Indexability,
-    Inventory, Locator, Severity, glob_match,
+    Evidence, EvidenceKind, ExtractedPage, Finding, FindingFamily, Indexability, Inventory,
+    Locator, Severity, glob_match,
 };
 
 const GEO_MARKERS: &[&str] = &[
@@ -70,10 +70,7 @@ fn city_pages(inventory: &Inventory) -> impl Iterator<Item = &ExtractedPage> {
 }
 
 fn is_city(path: &str, patterns: &[String]) -> bool {
-    if patterns
-        .iter()
-        .any(|pattern| glob_match(pattern, path))
-    {
+    if patterns.iter().any(|pattern| glob_match(pattern, path)) {
         return true;
     }
     if !patterns.is_empty() {

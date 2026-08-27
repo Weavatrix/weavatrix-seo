@@ -88,7 +88,11 @@ fn schema_that_names_the_entity_is_quiet() {
 fn shared_chrome_entities_collapse_to_origin() {
     let mut inventory = Inventory::blank(AnalysisMode::Site);
     inventory.pages = vec![
-        page("https://kablay.us/", "Southwest Washington. Vancouver WA.", Vec::new()),
+        page(
+            "https://kablay.us/",
+            "Southwest Washington. Vancouver WA.",
+            Vec::new(),
+        ),
         page(
             "https://kablay.us/blog",
             "Southwest Washington. Vancouver WA.",

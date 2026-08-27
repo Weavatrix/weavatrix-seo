@@ -141,9 +141,6 @@ mod tests {
             "/:locale/category/:slug/:city",
             "/en/category/cleaning/camas-wa"
         ));
-        assert!(!glob_match(
-            "/:locale/category/:slug/:city",
-            "/blog/post"
-        ));
+        assert!(!glob_match("/:locale/category/:slug/:city", "/blog/post"));
     }
 }

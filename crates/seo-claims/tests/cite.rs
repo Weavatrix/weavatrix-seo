@@ -67,7 +67,9 @@ fn organization_without_id_is_ai_001() {
         Vec::new(),
     )];
     assert!(
-        codes(&inventory).iter().any(|code| code == "WVX-SEO-AI-001"),
+        codes(&inventory)
+            .iter()
+            .any(|code| code == "WVX-SEO-AI-001"),
         "{:?}",
         codes(&inventory)
     );

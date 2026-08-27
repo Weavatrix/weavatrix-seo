@@ -20,11 +20,7 @@ fn publisher_identity(inventory: &Inventory, findings: &mut Vec<Finding>) {
     let mut cited = false;
     for page in indexable(inventory) {
         for block in &page.json_ld {
-            if !block
-                .types
-                .iter()
-                .any(|kind| is_cite_type(kind))
-            {
+            if !block.types.iter().any(|kind| is_cite_type(kind)) {
                 continue;
             }
             if sample.is_none() {

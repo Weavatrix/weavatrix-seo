@@ -230,7 +230,10 @@ fn city_finding(inventory: &Inventory, subject: &str, page: &ExtractedPage) -> F
         2,
         Severity::Warn,
         subject,
-        format!("{} is a city family URL without Place/Service JSON-LD", page.url),
+        format!(
+            "{} is a city family URL without Place/Service JSON-LD",
+            page.url
+        ),
         Locator::dom(&page.url, "script[type='application/ld+json']"),
         evidence(inventory, page.evidence.source),
     )
