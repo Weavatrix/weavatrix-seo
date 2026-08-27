@@ -30,3 +30,14 @@ pub use weavatrix_seo_history::{SearchDiff, load as load_snapshot, save as save_
 pub use weavatrix_seo_model::{
     AnalysisMode, AuditReport, Finding, Inventory, Opportunity, Severity,
 };
+pub use weavatrix_seo_semantic::{LinkInputs, PageRow, VectorRow};
+
+/// Deterministic page vectors and SEO link profiles for an audited report.
+///
+/// The model is first-party and lexical, so nothing external is needed to
+/// produce these. Node identities are `page:<url>`.
+#[must_use]
+pub fn link_inputs(report: &AuditReport) -> LinkInputs {
+    let (architecture, _) = weavatrix_seo_architecture::analyze(&report.inventory);
+    weavatrix_seo_semantic::link_inputs(&report.inventory, &architecture)
+}

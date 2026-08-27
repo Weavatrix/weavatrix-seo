@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.12` treats `/:locale` as optional, so default-locale city URLs match `:city` families. Chrome `ENTITY-001` collapse from 0.1.11 stays. SEO does not own a browser.
+`0.1.13` gives the MCP every evidence import the CLI has, and adds `seo_links`, `seo_vectors`, and `seo_gate`. `/:locale` stays optional from 0.1.12. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -41,7 +41,7 @@ repository source
 - internal-link architecture (depth, orphans, authority)
 - exact-duplicate detection and thin programmatic city variants
 - HTML report (`--html PATH`) plus JSON
-- `seo_inventory`, `seo_audit`, `seo_explain`, `seo_opportunities`
+- directed internal-link recommendations from first-party page vectors, no embedding service
 - market-entity contamination, license claim/fact contradictions, undeclared pack entities, and AI citation identity
 
 `.weavatrix/seo.json` is optional. When present, `indexability.include` / `exclude` decide which route families may be CREATE/SOURCE_ONLY; otherwise private chrome (`/admin`, `/auth`, …) is excluded.
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.12"
+weavatrix-seo = "0.1.13"
 ```
 
 ## CLI
@@ -96,7 +96,7 @@ Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server re
 
 ## MCP
 
-Eight tools, no shell:
+Eleven tools, no shell:
 
 ```text
 seo_inventory
@@ -104,12 +104,19 @@ seo_audit
 seo_opportunities
 seo_plan
 seo_compare
+seo_links
+seo_vectors
 seo_diff
+seo_gate
 seo_explain
 seo_observations
 ```
 
 Run `weavatrix-seo mcp` or the `weavatrix-seo-mcp` binary.
+
+The crawl-backed tools accept every evidence import the CLI accepts: `gsc`, `observations`, `render`, `history`, `workers`, `max_pages`. `seo_gate` is `--ci` / `--baseline` and returns the verdict instead of an exit code. `seo_observations` reads a provider export; without one it stays unmeasured. MCP crawls are public-only.
+
+`seo_links` returns directed internal-link recommendations, and `seo_vectors` returns the page vectors and link profiles they were computed from. The embedding model is `wvx-seo-lexhash-v1`: first-party, deterministic, 64-dimension, and **lexical**. It needs no embedding service, and it cannot match synonyms or cross-language pairs. Node identities are `page:<url>`, so these are page-graph inputs, not repository-graph inputs. Similarity is `INFERRED` and is never upgraded to a ranking claim.
 
 ## Evidence
 

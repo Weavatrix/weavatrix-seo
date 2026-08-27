@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.1.13 - 2026-08-27
+
+- MCP parity: crawl-backed tools accept `gsc`, `observations`, `render`, `history`, and `workers`, so demand and visibility axes rank the same way they do on the CLI.
+- `seo_observations` reads a provider export instead of always answering `unmeasured`. It filters by `provider` and caps returned rows.
+- `seo_gate` is the `--ci` / `--baseline` evidence gate as a tool. It returns new errors, resolved fingerprints, coverage regressions, and comparability.
+- `seo_links` returns directed internal-link recommendations. `seo_vectors` returns the `wvx-seo-lexhash-v1` page vectors and SEO link profiles behind them, so a link pass needs no embedding service. Lexical, so no synonym or cross-language matching. Node identities are `page:<url>`.
+- `scope` is gone from the MCP schema. It was advertised and never read.
+- Vectors and profiles now come from one producer (`link_inputs`), so the analysis pass and the exported payload cannot drift.
+
 ## 0.1.12 - 2026-08-25
 
 - `/:locale` is optional in search-policy globs, so default-locale URLs (`/category/:slug/:city`) match city families. Live kablay.us city landings can be `LOCAL-001` / `ENTITY-002`.

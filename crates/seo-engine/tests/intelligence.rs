@@ -1,7 +1,7 @@
 //! Semantic inference, GSC demand, and plan verbs.
 
 use std::collections::BTreeMap;
-use weavatrix_seo::{AuditRequest, PlanKind, plan_from, run_audit};
+use weavatrix_seo::{AuditRequest, PlanKind, link_inputs, plan_from, run_audit};
 
 mod common;
 
@@ -127,6 +127,82 @@ fn different_services_same_city_are_not_cannibal() {
             .iter()
             .map(|finding| finding.code.as_str())
             .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn link_inputs_are_self_contained() {
+    let mut pages = BTreeMap::new();
+    pages.insert(
+        "/".into(),
+        page(
+            200,
+            html(
+                "Home",
+                "<link rel=\"canonical\" href=\"/\">",
+                "<h1>Home</h1><p>Hub of the site.</p><a href=\"/a\">A</a>",
+            ),
+        ),
+    );
+    pages.insert(
+        "/a".into(),
+        page(
+            200,
+            html(
+                "Electrician Camas",
+                "<link rel=\"canonical\" href=\"/a\">",
+                "<h1>Electrician in Camas</h1><p>Licensed electrician serving Camas with panel upgrades.</p>",
+            ),
+        ),
+    );
+    pages.insert(
+        "/b".into(),
+        page(
+            200,
+            html(
+                "Plumber Camas",
+                "<link rel=\"canonical\" href=\"/b\">",
+                "<h1>Plumber in Camas</h1><p>Licensed plumber serving Camas with leak repair.</p>",
+            ),
+        ),
+    );
+    let site = spawn(pages);
+    let report = run_audit(&AuditRequest {
+        site: Some(format!("{}/", site.base)),
+        max_pages: Some(8),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    let inputs = link_inputs(&report);
+    assert_eq!(inputs.model, "wvx-seo-lexhash-v1");
+    assert_eq!(inputs.dimension, 64);
+    assert!(inputs.vectors.len() >= 2, "{:?}", inputs.vectors.len());
+    assert_eq!(inputs.vectors.len(), inputs.pages.len());
+    assert!(
+        inputs
+            .vectors
+            .iter()
+            .all(|row| row.values.len() == inputs.dimension && row.node.starts_with("page:"))
+    );
+    assert!(
+        inputs
+            .pages
+            .iter()
+            .all(|row| !row.site.is_empty() && !row.canonical.is_empty())
+    );
+    let root = inputs
+        .pages
+        .iter()
+        .find(|row| row.node.ends_with('/'))
+        .expect("root profile");
+    assert!(root.cornerstone, "{root:?}");
+    assert!(
+        inputs
+            .pages
+            .iter()
+            .any(|row| !row.existing_targets.is_empty()),
+        "{:?}",
+        inputs.pages
     );
 }
 

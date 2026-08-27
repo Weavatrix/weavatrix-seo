@@ -1,11 +1,11 @@
 //! Inferred clusters, cannibalization, and internal-link recommendations.
 
 use crate::embed::{self, MODEL};
-use crate::profiles;
-use weavatrix_graph::{AttributeValue, GraphBuilder, Node, NodeKind};
+use crate::inputs::{PageRow, link_inputs};
+use weavatrix_graph::{AttributeValue, GraphBuilder, Node, NodeId, NodeKind};
 use weavatrix_semantic::{
     AnchorCandidate, AnchorConfig, AnchorMatcher, LinkConfig, SelectionMode, SemanticLinker,
-    SemanticVector, SeoLinkPolicy,
+    SemanticVector, SeoLinkPolicy, SeoPage,
 };
 use weavatrix_seo_architecture::Architecture;
 use weavatrix_seo_model::{
@@ -36,18 +36,12 @@ pub fn analyze(inventory: &Inventory, architecture: &Architecture) -> SemanticPa
     if pages.len() < 2 {
         return pass;
     }
-    let Ok(all_profiles) = profiles(inventory) else {
-        return pass;
-    };
+    let inputs = link_inputs(inventory, architecture);
     let mut vectors = Vec::new();
     let mut ids = Vec::new();
-    for page in &pages {
-        let Some(values) = embed::embed(&page.visible_text()) else {
-            continue;
-        };
-        let id = format!("page:{}", page.url);
-        if let Ok(vector) = SemanticVector::new(id.clone(), values) {
-            ids.push(id);
+    for row in &inputs.vectors {
+        if let Ok(vector) = SemanticVector::new(row.node.clone(), row.values.clone()) {
+            ids.push(row.node.clone());
             vectors.push(vector);
         }
     }
@@ -55,12 +49,33 @@ pub fn analyze(inventory: &Inventory, architecture: &Architecture) -> SemanticPa
         return pass;
     }
     cannibalization(&pages, &vectors, &mut pass);
-    let selected: Vec<_> = all_profiles
-        .into_iter()
-        .filter(|profile| ids.iter().any(|id| profile.node_id().as_str() == id))
+    let selected: Vec<_> = inputs
+        .pages
+        .iter()
+        .filter(|row| ids.iter().any(|id| id == &row.node))
+        .filter_map(profile)
         .collect();
-    recommend(inventory, architecture, selected, &ids, &vectors, &mut pass);
+    recommend(inventory, selected, &ids, &vectors, &mut pass);
     pass
+}
+
+/// Rebuilds one policy profile from its row. Unusable rows are dropped.
+fn profile(row: &PageRow) -> Option<SeoPage> {
+    let node = NodeId::new(row.node.clone()).ok()?;
+    let mut page = SeoPage::new(node, row.site.as_str(), row.canonical.as_str()).ok()?;
+    if let Some(language) = &row.language {
+        page = page.with_language(language.as_str()).ok()?;
+    }
+    page = page
+        .with_source_eligible(row.source_eligible)
+        .with_target_eligible(row.target_eligible)
+        .with_cornerstone(row.cornerstone)
+        .with_orphan(row.orphan)
+        .with_target_priority(row.target_priority);
+    for target in &row.existing_targets {
+        page = page.with_existing_target(NodeId::new(target.clone()).ok()?);
+    }
+    Some(page)
 }
 
 fn inferred() -> Evidence {
@@ -175,13 +190,11 @@ fn intent_tokens(heading: &str) -> Vec<String> {
 
 fn recommend(
     inventory: &Inventory,
-    architecture: &Architecture,
-    profiles: Vec<weavatrix_semantic::SeoPage>,
+    profiles: Vec<SeoPage>,
     ids: &[String],
     vectors: &[SemanticVector],
     pass: &mut SemanticPass,
 ) {
-    let profiles = annotate_profiles(profiles, inventory, architecture);
     let Ok(policy) = SeoLinkPolicy::new(profiles) else {
         return;
     };
@@ -213,38 +226,6 @@ fn recommend(
     for edge in report.edges() {
         emit_link(edge, placements.as_ref(), pass);
     }
-}
-
-fn annotate_profiles(
-    mut profiles: Vec<weavatrix_semantic::SeoPage>,
-    inventory: &Inventory,
-    architecture: &Architecture,
-) -> Vec<weavatrix_semantic::SeoPage> {
-    let authority: std::collections::BTreeMap<_, _> = architecture
-        .pages
-        .iter()
-        .map(|page| (page.url.to_string(), page.authority))
-        .collect();
-    let existing: std::collections::BTreeSet<_> = inventory
-        .edges
-        .iter()
-        .filter(|edge| edge.relation == weavatrix_seo_model::Relation::LinksTo)
-        .map(|edge| (edge.source.to_string(), edge.target.to_string()))
-        .collect();
-    for profile in &mut profiles {
-        let url = profile.node_id().as_str().trim_start_matches("page:");
-        if authority.get(url).is_some_and(|score| *score > 0.15) || url.ends_with('/') {
-            *profile = profile.clone().with_cornerstone(true);
-        }
-        for (source, target) in &existing {
-            if profile.node_id().as_str() == format!("page:{source}")
-                && let Ok(node) = weavatrix_graph::NodeId::new(format!("page:{target}"))
-            {
-                *profile = profile.clone().with_existing_target(node);
-            }
-        }
-    }
-    profiles
 }
 
 fn emit_link(
