@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.1.13` gives the MCP every evidence import the CLI has, and adds `seo_links`, `seo_vectors`, and `seo_gate`. `/:locale` stays optional from 0.1.12. SEO does not own a browser.
+`0.2.0` tightens evidence semantics: a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound, an explicit search contract beats the built-in heuristic, and comparability is one shared rule. MCP parity from 0.1.13 stays. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.1.13"
+weavatrix-seo = "0.2.0"
 ```
 
 ## CLI
@@ -130,8 +130,9 @@ confidence:      exact | high | medium | low
 snapshot_id:     measured crawl, not the seed URL
 run_id:          one analysis invocation
 policy_version:  finding semantics for this release
-revision:        git worktree when a repo is in scope
+revision:        the worktree a source fact came from, never a live response
 graph:           URL ─RENDERED_BY→ route ─METADATA_FROM→ symbol@span
+                 URL ─COMPARED_AGAINST→ revision
 ```
 
 Rules:
@@ -140,6 +141,12 @@ Rules:
 - a sitemap entry is not proof a page is indexed
 - semantic similarity is never upgraded to deterministic truth
 - missing evidence is `unmeasured`, not a pass
+- a hybrid run compares production against a worktree; it does not prove
+  production was built from it, so the edge is `COMPARED_AGAINST` and never
+  `CHANGED_BY`
+- an HTTP response is never the provenance of a source fact
+- an explicit `.weavatrix/seo.*` contract beats the built-in private-path
+  heuristic; a contract that is present but unreadable is an error, not silence
 
 ## Findings
 

@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.2.0 - 2026-08-28
+
+Evidence semantics. Every change here removes a claim the code could not support.
+Output shape changes, so this is a minor bump.
+
+- A live response no longer carries the worktree revision. Crawled pages are not
+  stamped with a repository SHA, and the graph edge is
+  `url --COMPARED_AGAINST--> revision` instead of `CHANGED_BY`. `CHANGED_BY`
+  stays reserved for a deployment or build proof that the engine cannot produce
+  yet. `seo_explain` walks both.
+- Source facts carry repository provenance. Route families and source symbols
+  used to inherit the evidence of the first crawled page, so a
+  `generateMetadata` symbol reported `source: http`. They now use
+  `Evidence::repo()` with the worktree revision. A URL matching a predicted
+  route pattern is a cross-layer inference and is labelled `INFERRED`.
+- Findings are stamped. Every finding now carries `snapshot_id` and
+  `policy_version`; `revision` is attached only when a repository parser
+  established the fact.
+- An explicit `.weavatrix/seo.*` contract wins over the built-in private-path
+  heuristic. A project that declares `/profile/:username` indexable is no longer
+  overruled by a guess. The heuristic still applies when nothing is declared.
+- A present-but-unreadable contract is `WVX-SEO-IDX-001` (error) instead of
+  silently reading as "no contract". This can fail a `--ci` run that used to
+  pass on a typo.
+- `frame-ancestors` delivered through `meta http-equiv` no longer satisfies the
+  X-Frame-Options check, per CSP Level 3. Meta CSP is kept in `csp_meta` rather
+  than merged into response headers, and still counts as the origin having a
+  policy.
+- One `EvidenceScope` owns comparability for the gate and the history diff.
+  `seo_diff` now checks mode, as its contract always claimed, and reports
+  `config_changed`; an origin-level finding no longer resolves when the crawl
+  budget shrank.
+- `seo_plan` reports the real `PageMatrix` verdict. The field was previously a
+  substring guess that always answered `REVIEW`.
+
 ## 0.1.13 - 2026-08-27
 
 - MCP parity: crawl-backed tools accept `gsc`, `observations`, `render`, `history`, and `workers`, so demand and visibility axes rank the same way they do on the CLI.

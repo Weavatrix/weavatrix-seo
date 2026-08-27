@@ -86,7 +86,10 @@ fn chain_for(inventory: &Inventory, subject: &str) -> (Vec<ExplainHop>, Vec<Stri
             );
         }
     }
-    for fact in facts_from(inventory, &url_key, Relation::ChangedBy) {
+    for fact in facts_from(inventory, &url_key, Relation::ComparedAgainst)
+        .into_iter()
+        .chain(facts_from(inventory, &url_key, Relation::ChangedBy))
+    {
         push_node(inventory, &mut chain, &fact.target, Some(fact.relation));
     }
     if chain.is_empty() {
@@ -185,6 +188,7 @@ fn relation_name(relation: Relation) -> &'static str {
         Relation::GeneratedBy => "GENERATED_BY",
         Relation::MetadataFrom => "METADATA_FROM",
         Relation::ChangedBy => "CHANGED_BY",
+        Relation::ComparedAgainst => "COMPARED_AGAINST",
         Relation::ObservedAs => "OBSERVED_AS",
         _ => "RELATED",
     }

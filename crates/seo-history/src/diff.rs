@@ -25,8 +25,14 @@ pub struct SearchDiff {
     pub base: DiffRef,
     /// Head side.
     pub head: DiffRef,
-    /// Origin/mode/policy matched.
+    /// Origin, mode, and policy matched.
     pub comparable: bool,
+    /// Crawl configuration differed between two otherwise comparable runs.
+    ///
+    /// Coverage is then not equivalent, so a missing URL is a budget change and
+    /// not a removal.
+    #[serde(default)]
+    pub config_changed: bool,
     /// URLs in head not in base.
     pub urls_added: Vec<String>,
     /// URLs in base not in head.
@@ -57,10 +63,10 @@ pub struct SearchDiff {
 /// Diffs two compact snapshots.
 #[must_use]
 pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
-    let comparable = base.site == head.site
-        && (base.policy_version.is_empty()
-            || head.policy_version.is_empty()
-            || base.policy_version == head.policy_version);
+    let base_scope = base.scope();
+    let head_scope = head.scope();
+    let comparable = base_scope.comparable_with(&head_scope);
+    let config_changed = base_scope.config_changed(&head_scope);
     let base_pages: BTreeMap<&str, &crate::StoredPage> = base
         .pages
         .iter()
@@ -113,7 +119,11 @@ pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
         if head_errors.contains(finding.fingerprint.as_str()) {
             continue;
         }
-        if head_pages.contains_key(finding.url.as_str()) || finding.url.is_empty() {
+        // An origin-level finding only resolves when the crawl budget did not
+        // shrink underneath it. A smaller crawl resolves nothing.
+        let still_measured = head_pages.contains_key(finding.url.as_str())
+            || (finding.url.is_empty() && !config_changed);
+        if still_measured {
             findings_resolved.push(finding.fingerprint.clone());
         }
     }
@@ -132,6 +142,7 @@ pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
             site: head.site.clone(),
         },
         comparable,
+        config_changed,
         urls_added,
         urls_removed,
         urls_changed,
@@ -243,6 +254,34 @@ mod tests {
                 .collect(),
             counts: InventoryCounts::default(),
         }
+    }
+
+    #[test]
+    fn budget_change_is_reported_and_resolves_nothing() {
+        let mut base = snap("https://x.test/", &["https://x.test/"], &["err-a"]);
+        base.config_digest = "max=1000".into();
+        base.findings[0].url = String::new();
+        let mut head = snap("https://x.test/", &["https://x.test/"], &[]);
+        head.snapshot_id = "h".into();
+        head.config_digest = "max=10".into();
+        let delta = diff(&base, &head);
+        assert!(delta.comparable, "origin, mode, and policy still match");
+        assert!(delta.config_changed);
+        assert!(
+            delta.findings_resolved.is_empty(),
+            "a smaller crawl resolves nothing: {:?}",
+            delta.findings_resolved
+        );
+    }
+
+    #[test]
+    fn a_compare_run_is_not_comparable_with_a_site_run() {
+        let base = snap("https://x.test/", &["https://x.test/"], &[]);
+        let mut head = snap("https://x.test/", &["https://x.test/"], &[]);
+        head.mode = AnalysisMode::Compare;
+        let delta = diff(&base, &head);
+        assert!(!delta.comparable, "the doc comment promises a mode check");
+        assert!(delta.unmeasured);
     }
 
     #[test]

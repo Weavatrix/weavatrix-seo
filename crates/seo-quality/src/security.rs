@@ -186,7 +186,7 @@ fn origin_finding(
 }
 
 fn has_csp(page: &ExtractedPage) -> bool {
-    page.header("content-security-policy").is_some()
+    page.header("content-security-policy").is_some() || page.csp_meta.is_some()
 }
 
 fn has_nosniff(page: &ExtractedPage) -> bool {
@@ -197,6 +197,11 @@ fn has_nosniff(page: &ExtractedPage) -> bool {
     })
 }
 
+/// Header-delivered `frame-ancestors` only.
+///
+/// CSP Level 3 requires user agents to ignore `frame-ancestors` in a policy
+/// delivered through `meta http-equiv`, so a meta policy can never stand in for
+/// `X-Frame-Options`.
 fn csp_frame_ancestors(page: &ExtractedPage) -> bool {
     page.header("content-security-policy").is_some_and(|value| {
         value

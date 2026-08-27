@@ -180,6 +180,7 @@ mod tests {
             og_description: None,
             og_image: None,
             headers: Vec::new(),
+            csp_meta: None,
             body_bytes: 1,
             fetch_ms: 1,
             has_main: false,

@@ -3,7 +3,7 @@
 use crate::Baseline;
 use std::collections::BTreeSet;
 use std::fs;
-use weavatrix_seo_model::{AnalysisMode, AuditReport, POLICY_VERSION, Severity};
+use weavatrix_seo_model::{AuditReport, EvidenceScope, POLICY_VERSION, Severity};
 
 /// Reads a dedicated baseline artifact, or error fingerprints from a saved audit.
 ///
@@ -69,20 +69,20 @@ impl Baseline {
         self.issues.iter().map(|(fp, _)| fp.clone()).collect()
     }
 
+    /// Comparison identity of this baseline.
+    #[must_use]
+    pub fn scope(&self) -> EvidenceScope {
+        EvidenceScope::new(
+            self.origin.clone(),
+            self.mode,
+            self.policy_version.clone(),
+            self.config_digest.clone(),
+        )
+    }
+
     /// True when origin, mode, and policy match.
     #[must_use]
     pub fn comparable(&self, report: &AuditReport) -> bool {
-        let origin = report.inventory.site.as_deref();
-        let mode_ok = self.mode == report.inventory.mode
-            || matches!(
-                (self.mode, report.inventory.mode),
-                (AnalysisMode::Site, AnalysisMode::Hybrid)
-                    | (AnalysisMode::Hybrid, AnalysisMode::Site)
-            );
-        self.origin.as_deref() == origin
-            && mode_ok
-            && (self.policy_version.is_empty()
-                || report.inventory.policy_version.is_empty()
-                || self.policy_version == report.inventory.policy_version)
+        self.scope().comparable_with(&report.inventory.scope())
     }
 }

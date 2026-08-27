@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{AuditReport, Opportunity, OpportunityAxes};
-use weavatrix_seo_programmatic::SafetyVerdict;
 
 /// Plan verb. Weavatrix SEO stays read-only; mutations belong elsewhere.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,7 +119,7 @@ fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
             None
         }
     });
-    let programmatic_verdict = programmatic_for(&item.subject);
+    let programmatic_verdict = item.programmatic_verdict.clone();
     let (required_facts, schema_requirements, link_placements) = extras(kind, item);
     PlanAction {
         kind,
@@ -158,13 +157,5 @@ fn extras(kind: PlanKind, item: &Opportunity) -> (Vec<String>, Vec<String>, Vec<
             Vec::new(),
         ),
         _ => (Vec::new(), Vec::new(), Vec::new()),
-    }
-}
-
-fn programmatic_for(subject: &str) -> Option<String> {
-    if subject.contains(":city") || subject.contains("category/") {
-        Some(format!("{:?}", SafetyVerdict::Review))
-    } else {
-        None
     }
 }

@@ -122,6 +122,7 @@ impl Crawl {
             predicted_routes: Vec::new(),
             producers: Vec::new(),
             policy: None,
+            policy_error: None,
             sitemap_discovered: sitemap_set.len(),
             counts: weavatrix_seo_model::InventoryCounts::default(),
         }

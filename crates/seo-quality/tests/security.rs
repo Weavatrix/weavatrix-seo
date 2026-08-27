@@ -37,6 +37,7 @@ fn page(url: &str, headers: Vec<(&str, &str)>) -> ExtractedPage {
             .into_iter()
             .map(|(name, value)| (name.to_owned(), value.to_owned()))
             .collect(),
+        csp_meta: None,
         body_bytes: 4,
         fetch_ms: 1,
         has_main: true,
@@ -47,6 +48,12 @@ fn page(url: &str, headers: Vec<(&str, &str)>) -> ExtractedPage {
         linked_from_page: true,
         evidence: Evidence::http(),
     }
+}
+
+fn with_meta_csp(url: &str, headers: Vec<(&str, &str)>, meta: &str) -> ExtractedPage {
+    let mut page = page(url, headers);
+    page.csp_meta = Some(meta.to_owned());
+    page
 }
 
 fn codes(pages: Vec<ExtractedPage>) -> Vec<String> {
@@ -103,6 +110,36 @@ fn mixed_hsts_is_origin_split() {
     ]);
     assert!(found.contains(&"WVX-SEO-SEC-007".into()), "{found:?}");
     assert!(!found.contains(&"WVX-SEO-SEC-001".into()), "{found:?}");
+}
+
+#[test]
+fn meta_delivered_frame_ancestors_does_not_quiet_xfo() {
+    let found = codes(vec![with_meta_csp(
+        "https://kablay.us/",
+        vec![
+            ("strict-transport-security", "max-age=300"),
+            ("x-content-type-options", "nosniff"),
+            ("referrer-policy", "no-referrer"),
+        ],
+        "frame-ancestors 'none'",
+    )]);
+    assert!(
+        found.contains(&"WVX-SEO-SEC-004".into()),
+        "CSP Level 3 ignores frame-ancestors in a meta policy: {found:?}"
+    );
+}
+
+#[test]
+fn meta_csp_still_counts_as_a_policy() {
+    let found = codes(vec![with_meta_csp(
+        "https://kablay.us/",
+        vec![("strict-transport-security", "max-age=300")],
+        "default-src 'self'",
+    )]);
+    assert!(
+        !found.contains(&"WVX-SEO-SEC-003".into()),
+        "the origin does ship a policy, just not as a header: {found:?}"
+    );
 }
 
 #[test]

@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{
-    AnalysisMode, AuditReport, ContentHash, ExtractedPage, Finding, Indexability, InventoryCounts,
-    ProducerFact, Severity,
+    AnalysisMode, AuditReport, ContentHash, EvidenceScope, ExtractedPage, Finding, Indexability,
+    InventoryCounts, ProducerFact, Severity,
 };
 
 /// One measured URL without body text.
@@ -107,6 +107,17 @@ impl StoredSnapshot {
             findings: report.findings.iter().map(store_finding).collect(),
             counts: report.inventory.counts.clone(),
         }
+    }
+
+    /// Comparison identity of this snapshot.
+    #[must_use]
+    pub fn scope(&self) -> EvidenceScope {
+        EvidenceScope::new(
+            self.site.clone(),
+            self.mode,
+            self.policy_version.clone(),
+            self.config_digest.clone(),
+        )
     }
 }
 

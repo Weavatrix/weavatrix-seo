@@ -142,6 +142,13 @@ pub struct ExtractedPage {
     /// Selected response headers (name, value), lowercased names.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub headers: Vec<(String, String)>,
+    /// `meta http-equiv=Content-Security-Policy`, kept apart from response headers.
+    ///
+    /// Delivery decides semantics: CSP Level 3 requires `frame-ancestors` to be
+    /// ignored in a meta-delivered policy, so this value must never be merged
+    /// into [`Self::headers`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub csp_meta: Option<String>,
     /// Response body size in bytes (lossy UTF-8 length).
     #[serde(default)]
     pub body_bytes: usize,

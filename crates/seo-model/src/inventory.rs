@@ -1,8 +1,8 @@
 //! Search-surface inventory.
 
 use crate::{
-    AbsoluteUrl, ExtractedPage, FactEdge, FetchObservation, GraphEdge, POLICY_VERSION,
-    ProducerFact, SearchNode, SearchPolicy, snapshot_digest,
+    AbsoluteUrl, EvidenceScope, EvidenceSource, ExtractedPage, FactEdge, FetchObservation, Finding,
+    GraphEdge, POLICY_VERSION, ProducerFact, SearchNode, SearchPolicy, snapshot_digest,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
@@ -88,6 +88,9 @@ pub struct Inventory {
     /// Optional `.weavatrix/seo.json` contract.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub policy: Option<SearchPolicy>,
+    /// Why a present contract could not be read. A typo is not "no contract".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_error: Option<String>,
     /// Loc entries discovered from sitemaps, before page cap.
     #[serde(default)]
     pub sitemap_discovered: usize,
@@ -117,6 +120,7 @@ impl Inventory {
             predicted_routes: Vec::new(),
             producers: Vec::new(),
             policy: None,
+            policy_error: None,
             sitemap_discovered: 0,
             counts: InventoryCounts::default(),
         }
@@ -126,6 +130,44 @@ impl Inventory {
     #[must_use]
     pub fn page(&self, url: &AbsoluteUrl) -> Option<&ExtractedPage> {
         self.pages.iter().find(|page| page.url == *url)
+    }
+
+    /// Comparison identity of this run.
+    #[must_use]
+    pub fn scope(&self) -> EvidenceScope {
+        EvidenceScope::new(
+            self.site.clone(),
+            self.mode,
+            self.policy_version.clone(),
+            self.config_digest.clone(),
+        )
+    }
+
+    /// Binds snapshot, policy, and revision onto findings produced from this run.
+    ///
+    /// A finding only earns `revision` when a repository parser established it.
+    /// Live HTTP evidence is never stamped with a source revision: the crawl
+    /// measured production, and nothing here proves production was built from
+    /// this worktree.
+    pub fn stamp_findings(&self, findings: &mut [Finding]) {
+        for finding in findings {
+            if finding.evidence.snapshot_id.is_none() && !self.snapshot_id.is_empty() {
+                finding.evidence.snapshot_id = Some(self.snapshot_id.clone());
+            }
+            if finding.evidence.policy_version.is_none() {
+                finding.evidence.policy_version = Some(if self.policy_version.is_empty() {
+                    POLICY_VERSION.to_owned()
+                } else {
+                    self.policy_version.clone()
+                });
+            }
+            if finding.evidence.revision.is_none()
+                && finding.evidence.source == EvidenceSource::Repo
+                && let Some(revision) = &self.repo_revision
+            {
+                finding.evidence.revision = Some(revision.clone());
+            }
+        }
     }
 
     /// URLs that were actually measured (pages + failed observations).
@@ -156,13 +198,9 @@ impl Inventory {
         self.snapshot_id = snapshot_digest(run_id, seed, &measured);
         POLICY_VERSION.clone_into(&mut self.policy_version);
         let snapshot = self.snapshot_id.clone();
-        let revision = self.repo_revision.clone();
         for page in &mut self.pages {
             page.evidence.snapshot_id = Some(snapshot.clone());
             page.evidence.policy_version = Some(POLICY_VERSION.to_owned());
-            if let Some(revision) = &revision {
-                page.evidence.revision = Some(revision.clone());
-            }
         }
         for edge in &mut self.edges {
             edge.evidence.snapshot_id = Some(snapshot.clone());

@@ -1,8 +1,8 @@
 //! Bind live URLs to route families, producers, schema, and revision.
 
 use weavatrix_seo_model::{
-    Evidence, FactEdge, Inventory, Locator, Relation, SearchNode, SearchNodeKind, route_id,
-    symbol_id, url_id,
+    Confidence, Evidence, EvidenceKind, FactEdge, Inventory, Locator, Relation, SearchNode,
+    SearchNodeKind, route_id, symbol_id, url_id,
 };
 use weavatrix_seo_nextjs::route_matches;
 use weavatrix_seo_render::RenderSnapshot;
@@ -10,16 +10,34 @@ use weavatrix_seo_source::SourceSurface;
 
 /// Extends the inventory with heterogeneous Search Evidence Graph facts.
 pub fn bind(inventory: &mut Inventory, surface: Option<&SourceSurface>) {
-    let evidence = inventory
+    let http = inventory
         .pages
         .first()
         .map_or_else(Evidence::http, |page| page.evidence.clone());
-    bind_revision(inventory, &evidence);
-    bind_pages(inventory, &evidence);
+    let repo = repo_evidence(inventory);
+    bind_revision(inventory, &repo);
+    bind_pages(inventory, &http);
     if let Some(surface) = surface {
-        bind_surface(inventory, surface, &evidence);
+        bind_surface(inventory, surface, &repo);
     }
     stamp_facts(inventory);
+}
+
+/// Provenance for facts a repository parser established.
+fn repo_evidence(inventory: &Inventory) -> Evidence {
+    let mut evidence = Evidence::repo();
+    if let Some(revision) = &inventory.repo_revision {
+        evidence.revision = Some(revision.clone());
+    }
+    evidence
+}
+
+/// Provenance for a fact that only exists because two layers were compared.
+fn cross_layer_evidence(inventory: &Inventory) -> Evidence {
+    let mut evidence = repo_evidence(inventory);
+    evidence.kind = EvidenceKind::Inferred;
+    evidence.confidence = Confidence::High;
+    evidence
 }
 
 fn bind_revision(inventory: &mut Inventory, evidence: &Evidence) {
@@ -32,12 +50,15 @@ fn bind_revision(inventory: &mut Inventory, evidence: &Evidence) {
             .at(Locator::source_span(".git", None, None)),
     );
     if let Some(site) = &inventory.site {
+        // The crawl measured production and the worktree sits at this revision.
+        // Nothing here proves production was built from it, so the relation is
+        // a comparison, not causation.
         inventory.facts.push(FactEdge::new(
             url_id(site),
             SearchNodeKind::Url,
             id,
             SearchNodeKind::Revision,
-            Relation::ChangedBy,
+            Relation::ComparedAgainst,
             evidence.clone(),
         ));
     }
@@ -112,15 +133,18 @@ fn bind_surface(inventory: &mut Inventory, surface: &SourceSurface, evidence: &E
                 evidence,
             );
         }
+        let matched = cross_layer_evidence(inventory);
         for page in &inventory.pages {
             if route_matches(&family.pattern, page.url.path()) {
+                // A measured URL matching a predicted pattern is an inference
+                // across two layers, not a deterministic repository fact.
                 inventory.facts.push(FactEdge::new(
                     url_id(&page.url.to_string()),
                     SearchNodeKind::Url,
                     route.clone(),
                     SearchNodeKind::RouteFamily,
                     Relation::RenderedBy,
-                    evidence.clone(),
+                    matched.clone(),
                 ));
             }
         }

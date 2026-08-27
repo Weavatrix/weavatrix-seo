@@ -34,6 +34,7 @@ fn page(url: &str, text: &str, json_ld: Vec<JsonLd>) -> ExtractedPage {
         og_description: None,
         og_image: None,
         headers: Vec::new(),
+        csp_meta: None,
         body_bytes: 0,
         fetch_ms: 0,
         has_main: false,

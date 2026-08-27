@@ -30,6 +30,22 @@ pub enum SafetyVerdict {
     Unmeasured,
 }
 
+impl SafetyVerdict {
+    /// Stable label matching the serialized form.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::SafeToGenerate => "SAFE_TO_GENERATE",
+            Self::SafeIfRequirementsMet => "SAFE_IF_REQUIREMENTS_MET",
+            Self::Consolidate => "CONSOLIDATE",
+            Self::NoindexByDefault => "NOINDEX_BY_DEFAULT",
+            Self::RejectLowValue => "REJECT_LOW_VALUE",
+            Self::Review => "REVIEW",
+            Self::Unmeasured => "UNMEASURED",
+        }
+    }
+}
+
 /// One proposed family.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PageMatrix {

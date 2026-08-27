@@ -9,7 +9,9 @@ use weavatrix_seo_architecture::{analyze as analyze_architecture, annotate_templ
 use weavatrix_seo_claims::audit as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
 use weavatrix_seo_content::exact_duplicates;
-use weavatrix_seo_model::{AuditReport, Inventory};
+use weavatrix_seo_model::{
+    AuditReport, Evidence, Finding, FindingFamily, Inventory, Locator, Severity,
+};
 use weavatrix_seo_observation::{
     load as load_gsc, load_any, unmeasured as observations_unmeasured,
 };
@@ -30,6 +32,9 @@ pub fn assemble(
     annotate_templates(&mut inventory);
     graph::bind(&mut inventory, surface);
     let mut findings = rule_audit(&inventory);
+    if let Some(error) = inventory.policy_error.clone() {
+        findings.push(policy_contract_finding(&inventory, &error));
+    }
     let (architecture, architecture_findings) = analyze_architecture(&inventory);
     findings.extend(architecture_findings);
     findings.extend(quality_audit(&inventory));
@@ -82,12 +87,35 @@ pub fn assemble(
             render: has_render,
         },
     );
+    inventory.stamp_findings(&mut findings);
     AuditReport {
         inventory,
         findings,
         axes,
         opportunities: items,
     }
+}
+
+/// A present-but-unreadable search contract leaves the indexable surface undefined.
+fn policy_contract_finding(inventory: &Inventory, error: &str) -> Finding {
+    let subject = inventory
+        .repo
+        .clone()
+        .unwrap_or_else(|| ".weavatrix".to_owned());
+    Finding::new(
+        FindingFamily::Idx,
+        1,
+        Severity::Error,
+        &subject,
+        format!("the repository search contract could not be read: {error}"),
+        Locator::source_span(".weavatrix", None, None),
+        Evidence::repo(),
+    )
+    .explained(
+        "A malformed contract falls back to built-in private-path guesses, so a typo is indistinguishable from having no contract at all.",
+        "Fix the contract file, or remove it to accept the default heuristic on purpose.",
+        "The contract parses and its include/exclude globs decide which families may be indexable.",
+    )
 }
 
 fn matrix_opportunities(
@@ -122,13 +150,16 @@ fn matrix_opportunities(
             ),
             _ => continue,
         };
-        items.push(weavatrix_seo_model::Opportunity::unmeasured_demand(
-            kind,
-            matrix.family.clone(),
-            summary,
-            "Programmatic compiler verdict from measured URLs and predicted families.",
-            action,
-        ));
+        items.push(
+            weavatrix_seo_model::Opportunity::unmeasured_demand(
+                kind,
+                matrix.family.clone(),
+                summary,
+                "Programmatic compiler verdict from measured URLs and predicted families.",
+                action,
+            )
+            .with_programmatic_verdict(matrix.verdict.label()),
+        );
     }
     items
 }

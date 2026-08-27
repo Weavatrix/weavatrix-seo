@@ -27,19 +27,12 @@ pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
     if let Some(header) = fetched.header("x-robots-tag") {
         robots.push(header.to_owned());
     }
-    let mut headers = fetched
+    let headers = fetched
         .headers
         .iter()
         .filter(|(name, _)| KEPT_HEADERS.contains(&name.as_str()))
         .cloned()
         .collect::<Vec<_>>();
-    if let Some(csp) = draft.csp_meta.clone()
-        && !headers
-            .iter()
-            .any(|(name, _)| name == "content-security-policy")
-    {
-        headers.push(("content-security-policy".into(), csp));
-    }
     ExtractedPage {
         url: fetched.url.clone(),
         requested: fetched.url.clone(),
@@ -67,6 +60,7 @@ pub fn page(fetched: &FetchResponse, draft: ExtractedPageDraft, in_sitemap: bool
         og_description: draft.og_description,
         og_image: draft.og_image,
         headers,
+        csp_meta: draft.csp_meta,
         body_bytes: fetched.body.len(),
         fetch_ms: fetched.fetch_ms,
         has_main: draft.has_main,
@@ -116,6 +110,7 @@ pub fn redirect_page(
         og_description: None,
         og_image: None,
         headers: Vec::new(),
+        csp_meta: None,
         body_bytes: 0,
         fetch_ms: 0,
         has_main: false,

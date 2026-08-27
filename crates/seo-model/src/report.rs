@@ -80,6 +80,9 @@ pub struct Opportunity {
     pub subject: String,
     /// Whether demand data was measured.
     pub demand: String,
+    /// Programmatic safety verdict when this opportunity came from a page matrix.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub programmatic_verdict: Option<String>,
     /// Separate priority axes. Never collapsed into one SEO score.
     #[serde(default)]
     pub axes: OpportunityAxes,
@@ -110,8 +113,16 @@ impl Opportunity {
             action: action.into(),
             subject,
             demand: "UNMEASURED".into(),
+            programmatic_verdict: None,
             axes: OpportunityAxes::default(),
         }
+    }
+
+    /// Attaches the page-matrix verdict this opportunity was compiled from.
+    #[must_use]
+    pub fn with_programmatic_verdict(mut self, verdict: impl Into<String>) -> Self {
+        self.programmatic_verdict = Some(verdict.into());
+        self
     }
 
     /// Attaches priority axes.

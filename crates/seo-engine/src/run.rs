@@ -30,18 +30,18 @@ pub fn run_audit(request: &AuditRequest) -> Result<AuditReport, EngineError> {
     inventory.repo.clone_from(&request.repo);
     inventory.config_digest = request_config_digest(request);
     if let Some(repo) = request.repo.as_deref() {
+        // The worktree revision is the source side of the comparison, not the
+        // provenance of a live response. Stamping it onto crawled pages would
+        // claim production was built from this commit.
         inventory.repo_revision = read_revision(repo);
-        if let Some(revision) = &inventory.repo_revision {
-            for page in &mut inventory.pages {
-                page.evidence.revision = Some(revision.clone());
-            }
-        }
     }
     if let Some(surface) = &surface {
         inventory.predicted_routes = surface.patterns();
         if let Some(repo) = request.repo.as_deref() {
             inventory.producers = surface.producer_facts(repo);
-            inventory.policy = weavatrix_seo_source::load_policy(repo);
+            let loaded = weavatrix_seo_source::load_policy(repo);
+            inventory.policy = loaded.policy;
+            inventory.policy_error = loaded.error;
         }
     }
     let mut competitor_inventories = Vec::new();

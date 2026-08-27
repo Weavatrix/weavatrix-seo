@@ -21,6 +21,7 @@ mod page;
 mod policy;
 mod producer;
 mod report;
+mod scope;
 mod url;
 mod url_parse;
 
@@ -40,4 +41,5 @@ pub use page::{Alternate, ExtractedPage, Heading, ImageRef, Indexability, JsonLd
 pub use policy::{IndexabilityPolicy, InternationalPolicy, SearchPolicy, glob_match};
 pub use producer::ProducerFact;
 pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
+pub use scope::EvidenceScope;
 pub use url::{AbsoluteUrl, Scheme};

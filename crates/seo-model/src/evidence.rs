@@ -88,6 +88,22 @@ impl Evidence {
         }
     }
 
+    /// Deterministic repository extraction.
+    ///
+    /// Use this for anything a source parser established. An HTTP response can
+    /// never be the provenance of a source fact.
+    #[must_use]
+    pub fn repo() -> Self {
+        Self {
+            kind: EvidenceKind::Deterministic,
+            source: EvidenceSource::Repo,
+            confidence: Confidence::Exact,
+            snapshot_id: None,
+            revision: None,
+            policy_version: None,
+        }
+    }
+
     /// Sitemap document extraction.
     #[must_use]
     pub fn sitemap() -> Self {

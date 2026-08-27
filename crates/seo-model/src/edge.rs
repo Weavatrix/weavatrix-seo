@@ -35,8 +35,15 @@ pub enum Relation {
     Requires,
     /// Observation attached to a URL.
     ObservedAs,
-    /// Node was changed by a revision.
+    /// Node was changed by a revision. Requires proof that the revision produced it.
     ChangedBy,
+    /// Measured live evidence was compared against a source revision.
+    ///
+    /// This is the honest relation for a hybrid run: the crawl saw production,
+    /// the worktree is at some revision, and nothing proves production was
+    /// built from it. Upgrade to [`Relation::ChangedBy`] only with deployment
+    /// or build evidence.
+    ComparedAgainst,
 }
 
 /// One recorded graph edge.
