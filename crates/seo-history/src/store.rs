@@ -31,12 +31,13 @@ pub fn save(dir: &str, report: &AuditReport) -> Result<String, String> {
 /// Returns IO or JSON errors.
 pub fn load(path: &str) -> Result<StoredSnapshot, String> {
     let raw = fs::read_to_string(path).map_err(|error| error.to_string())?;
-    if let Ok(snapshot) = blazingly_json::from_str::<StoredSnapshot>(&raw)
+    let raw = weavatrix_seo_model::strip_bom(&raw);
+    if let Ok(snapshot) = blazingly_json::from_str::<StoredSnapshot>(raw)
         && snapshot.schema.starts_with("weavatrix-seo-snapshot")
     {
         return Ok(snapshot);
     }
-    let report: AuditReport = blazingly_json::from_str(&raw).map_err(|error| error.to_string())?;
+    let report: AuditReport = blazingly_json::from_str(raw).map_err(|error| error.to_string())?;
     Ok(StoredSnapshot::from_report(&report))
 }
 

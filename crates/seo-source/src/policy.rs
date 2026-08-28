@@ -43,7 +43,7 @@ pub fn load(repo: &str) -> PolicyLoad {
     if json.is_file() {
         return match std::fs::read_to_string(&json) {
             Err(error) => PolicyLoad::failed(&json, error),
-            Ok(raw) => match blazingly_json::from_str(&raw) {
+            Ok(raw) => match blazingly_json::from_str(weavatrix_seo_model::strip_bom(&raw)) {
                 Ok(policy) => PolicyLoad::parsed(policy),
                 Err(error) => PolicyLoad::failed(&json, error),
             },

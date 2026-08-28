@@ -12,12 +12,13 @@ use weavatrix_seo_model::{AuditReport, EvidenceScope, POLICY_VERSION, Severity};
 /// Returns IO or JSON errors.
 pub fn load_baseline(path: &str) -> Result<Baseline, String> {
     let raw = fs::read_to_string(path).map_err(|error| error.to_string())?;
-    if let Ok(baseline) = blazingly_json::from_str::<Baseline>(&raw)
+    let raw = weavatrix_seo_model::strip_bom(&raw);
+    if let Ok(baseline) = blazingly_json::from_str::<Baseline>(raw)
         && baseline.schema.starts_with("weavatrix-seo-baseline")
     {
         return Ok(baseline);
     }
-    let report: AuditReport = blazingly_json::from_str(&raw).map_err(|error| error.to_string())?;
+    let report: AuditReport = blazingly_json::from_str(raw).map_err(|error| error.to_string())?;
     Ok(from_report(&report, String::new()))
 }
 

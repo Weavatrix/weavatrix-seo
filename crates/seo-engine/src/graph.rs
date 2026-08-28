@@ -74,7 +74,10 @@ fn bind_pages(inventory: &mut Inventory, evidence: &Evidence) {
             url.clone(),
         ));
         for block in &page.json_ld {
-            if block.ids.is_empty() {
+            // Bind per node, so `#org` is labelled Organization and `#site` is
+            // labelled WebSite. Flattening the block would give both the first
+            // type in the document.
+            if block.nodes.is_empty() {
                 for type_name in &block.types {
                     schema.push((
                         url.clone(),
@@ -82,11 +85,15 @@ fn bind_pages(inventory: &mut Inventory, evidence: &Evidence) {
                         type_name.clone(),
                     ));
                 }
-            } else {
-                for id in &block.ids {
-                    let label = block.types.first().cloned().unwrap_or_else(|| id.clone());
-                    schema.push((url.clone(), id.clone(), label));
-                }
+                continue;
+            }
+            for node in &block.nodes {
+                let label = node.label().unwrap_or("Thing").to_owned();
+                let id = node
+                    .id
+                    .clone()
+                    .unwrap_or_else(|| format!("schema:{url}#{label}"));
+                schema.push((url.clone(), id, label));
             }
         }
     }
@@ -124,6 +131,24 @@ fn bind_surface(inventory: &mut Inventory, surface: &SourceSurface, evidence: &E
             Relation::MetadataFrom,
             evidence,
         );
+        // `generateStaticParams` produces the URLs of the family.
+        bind_symbol(
+            inventory,
+            &route,
+            family.static_params_symbol.as_ref(),
+            Relation::GeneratedBy,
+            evidence,
+        );
+        // JSON-LD producers are where the declared schema comes from.
+        for producer in &family.json_ld_symbols {
+            bind_symbol(
+                inventory,
+                &route,
+                Some(producer),
+                Relation::MetadataFrom,
+                evidence,
+            );
+        }
         for helper in &family.helpers {
             bind_symbol(
                 inventory,

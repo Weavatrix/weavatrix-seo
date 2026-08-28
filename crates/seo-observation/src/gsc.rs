@@ -40,7 +40,8 @@ pub fn load(path: &str) -> Result<ObservationSnapshot, String> {
 ///
 /// Returns JSON errors.
 pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
-    let file: GscFile = blazingly_json::from_str(raw).map_err(|error| error.to_string())?;
+    let file: GscFile = blazingly_json::from_str(weavatrix_seo_model::strip_bom(raw))
+        .map_err(|error| error.to_string())?;
     let evidence = Evidence {
         kind: EvidenceKind::Observed,
         source: EvidenceSource::Gsc,
@@ -82,6 +83,14 @@ pub fn disconnected() -> ObservationSnapshot {
 #[cfg(test)]
 mod tests {
     use super::from_json;
+
+    #[test]
+    fn a_byte_order_mark_does_not_break_an_import() {
+        let snapshot =
+            from_json("\u{feff}{\"rows\":[{\"url\":\"https://x.test/\",\"impressions\":5}]}")
+                .expect("a mark is not a syntax error");
+        assert_eq!(snapshot.rows[0].impressions, 5);
+    }
 
     #[test]
     fn parses_gsc_rows() {

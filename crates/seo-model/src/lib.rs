@@ -22,6 +22,7 @@ mod policy;
 mod producer;
 mod report;
 mod scope;
+mod text;
 mod url;
 mod url_parse;
 
@@ -37,9 +38,12 @@ pub use locator::Locator;
 pub use media::MediaKind;
 pub use node::{FactEdge, SearchNode, SearchNodeKind, route_id, symbol_id, url_id};
 pub use observation::{FetchObservation, FetchOutcome};
-pub use page::{Alternate, ExtractedPage, Heading, ImageRef, Indexability, JsonLd, RedirectHop};
+pub use page::{
+    Alternate, ExtractedPage, Heading, ImageRef, Indexability, JsonLd, JsonLdNode, RedirectHop,
+};
 pub use policy::{IndexabilityPolicy, InternationalPolicy, SearchPolicy, glob_match};
 pub use producer::ProducerFact;
 pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
 pub use scope::EvidenceScope;
+pub use text::strip_bom;
 pub use url::{AbsoluteUrl, Scheme};

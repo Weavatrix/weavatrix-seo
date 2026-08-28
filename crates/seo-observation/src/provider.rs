@@ -53,7 +53,8 @@ pub fn load_any(path: &str) -> Result<ObservationSnapshot, String> {
 ///
 /// Returns JSON errors.
 pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
-    let file: File = blazingly_json::from_str(raw).map_err(|error| error.to_string())?;
+    let file: File = blazingly_json::from_str(weavatrix_seo_model::strip_bom(raw))
+        .map_err(|error| error.to_string())?;
     let default_provider = file
         .provider
         .as_deref()

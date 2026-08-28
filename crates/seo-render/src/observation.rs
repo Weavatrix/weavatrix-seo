@@ -80,7 +80,8 @@ pub fn load(path: &str) -> Result<RenderSnapshot, String> {
 /// Returns JSON errors.
 pub fn from_json(raw: &str) -> Result<RenderSnapshot, String> {
     let mut snapshot: RenderSnapshot =
-        blazingly_json::from_str(raw).map_err(|error| error.to_string())?;
+        blazingly_json::from_str(weavatrix_seo_model::strip_bom(raw))
+            .map_err(|error| error.to_string())?;
     if snapshot.schema.is_empty() {
         snapshot.schema = "weavatrix-seo-render/v1".into();
     }

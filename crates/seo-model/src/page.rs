@@ -60,11 +60,41 @@ pub struct ImageRef {
     pub hidden: bool,
 }
 
+/// One typed node inside a JSON-LD block, with its own identity.
+///
+/// Flattening a block into parallel `types` and `ids` arrays loses which id
+/// belongs to which type. `Organization #org` plus `WebSite #site` becomes two
+/// types and two ids with no way back — and that mapping is the whole basis of
+/// an entity graph.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct JsonLdNode {
+    /// `@id` when this node declared one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// `@type` values on this node.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub types: Vec<String>,
+    /// `sameAs` values on this node.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub same_as: Vec<String>,
+}
+
+impl JsonLdNode {
+    /// Primary declared type.
+    #[must_use]
+    pub fn label(&self) -> Option<&str> {
+        self.types.first().map(String::as_str)
+    }
+}
+
 /// Parsed JSON-LD document or a syntax failure.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct JsonLd {
     /// Raw script body.
     pub raw: String,
+    /// Typed nodes with their own identity. The flat fields derive from these.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nodes: Vec<JsonLdNode>,
     /// Recognized `@type` values when JSON parsed.
     pub types: Vec<String>,
     /// True when the script was valid JSON.

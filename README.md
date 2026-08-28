@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.3.0` types observations: bot hits are never search demand, average position keeps its fraction, and `ai_visibility` is separate from `ai_retrieval_readiness`. The 0.2.0 evidence-semantics work stays: a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound, and an explicit search contract beats the built-in heuristic. SEO does not own a browser.
+`0.4.0` bounds the MCP to an allow-list of filesystem roots and gives JSON-LD nodes their own identity. The 0.3.0 typed observations stay (bot hits are never search demand, `ai_visibility` is separate from `ai_retrieval_readiness`), as does the 0.2.0 evidence work (a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound). SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -61,15 +61,24 @@ The ordinary audit path does not call a model.
 
 ## Install
 
+Nothing is on crates.io yet: every crate in this workspace is `publish = false`.
+Build from a checkout:
+
 ```bash
 cargo install --path apps/seo-cli --locked
 ```
 
-Library:
+Or straight from git:
+
+```bash
+cargo install --git https://github.com/Weavatrix/weavatrix-seo weavatrix-seo-cli --locked
+```
+
+The library is consumed the same way until the crates are published:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.3.0"
+weavatrix-seo = { git = "https://github.com/Weavatrix/weavatrix-seo" }
 ```
 
 ## CLI
@@ -115,6 +124,8 @@ seo_observations
 Run `weavatrix-seo mcp` or the `weavatrix-seo-mcp` binary.
 
 The crawl-backed tools accept every evidence import the CLI accepts: `gsc`, `observations`, `render`, `history`, `workers`, `max_pages`. `seo_gate` is `--ci` / `--baseline` and returns the verdict instead of an exit code. `seo_observations` reads a provider export; without one it stays unmeasured. MCP crawls are public-only.
+
+Every path a tool accepts is confined to an allow-list. `weavatrix-seo mcp --allow-root PATH` is repeatable; with none declared the boundary is the working directory. Paths are canonicalised before the check, so `..` segments and symlinks cannot escape.
 
 `seo_links` returns directed internal-link recommendations, and `seo_vectors` returns the page vectors and link profiles they were computed from. The embedding model is `wvx-seo-lexhash-v1`: first-party, deterministic, 64-dimension, and **lexical**. It needs no embedding service, and it cannot match synonyms or cross-language pairs. Node identities are `page:<url>`, so these are page-graph inputs, not repository-graph inputs. Similarity is `INFERRED` and is never upgraded to a ranking claim.
 

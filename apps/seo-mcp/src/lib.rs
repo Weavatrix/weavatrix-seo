@@ -2,7 +2,10 @@
 
 #![forbid(unsafe_code)]
 
+mod roots;
 mod schema;
+
+pub use roots::Roots;
 
 use mcport::{ConcurrentMcpServer, RuntimeConfig, ToolReply, json};
 use serde::Deserialize;
@@ -20,6 +23,8 @@ use weavatrix_seo_observation::{
 pub struct HostOptions {
     /// Page cap applied to every crawl.
     pub max_pages: usize,
+    /// Directories a caller may reference. Empty means the working directory.
+    pub roots: Vec<String>,
 }
 
 /// Parse stdio host arguments.
@@ -29,6 +34,7 @@ pub struct HostOptions {
 /// Unknown or incomplete options are rejected.
 pub fn parse_host_args(args: &[String]) -> Result<HostOptions, String> {
     let mut max_pages = 200_usize;
+    let mut roots = Vec::new();
     let mut index = 0;
     while index < args.len() {
         let name = args[index]
@@ -43,11 +49,12 @@ pub fn parse_host_args(args: &[String]) -> Result<HostOptions, String> {
                     .parse()
                     .map_err(|_| format!("invalid --max-pages {value}"))?;
             }
+            "allow-root" => roots.push(value.clone()),
             other => return Err(format!("unknown option --{other}")),
         }
         index += 2;
     }
-    Ok(HostOptions { max_pages })
+    Ok(HostOptions { max_pages, roots })
 }
 
 /// Controlled concurrency for crawl-backed tools.
@@ -144,122 +151,115 @@ struct ObservationsInput {
 }
 
 /// Eleven-tool SEO server.
+///
+/// `roots` bounds every caller-supplied path. Without it a connected agent
+/// could read any file the host process can reach.
 #[must_use]
 #[allow(clippy::too_many_lines)]
-pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
+pub fn seo_server(max_pages: usize, roots: &Roots) -> ConcurrentMcpServer {
     ConcurrentMcpServer::new("weavatrix-seo", env!("CARGO_PKG_VERSION"))
         .instructions(
-            "Weavatrix SEO. Eleven bounded tools. No shell. Missing evidence is unmeasured.",
+            "Weavatrix SEO. Eleven bounded tools. No shell. Paths are confined to the allowed roots. Missing evidence is unmeasured.",
         )
         .strict_schemas()
         .typed_tool(
             "seo_inventory",
             "Build the search surface inventory for a site, repo, or hybrid run.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "inventory"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "inventory")
+            },
         )
         .typed_tool(
             "seo_audit",
             "Return bounded findings by axis, severity, and evidence.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "audit"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "audit")
+            },
         )
         .typed_tool(
             "seo_opportunities",
             "Return gaps and construction opportunities, not current errors.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "opportunities"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "opportunities")
+            },
         )
         .typed_tool(
             "seo_plan",
             "Produce a target search-architecture plan with acceptance conditions.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "plan"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "plan")
+            },
         )
         .typed_tool(
             "seo_compare",
             "Compare an owned site against public competitor origins.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "compare"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "compare")
+            },
         )
         .typed_tool(
             "seo_links",
             "Directed internal-link recommendations from first-party page vectors. Inferred, never a ranking proof.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "links"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "links")
+            },
         )
         .typed_tool(
             "seo_vectors",
             "Deterministic page vectors and SEO link profiles. Lexical model, no embedding service.",
             schema::site(),
-            move |_ctx, input: SiteInput| tool_audit(max_pages, &input, "vectors"),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: SiteInput| tool_audit(max_pages, &roots, &input, "vectors")
+            },
         )
         .typed_tool(
             "seo_diff",
             "Compare two revision-bound snapshots or audit JSON files.",
             schema::diff(),
-            move |_ctx, input: DiffInput| match (input.base.as_deref(), input.head.as_deref()) {
-                (Some(base), Some(head)) => match diff_paths(base, head) {
-                    Ok(delta) => ToolReply::structured(delta),
-                    Err(error) => ToolReply::error(error),
-                },
-                _ => ToolReply::structured(json!({
-                    "unmeasured": true,
-                    "repo": input.repo,
-                    "reason": "seo_diff requires base and head snapshot paths. Git SHAs without snapshots stay unmeasured."
-                })),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: DiffInput| tool_diff(&roots, &input)
             },
         )
         .typed_tool(
             "seo_gate",
             "Evidence CI: compare the current run against a baseline and return the gate verdict.",
             schema::gate(),
-            move |_ctx, input: GateInput| tool_gate(max_pages, &input),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: GateInput| tool_gate(max_pages, &roots, &input)
+            },
         )
         .typed_tool(
             "seo_explain",
             "Explain one finding or opportunity with its evidence chain.",
             schema::explain(),
-            move |_ctx, input: ExplainInput| {
-                if input.site.is_none() && input.repo.is_none() {
-                    return ToolReply::error("seo_explain requires site or repo");
-                }
-                let mode = if input.repo.is_some() && input.site.is_some() {
-                    AnalysisMode::Hybrid
-                } else if input.repo.is_some() {
-                    AnalysisMode::Repo
-                } else {
-                    AnalysisMode::Site
-                };
-                let request = AuditRequest {
-                    mode,
-                    site: input.site.clone(),
-                    repo: input.repo.clone(),
-                    competitors: Vec::new(),
-                    max_pages: input.max_pages.or(Some(max_pages)),
-                    workers: None,
-                    ci: false,
-                    baseline: None,
-                    allow_private: false,
-                    gsc: None,
-                    observations: None,
-                    history: None,
-                    render: None,
-                };
-                match run_audit(&request) {
-                    Ok(report) => match explain_chain(&report, &input.id) {
-                        Some(explanation) => ToolReply::structured(explanation),
-                        None => ToolReply::error(format!("unknown finding {}", input.id)),
-                    },
-                    Err(error) => ToolReply::error(error.to_string()),
-                }
+            {
+                let roots = roots.clone();
+                move |_ctx, input: ExplainInput| tool_explain(max_pages, &roots, &input)
             },
         )
         .typed_tool(
             "seo_observations",
             "Query imported GSC, log, analytics, or AI-search evidence.",
             schema::observations(),
-            move |_ctx, input: ObservationsInput| tool_observations(&input),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: ObservationsInput| tool_observations(&roots, &input)
+            },
         )
 }
 
@@ -269,12 +269,16 @@ pub fn seo_server(max_pages: usize) -> ConcurrentMcpServer {
 ///
 /// Returns an IO error from the runtime.
 pub fn serve(options: &HostOptions) -> Result<(), String> {
-    seo_server(options.max_pages)
+    seo_server(options.max_pages, &Roots::new(&options.roots))
         .serve(runtime_config())
         .map_err(|error| error.to_string())
 }
 
-fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply {
+fn audit_request(
+    default_pages: usize,
+    roots: &Roots,
+    input: &SiteInput,
+) -> Result<AuditRequest, String> {
     let mut competitors = input.competitors.clone();
     if let Some(one) = &input.competitor {
         competitors.push(one.clone());
@@ -288,20 +292,27 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
         _ if input.repo.is_some() => AnalysisMode::Repo,
         _ => AnalysisMode::Site,
     };
-    let request = AuditRequest {
+    Ok(AuditRequest {
         mode,
         site: input.site.clone(),
-        repo: input.repo.clone(),
+        repo: roots.resolve_optional("repo", input.repo.as_ref())?,
         competitors,
         max_pages: input.max_pages.or(Some(default_pages)),
         workers: input.workers,
         ci: false,
         baseline: None,
         allow_private: false,
-        gsc: input.gsc.clone(),
-        observations: input.observations.clone(),
-        history: input.history.clone(),
-        render: input.render.clone(),
+        gsc: roots.resolve_optional("gsc", input.gsc.as_ref())?,
+        observations: roots.resolve_optional("observations", input.observations.as_ref())?,
+        history: roots.resolve_optional("history", input.history.as_ref())?,
+        render: roots.resolve_optional("render", input.render.as_ref())?,
+    })
+}
+
+fn tool_audit(default_pages: usize, roots: &Roots, input: &SiteInput, view: &str) -> ToolReply {
+    let request = match audit_request(default_pages, roots, input) {
+        Ok(request) => request,
+        Err(error) => return ToolReply::error(error),
     };
     match run_audit(&request) {
         Ok(report) => match view {
@@ -336,37 +347,117 @@ fn tool_audit(default_pages: usize, input: &SiteInput, view: &str) -> ToolReply 
     }
 }
 
-fn tool_gate(default_pages: usize, input: &GateInput) -> ToolReply {
-    if input.site.is_none() && input.repo.is_none() {
-        return ToolReply::error("seo_gate requires site or repo");
+fn diff_sides(
+    roots: &Roots,
+    input: &DiffInput,
+) -> Result<(Option<String>, Option<String>), String> {
+    Ok((
+        roots.resolve_optional("base", input.base.as_ref())?,
+        roots.resolve_optional("head", input.head.as_ref())?,
+    ))
+}
+
+fn tool_diff(roots: &Roots, input: &DiffInput) -> ToolReply {
+    let (base, head) = match diff_sides(roots, input) {
+        Ok(sides) => sides,
+        Err(error) => return ToolReply::error(error),
+    };
+    match (base, head) {
+        (Some(base), Some(head)) => match diff_paths(&base, &head) {
+            Ok(delta) => ToolReply::structured(delta),
+            Err(error) => ToolReply::error(error),
+        },
+        _ => ToolReply::structured(json!({
+            "unmeasured": true,
+            "repo": input.repo,
+            "reason": "seo_diff requires base and head snapshot paths. Git SHAs without snapshots stay unmeasured."
+        })),
     }
-    let mode = match input.mode.as_deref() {
-        Some("repo") => AnalysisMode::Repo,
-        Some("hybrid") => AnalysisMode::Hybrid,
-        _ if input.repo.is_some() && input.site.is_some() => AnalysisMode::Hybrid,
-        _ if input.repo.is_some() => AnalysisMode::Repo,
-        _ => AnalysisMode::Site,
+}
+
+fn tool_explain(default_pages: usize, roots: &Roots, input: &ExplainInput) -> ToolReply {
+    if input.site.is_none() && input.repo.is_none() {
+        return ToolReply::error("seo_explain requires site or repo");
+    }
+    let repo = match roots.resolve_optional("repo", input.repo.as_ref()) {
+        Ok(repo) => repo,
+        Err(error) => return ToolReply::error(error),
+    };
+    let mode = if repo.is_some() && input.site.is_some() {
+        AnalysisMode::Hybrid
+    } else if repo.is_some() {
+        AnalysisMode::Repo
+    } else {
+        AnalysisMode::Site
     };
     let request = AuditRequest {
         mode,
         site: input.site.clone(),
-        repo: input.repo.clone(),
+        repo,
+        competitors: Vec::new(),
+        max_pages: input.max_pages.or(Some(default_pages)),
+        workers: None,
+        ci: false,
+        baseline: None,
+        allow_private: false,
+        gsc: None,
+        observations: None,
+        history: None,
+        render: None,
+    };
+    match run_audit(&request) {
+        Ok(report) => match explain_chain(&report, &input.id) {
+            Some(explanation) => ToolReply::structured(explanation),
+            None => ToolReply::error(format!("unknown finding {}", input.id)),
+        },
+        Err(error) => ToolReply::error(error.to_string()),
+    }
+}
+
+fn gate_request(
+    default_pages: usize,
+    roots: &Roots,
+    input: &GateInput,
+) -> Result<AuditRequest, String> {
+    let repo = roots.resolve_optional("repo", input.repo.as_ref())?;
+    let mode = match input.mode.as_deref() {
+        Some("repo") => AnalysisMode::Repo,
+        Some("hybrid") => AnalysisMode::Hybrid,
+        _ if repo.is_some() && input.site.is_some() => AnalysisMode::Hybrid,
+        _ if repo.is_some() => AnalysisMode::Repo,
+        _ => AnalysisMode::Site,
+    };
+    Ok(AuditRequest {
+        mode,
+        site: input.site.clone(),
+        repo,
         competitors: Vec::new(),
         max_pages: input.max_pages.or(Some(default_pages)),
         workers: input.workers,
         ci: true,
-        baseline: input.baseline.clone(),
+        baseline: roots.resolve_optional("baseline", input.baseline.as_ref())?,
         allow_private: false,
-        gsc: input.gsc.clone(),
-        observations: input.observations.clone(),
+        gsc: roots.resolve_optional("gsc", input.gsc.as_ref())?,
+        observations: roots.resolve_optional("observations", input.observations.as_ref())?,
         history: None,
-        render: input.render.clone(),
+        render: roots.resolve_optional("render", input.render.as_ref())?,
+    })
+}
+
+fn tool_gate(default_pages: usize, roots: &Roots, input: &GateInput) -> ToolReply {
+    if input.site.is_none() && input.repo.is_none() {
+        return ToolReply::error("seo_gate requires site or repo");
+    }
+    let request = match gate_request(default_pages, roots, input) {
+        Ok(request) => request,
+        Err(error) => return ToolReply::error(error),
     };
+    let baseline_path = request.baseline.clone();
     let report = match run_audit(&request) {
         Ok(report) => report,
         Err(error) => return ToolReply::error(error.to_string()),
     };
-    let baseline = match input.baseline.as_deref().map(load_baseline).transpose() {
+    let baseline = match baseline_path.as_deref().map(load_baseline).transpose() {
         Ok(baseline) => baseline,
         Err(error) => return ToolReply::error(error),
     };
@@ -377,13 +468,27 @@ fn tool_gate(default_pages: usize, input: &GateInput) -> ToolReply {
         "new_errors": verdict.new_errors,
         "resolved": verdict.resolved,
         "coverage_regressions": verdict.coverage_regressions,
-        "baseline": input.baseline,
+        "baseline": baseline_path,
         "measured_urls": report.inventory.measured_urls().len()
     }))
 }
 
-fn tool_observations(input: &ObservationsInput) -> ToolReply {
-    let loaded = match (input.observations.as_deref(), input.gsc.as_deref()) {
+fn observation_paths(
+    roots: &Roots,
+    input: &ObservationsInput,
+) -> Result<(Option<String>, Option<String>), String> {
+    Ok((
+        roots.resolve_optional("observations", input.observations.as_ref())?,
+        roots.resolve_optional("gsc", input.gsc.as_ref())?,
+    ))
+}
+
+fn tool_observations(roots: &Roots, input: &ObservationsInput) -> ToolReply {
+    let (observations, gsc) = match observation_paths(roots, input) {
+        Ok(paths) => paths,
+        Err(error) => return ToolReply::error(error),
+    };
+    let loaded = match (observations.as_deref(), gsc.as_deref()) {
         (Some(path), _) => Some(load_any(path)),
         (None, Some(path)) => Some(load_gsc(path)),
         (None, None) => None,

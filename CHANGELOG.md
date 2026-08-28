@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.4.0 - 2026-08-28
+
+A filesystem boundary for the agent surface, plus the first exact graph
+identities.
+
+- The MCP confines every caller-supplied path. `repo`, `gsc`, `observations`,
+  `render`, `history`, `baseline`, and both `seo_diff` sides are canonicalised
+  and checked against an allow-list, so `..` segments and symlinks cannot point
+  outside it. `--allow-root PATH` is repeatable; with none declared the boundary
+  is the working directory, which is where a plugin launcher starts the server.
+  "No shell" was never "no filesystem capability".
+- JSON-LD nodes keep their own identity. A block is parsed into `JsonLdNode`
+  values carrying `@id`, `@type`, and `sameAs` together, and the flat `types` /
+  `ids` / `same_as` fields derive from them. `Organization #org` beside
+  `WebSite #site` used to leave two ids and two types with no mapping, and the
+  graph labelled every id with the first type in the document.
+- `generateStaticParams` and JSON-LD producers reach the graph. Both were
+  extracted and used for impact, but neither was ever bound as a node or edge.
+- A UTF-8 byte-order mark no longer breaks an import. Windows tooling writes one
+  by default, and every JSON loader — observations, render, baseline, history,
+  search contract — rejected such a file with `expected \`{\` at line 1 column 1`.
+- The README no longer shows a crates.io dependency. Every crate here is
+  `publish = false`, so the example could not work; the git and `--path` routes
+  are the real ones.
+
 ## 0.3.0 - 2026-08-28
 
 Typed observations and honest ranking. An observation now says what it measured,

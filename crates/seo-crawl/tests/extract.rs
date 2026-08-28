@@ -70,6 +70,35 @@ fn reads_csp_http_equiv() {
 }
 
 #[test]
+fn each_json_ld_node_keeps_its_own_identity() {
+    let draft = extract_html(
+        r#"<html><head><script type="application/ld+json">{"@graph":[{"@type":"Organization","@id":"https://x.test/#org","sameAs":["https://linkedin.test/x"]},{"@type":"WebSite","@id":"https://x.test/#site"}]}</script></head><body><h1>Home</h1></body></html>"#,
+    );
+    let block = draft.json_ld.first().expect("block");
+    assert!(block.valid_json);
+    let organization = block
+        .nodes
+        .iter()
+        .find(|node| node.id.as_deref() == Some("https://x.test/#org"))
+        .expect("organization node");
+    assert_eq!(organization.label(), Some("Organization"));
+    assert_eq!(organization.same_as, vec!["https://linkedin.test/x"]);
+    let website = block
+        .nodes
+        .iter()
+        .find(|node| node.id.as_deref() == Some("https://x.test/#site"))
+        .expect("website node");
+    assert_eq!(
+        website.label(),
+        Some("WebSite"),
+        "flattening used to label every id with the first type in the document"
+    );
+    assert!(website.same_as.is_empty());
+    assert_eq!(block.types, vec!["Organization", "WebSite"]);
+    assert_eq!(block.ids.len(), 2);
+}
+
+#[test]
 fn reads_organization_citation_id() {
     let draft = extract_html(
         r#"<html><head><script type="application/ld+json">{"@type":"Organization","@id":"https://x.test/#org","sameAs":["https://x.com/x"]}</script></head><body><h1>Home</h1></body></html>"#,
