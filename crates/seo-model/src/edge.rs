@@ -37,6 +37,10 @@ pub enum Relation {
     ObservedAs,
     /// Node was changed by a revision. Requires proof that the revision produced it.
     ChangedBy,
+    /// Claim or entity falls under a jurisdiction or policy pack.
+    GovernedBy,
+    /// Domain fact is defined at a source location.
+    DefinedAt,
     /// Measured live evidence was compared against a source revision.
     ///
     /// This is the honest relation for a hybrid run: the crawl saw production,

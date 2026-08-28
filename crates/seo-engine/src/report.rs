@@ -6,7 +6,7 @@ use crate::observe;
 use crate::request::AuditRequest;
 use crate::source::{programmatic_findings, source_findings};
 use weavatrix_seo_architecture::{analyze as analyze_architecture, annotate_templates};
-use weavatrix_seo_claims::audit as integrity_audit;
+use weavatrix_seo_claims::audit_with_graph as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
 use weavatrix_seo_content::exact_duplicates;
 use weavatrix_seo_model::{
@@ -40,7 +40,9 @@ pub fn assemble(
     findings.extend(quality_audit(&inventory));
     findings.extend(exact_duplicates(&inventory));
     findings.extend(thin_city_variants(&inventory));
-    findings.extend(integrity_audit(&inventory, request.repo.as_deref()));
+    let (integrity_findings, domain) = integrity_audit(&inventory, request.repo.as_deref());
+    findings.extend(integrity_findings);
+    graph::bind_domain(&mut inventory, domain);
     let predicted = surface.map_or_else(
         || inventory.predicted_routes.clone(),
         weavatrix_seo_source::SourceSurface::patterns,

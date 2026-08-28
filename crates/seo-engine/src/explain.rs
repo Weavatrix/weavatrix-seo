@@ -86,6 +86,7 @@ fn chain_for(inventory: &Inventory, subject: &str) -> (Vec<ExplainHop>, Vec<Stri
             );
         }
     }
+    push_domain(inventory, &mut chain, &url_key);
     for fact in facts_from(inventory, &url_key, Relation::ComparedAgainst)
         .into_iter()
         .chain(facts_from(inventory, &url_key, Relation::ChangedBy))
@@ -104,6 +105,33 @@ fn chain_for(inventory: &Inventory, subject: &str) -> (Vec<ExplainHop>, Vec<Stri
     families.sort();
     families.dedup();
     (chain, families)
+}
+
+/// Walks the domain layer: what the URL claims, what that needs, and where it lives.
+///
+/// `URL ─CLAIMS→ Claim ─REQUIRES→ DataField ─DEFINED_AT→ span`, plus the policy
+/// that governs the claim and the entities and market the page is about.
+fn push_domain(inventory: &Inventory, chain: &mut Vec<ExplainHop>, url_key: &str) {
+    for claim in facts_from(inventory, url_key, Relation::Claims) {
+        push_node(inventory, chain, &claim.target, Some(claim.relation));
+        for governs in facts_from(inventory, &claim.target, Relation::GovernedBy) {
+            push_node(inventory, chain, &governs.target, Some(governs.relation));
+        }
+        for field in facts_from(inventory, &claim.target, Relation::Requires) {
+            push_node(inventory, chain, &field.target, Some(field.relation));
+            for definition in facts_from(inventory, &field.target, Relation::DefinedAt) {
+                push_node(
+                    inventory,
+                    chain,
+                    &definition.target,
+                    Some(definition.relation),
+                );
+            }
+        }
+    }
+    for about in facts_from(inventory, url_key, Relation::About) {
+        push_node(inventory, chain, &about.target, Some(about.relation));
+    }
 }
 
 fn family_for_source(inventory: &Inventory, path: &str) -> Option<String> {
@@ -178,7 +206,13 @@ fn kind_name(kind: SearchNodeKind) -> &'static str {
         SearchNodeKind::Revision => "revision",
         SearchNodeKind::SchemaObject => "schema",
         SearchNodeKind::SearchObservation => "observation",
-        _ => "node",
+        SearchNodeKind::Claim => "claim",
+        SearchNodeKind::DataField => "field",
+        SearchNodeKind::Entity => "entity",
+        SearchNodeKind::Market => "market",
+        SearchNodeKind::Policy => "policy",
+        SearchNodeKind::LegalRequirement => "requirement",
+        SearchNodeKind::Topic => "topic",
     }
 }
 
@@ -190,6 +224,12 @@ fn relation_name(relation: Relation) -> &'static str {
         Relation::ChangedBy => "CHANGED_BY",
         Relation::ComparedAgainst => "COMPARED_AGAINST",
         Relation::ObservedAs => "OBSERVED_AS",
+        Relation::Claims => "CLAIMS",
+        Relation::Requires => "REQUIRES",
+        Relation::DefinedAt => "DEFINED_AT",
+        Relation::GovernedBy => "GOVERNED_BY",
+        Relation::About => "ABOUT",
+        Relation::Declares => "DECLARES",
         _ => "RELATED",
     }
 }

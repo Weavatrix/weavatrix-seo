@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.4.0` bounds the MCP to an allow-list of filesystem roots and gives JSON-LD nodes their own identity. The 0.3.0 typed observations stay (bot hits are never search demand, `ai_visibility` is separate from `ai_retrieval_readiness`), as does the 0.2.0 evidence work (a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound). SEO does not own a browser.
+`0.5.0` populates the domain layer of the graph: claims, the data fields they require, the source spans that define those fields, entities, markets, and policy packs — and `seo_explain` walks that chain. `0.4.0` bounds the MCP to an allow-list of filesystem roots and gives JSON-LD nodes their own identity. The 0.3.0 typed observations stay (bot hits are never search demand, `ai_visibility` is separate from `ai_retrieval_readiness`), as does the 0.2.0 evidence work (a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound). SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -144,6 +144,8 @@ policy_version:  finding semantics for this release
 revision:        the worktree a source fact came from, never a live response
 graph:           URL ─RENDERED_BY→ route ─METADATA_FROM→ symbol@span
                  URL ─COMPARED_AGAINST→ revision
+                 URL ─CLAIMS→ claim ─REQUIRES→ field ─DEFINED_AT→ span
+                 claim ─GOVERNED_BY→ policy · URL ─ABOUT→ entity / market
 ```
 
 Rules:

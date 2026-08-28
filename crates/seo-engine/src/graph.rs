@@ -189,6 +189,13 @@ fn stamp_facts(inventory: &mut Inventory) {
     }
 }
 
+/// Attaches the domain layer: claims, required fields, entities, markets, policies.
+pub fn bind_domain(inventory: &mut Inventory, domain: weavatrix_seo_claims::DomainGraph) {
+    inventory.nodes.extend(domain.nodes);
+    inventory.facts.extend(domain.facts);
+    stamp_facts(inventory);
+}
+
 /// Attaches imported render observations as `OBSERVED_AS` facts.
 pub fn bind_render(inventory: &mut Inventory, snapshot: &RenderSnapshot) {
     if !snapshot.connected() {

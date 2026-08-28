@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.5.0 - 2026-08-28
+
+The domain layer of the graph. `SearchNodeKind` has declared `Claim`,
+`DataField`, `Entity`, `Market`, and `Policy` since 0.0.8, and the builder never
+created one. The detectors already established these facts to raise findings, so
+the graph was narrower than its own type system.
+
+- Public claims, the fields they require, and the source that defines them are
+  bound as nodes and edges:
+
+  ```text
+  URL ─CLAIMS→ Claim ─REQUIRES→ DataField ─DEFINED_AT→ source span
+                 └─GOVERNED_BY→ Policy
+  URL ─ABOUT→ Entity / Market
+  ```
+
+- Two relations are new: `GOVERNED_BY` and `DEFINED_AT`. An entity keeps its own
+  jurisdiction even when a page of another market names it, which is what makes
+  contamination legible in the graph and not only in a finding.
+- `seo_explain` walks that chain. Explaining a claim contradiction now names the
+  claim, the field it needs, the policy that requires it, and the file and line
+  that set the field false.
+- `EvidenceSource::Policy` separates a shipped pack rule from repository
+  evidence. The pack says a claim requires a fact; whether the analysed project
+  satisfies it is a different measurement with a different source.
+- The domain graph and the integrity findings come from one repository scan
+  (`audit_with_graph`), so an explanation cannot be built from a different read
+  of the source than the finding it explains.
+- Market classification stays `INFERRED`: it is a heuristic over host, path,
+  language, and copy.
+
 ## 0.4.0 - 2026-08-28
 
 A filesystem boundary for the agent surface, plus the first exact graph

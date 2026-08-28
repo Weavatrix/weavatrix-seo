@@ -38,6 +38,8 @@ pub enum EvidenceSource {
     Provider,
     /// Semantic similarity layer.
     Semantic,
+    /// A shipped policy pack. Not the analysed repository.
+    Policy,
 }
 
 /// Confidence attached to evidence.
@@ -97,6 +99,22 @@ impl Evidence {
         Self {
             kind: EvidenceKind::Deterministic,
             source: EvidenceSource::Repo,
+            confidence: Confidence::Exact,
+            snapshot_id: None,
+            revision: None,
+            policy_version: None,
+        }
+    }
+
+    /// A rule stated by a shipped policy pack.
+    ///
+    /// This is not repository evidence. The pack says a claim requires a fact;
+    /// whether the analysed project satisfies it is a separate measurement.
+    #[must_use]
+    pub fn policy() -> Self {
+        Self {
+            kind: EvidenceKind::Deterministic,
+            source: EvidenceSource::Policy,
             confidence: Confidence::Exact,
             snapshot_id: None,
             revision: None,
