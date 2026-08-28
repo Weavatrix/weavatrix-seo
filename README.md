@@ -32,7 +32,7 @@ repository source
 
 ## Status
 
-`0.2.0` tightens evidence semantics: a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound, an explicit search contract beats the built-in heuristic, and comparability is one shared rule. MCP parity from 0.1.13 stays. SEO does not own a browser.
+`0.3.0` types observations: bot hits are never search demand, average position keeps its fraction, and `ai_visibility` is separate from `ai_retrieval_readiness`. The 0.2.0 evidence-semantics work stays: a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound, and an explicit search contract beats the built-in heuristic. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -69,7 +69,7 @@ Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.2.0"
+weavatrix-seo = "0.3.0"
 ```
 
 ## CLI
@@ -90,7 +90,7 @@ weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
 weavatrix-seo mcp
 ```
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports GSC/Bing/bot-log JSON. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories and reports producer impact: families whose helper, metadata, or imported data module changed even if the route pattern did not. Git SHAs without snapshot files stay unmeasured. `explain` prints the URL → route → symbol chain.
+`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports provider JSON. Each row carries a `kind` (`search_performance`, `bot_crawl`, `ai_citation`, `serp_position`, `analytics`) — declared per row or per file, otherwise implied by a known provider name. An unrecognised provider stays `analytics`, so it never becomes search demand. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories and reports producer impact: families whose helper, metadata, or imported data module changed even if the route pattern did not. Git SHAs without snapshot files stay unmeasured. `explain` prints the URL → route → symbol chain.
 
 Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
 
@@ -141,6 +141,10 @@ Rules:
 - a sitemap entry is not proof a page is indexed
 - semantic similarity is never upgraded to deterministic truth
 - missing evidence is `unmeasured`, not a pass
+- an observation says what it measured; crawler hits, analytics sessions, and AI
+  citations are never read as search demand
+- retrieval readiness is inferable, AI visibility is not: `ai_visibility` stays
+  unmeasured until a generative-search citation is imported
 - a hybrid run compares production against a worktree; it does not prove
   production was built from it, so the edge is `COMPARED_AGAINST` and never
   `CHANGED_BY`

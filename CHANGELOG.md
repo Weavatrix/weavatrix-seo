@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.3.0 - 2026-08-28
+
+Typed observations and honest ranking. An observation now says what it measured,
+and nothing else is allowed to stand in for search demand.
+
+- Observations carry an `ObservationKind`: `search_performance`, `bot_crawl`,
+  `ai_citation`, `serp_position`, or `analytics`. A row can declare `kind`
+  explicitly; otherwise a known provider name implies it, and an unrecognised
+  provider stays `analytics` rather than being guessed into demand.
+- Bot hits are no longer folded into impressions. `hits` and `impressions` are
+  separate fields, and only `search_performance` rows feed the demand and
+  visibility axes. 500 crawler requests used to become 50 points of demand and
+  promote a page up the opportunity list.
+- `WVX-SEO-OBS-001` fires only on measured search demand. A bot hit on an
+  uncrawled URL is a crawl-budget fact, not a search-coverage gap.
+- Average position is `Option<f32>`. Search Console reports fractions, and 12.4
+  was previously truncated to 12 on import. The visibility gap rounds instead of
+  truncating.
+- `ai_search` is split. `ai_retrieval_readiness` keeps the schema, content, and
+  architecture findings that can be inferred from a crawl. The new
+  `ai_visibility` axis stays `unmeasured` until a generative-search citation is
+  actually imported, because readiness is not visibility.
+- `PageMatrix.cardinality` is now `measured_urls`. It always held the number of
+  URLs this crawl measured, never the size of the generated matrix. Estimating
+  real cardinality needs the route generators, which the compiler still does not
+  read; `SAFE_TO_GENERATE` remains unchanged and still deserves stricter gates.
+- Opportunity ranking uses the axes it declares. Ordering is lexicographic over
+  trust, measured demand, visibility gap, business value, conversion potential,
+  graph leverage, and topical fit, with implementation cost only as a
+  tie-breaker — not one opaque score. A low-confidence or high-risk item sinks
+  below everything trustworthy instead of being dropped. An axis nobody scored
+  is not treated as a low score.
+
 ## 0.2.0 - 2026-08-28
 
 Evidence semantics. Every change here removes a claim the code could not support.

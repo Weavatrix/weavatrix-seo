@@ -50,16 +50,46 @@ pub struct OpportunityAxes {
     pub risk: Option<u16>,
 }
 
+/// Below this, a recommendation is not confident enough to act on first.
+const MIN_CONFIDENCE: u16 = 40;
+/// Above this, a recommendation is too risky to act on first.
+const MAX_RISK: u16 = 70;
+
 impl OpportunityAxes {
-    /// Sort key: measured demand first, then gap and leverage.
+    /// Ordering key, highest first.
+    ///
+    /// This is lexicographic over the declared axes, never one opaque score:
+    /// trust gates first, then measured demand, then value, and effort only
+    /// breaks ties. An untrusted item sinks below everything else instead of
+    /// being dropped, because it is still a real gap.
     #[must_use]
-    pub fn rank_key(&self) -> (u8, u16, u16, u16) {
+    pub fn rank_key(&self) -> (u8, u8, u16, u16, u16, u16, u16, u16, u16) {
         (
+            u8::from(self.is_trusted()),
             u8::from(self.demand.is_some()),
             self.demand.unwrap_or(0),
             self.visibility_gap.unwrap_or(0),
+            self.business_value.unwrap_or(0),
+            self.conversion_potential.unwrap_or(0),
             self.graph_leverage.unwrap_or(0),
+            self.topical_fit.unwrap_or(0),
+            self.cheapness(),
         )
+    }
+
+    /// Whether this is confident enough and safe enough to act on first.
+    ///
+    /// An unscored axis is not a low score: a recommendation that never
+    /// declared confidence is not thereby untrustworthy.
+    #[must_use]
+    pub fn is_trusted(&self) -> bool {
+        self.confidence.unwrap_or(100) >= MIN_CONFIDENCE && self.risk.unwrap_or(0) <= MAX_RISK
+    }
+
+    /// Cheaper work sorts first. Only a tie-breaker.
+    #[must_use]
+    pub fn cheapness(&self) -> u16 {
+        100_u16.saturating_sub(self.implementation_cost.unwrap_or(0).min(100))
     }
 }
 
@@ -156,5 +186,78 @@ impl AuditReport {
         self.findings
             .iter()
             .find(|finding| finding.fingerprint == id || finding.code == id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OpportunityAxes;
+
+    #[test]
+    fn an_unscored_axis_is_not_a_low_score() {
+        assert!(OpportunityAxes::default().is_trusted());
+    }
+
+    #[test]
+    fn low_confidence_sinks_below_everything_trusted() {
+        let trusted = OpportunityAxes {
+            graph_leverage: Some(1),
+            ..OpportunityAxes::default()
+        };
+        let guessy = OpportunityAxes {
+            demand: Some(100),
+            confidence: Some(10),
+            ..OpportunityAxes::default()
+        };
+        assert!(!guessy.is_trusted());
+        assert!(
+            trusted.rank_key() > guessy.rank_key(),
+            "a confident small win outranks an unreliable large one"
+        );
+    }
+
+    #[test]
+    fn high_risk_sinks_too() {
+        let safe = OpportunityAxes::default();
+        let risky = OpportunityAxes {
+            demand: Some(100),
+            risk: Some(90),
+            ..OpportunityAxes::default()
+        };
+        assert!(!risky.is_trusted());
+        assert!(safe.rank_key() > risky.rank_key());
+    }
+
+    #[test]
+    fn effort_only_breaks_a_tie() {
+        let cheap = OpportunityAxes {
+            demand: Some(50),
+            implementation_cost: Some(10),
+            ..OpportunityAxes::default()
+        };
+        let costly = OpportunityAxes {
+            demand: Some(50),
+            implementation_cost: Some(90),
+            ..OpportunityAxes::default()
+        };
+        let bigger_but_costly = OpportunityAxes {
+            demand: Some(60),
+            implementation_cost: Some(90),
+            ..OpportunityAxes::default()
+        };
+        assert!(cheap.rank_key() > costly.rank_key());
+        assert!(
+            bigger_but_costly.rank_key() > cheap.rank_key(),
+            "effort never outweighs measured demand"
+        );
+    }
+
+    #[test]
+    fn declared_value_axes_are_actually_used() {
+        let valuable = OpportunityAxes {
+            business_value: Some(90),
+            ..OpportunityAxes::default()
+        };
+        assert!(valuable.rank_key() > OpportunityAxes::default().rank_key());
     }
 }

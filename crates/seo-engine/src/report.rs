@@ -85,6 +85,7 @@ pub fn assemble(
             http: !inventory.pages.is_empty(),
             obs: observations.connected,
             render: has_render,
+            ai_citations: observations.has(weavatrix_seo_observation::ObservationKind::AiCitation),
         },
     );
     inventory.stamp_findings(&mut findings);

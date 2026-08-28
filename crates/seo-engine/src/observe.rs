@@ -1,7 +1,7 @@
 //! Attach GSC demand to opportunities and emit unmeasured URL observations.
 
 use weavatrix_seo_model::{Finding, FindingFamily, Inventory, Locator, Opportunity, Severity};
-use weavatrix_seo_observation::{ObservationSnapshot, axes_for};
+use weavatrix_seo_observation::{ObservationKind, ObservationSnapshot, axes_for};
 
 pub fn decorate(
     snapshot: &ObservationSnapshot,
@@ -27,7 +27,9 @@ pub fn decorate(
     let measured: Vec<String> = inventory.measured_urls();
     let mut findings = Vec::new();
     for row in &snapshot.rows {
-        if row.impressions < 50 {
+        // Only measured search demand says a missing URL matters. Bot hits on an
+        // uncrawled URL are a crawl-budget fact, not a search-coverage gap.
+        if row.kind != ObservationKind::SearchPerformance || row.impressions < 50 {
             continue;
         }
         let known = measured

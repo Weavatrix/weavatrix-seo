@@ -51,8 +51,11 @@ impl SafetyVerdict {
 pub struct PageMatrix {
     /// Family identity.
     pub family: String,
-    /// Estimated cardinality when known.
-    pub cardinality: Option<u64>,
+    /// URLs of this family that this crawl actually measured.
+    ///
+    /// This is not the size of the generated matrix. Estimating that needs the
+    /// route generators, which this compiler does not read yet.
+    pub measured_urls: u64,
     /// Verdict.
     pub verdict: SafetyVerdict,
 }
@@ -64,7 +67,7 @@ pub use compile::compile;
 pub fn unmeasured(family: impl Into<String>) -> PageMatrix {
     PageMatrix {
         family: family.into(),
-        cardinality: None,
+        measured_urls: 0,
         verdict: SafetyVerdict::Unmeasured,
     }
 }

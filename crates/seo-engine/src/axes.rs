@@ -14,6 +14,8 @@ pub struct Coverage {
     pub obs: bool,
     /// WVQ / Playwright render snapshot.
     pub render: bool,
+    /// Generative-search citation observations were imported.
+    pub ai_citations: bool,
 }
 
 pub fn axes(findings: &[Finding], coverage: Coverage) -> Vec<AxisScore> {
@@ -33,13 +35,31 @@ pub fn axes(findings: &[Finding], coverage: Coverage) -> Vec<AxisScore> {
         ("performance", FindingFamily::Perf),
         ("programmatic_safety", FindingFamily::Prog),
         ("observed_search", FindingFamily::Obs),
-        ("ai_search", FindingFamily::Ai),
+        ("ai_retrieval_readiness", FindingFamily::Ai),
     ];
     named
         .into_iter()
         .map(|(axis, family)| score(findings, axis, family, coverage))
-        .chain([render_axis(findings, coverage.render)])
+        .chain([
+            render_axis(findings, coverage.render),
+            ai_visibility_axis(coverage.ai_citations),
+        ])
         .collect()
+}
+
+/// Whether generative search actually cited this site.
+///
+/// Readiness is inferable from schema, content, and architecture. Visibility is
+/// not: it needs an observation of a real answer. Without one this axis stays
+/// unmeasured rather than borrowing a readiness result.
+fn ai_visibility_axis(has_citations: bool) -> AxisScore {
+    AxisScore {
+        axis: "ai_visibility".into(),
+        errors: 0,
+        warnings: 0,
+        infos: 0,
+        unmeasured: !has_citations,
+    }
 }
 
 fn score(findings: &[Finding], axis: &str, family: FindingFamily, coverage: Coverage) -> AxisScore {

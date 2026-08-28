@@ -1,6 +1,6 @@
 //! First-party GSC import. No Google API client.
 
-use crate::{Observation, ObservationSnapshot};
+use crate::{Observation, ObservationKind, ObservationSnapshot};
 use serde::Deserialize;
 use weavatrix_seo_model::{Evidence, EvidenceKind, EvidenceSource};
 
@@ -19,8 +19,9 @@ struct GscRow {
     clicks: u32,
     #[serde(default)]
     impressions: u32,
+    /// Search Console reports a fractional average position.
     #[serde(default)]
-    position: u32,
+    position: Option<f32>,
 }
 
 /// Loads a compact GSC export. Absence of a file is unmeasured, not a pass.
@@ -52,12 +53,14 @@ pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
         .rows
         .into_iter()
         .map(|row| Observation {
+            kind: ObservationKind::SearchPerformance,
             query: row.query,
             url: row.url,
             provider: "gsc".into(),
             evidence: evidence.clone(),
             clicks: row.clicks,
             impressions: row.impressions,
+            hits: 0,
             position: row.position,
         })
         .collect();

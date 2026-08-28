@@ -54,7 +54,10 @@ pub fn opportunities(inventory: &Inventory, architecture: &Architecture) -> Vec<
     items
 }
 
-/// Sorts opportunities by measured demand, then visibility gap, then graph leverage.
+/// Sorts opportunities by [`weavatrix_seo_model::OpportunityAxes::rank_key`].
+///
+/// Trust gates first, then measured demand, then the declared value axes, with
+/// effort as the tie-breaker. Nothing is dropped.
 #[must_use]
 pub fn rank(mut items: Vec<Opportunity>) -> Vec<Opportunity> {
     items.sort_by(|left, right| right.axes.rank_key().cmp(&left.axes.rank_key()));

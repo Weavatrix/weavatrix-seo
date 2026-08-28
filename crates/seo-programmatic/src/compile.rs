@@ -61,7 +61,7 @@ pub fn compile(inventory: &Inventory, predicted: &[String]) -> Vec<PageMatrix> {
         };
         matrices.push(PageMatrix {
             family,
-            cardinality: Some(u64::try_from(pages.len()).unwrap_or(0)),
+            measured_urls: u64::try_from(pages.len()).unwrap_or(0),
             verdict,
         });
     }
