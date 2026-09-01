@@ -222,7 +222,7 @@ fn gsc_export_marks_demand_and_unmeasured_urls() {
     );
     let site = spawn(pages);
     let origin = format!("{}/", site.base);
-    let path = std::env::temp_dir().join(format!("wvx-seo-gsc-{}.json", std::process::id()));
+    let path = common::unique_temp("wvx-seo-gsc").with_extension("json");
     std::fs::write(
         &path,
         format!(

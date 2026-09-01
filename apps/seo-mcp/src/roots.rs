@@ -117,7 +117,13 @@ mod tests {
     use super::Roots;
 
     fn sandbox(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("wvx-seo-roots-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "wvx-seo-roots-{name}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_nanos())
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("inside")).expect("sandbox");
         dir.canonicalize().expect("canonical sandbox")

@@ -5,12 +5,14 @@
 
 #![forbid(unsafe_code)]
 
+mod authority;
 mod edge;
 mod error;
 mod evidence;
 mod finding;
 mod hash;
 mod identity;
+mod intelligence;
 mod inventory;
 mod link;
 mod locator;
@@ -22,21 +24,31 @@ mod policy;
 mod producer;
 mod report;
 mod scope;
+mod semantics;
 mod text;
 mod url;
 mod url_parse;
 
+pub use authority::RuleAuthority;
 pub use edge::{GraphEdge, Relation};
 pub use error::{Result, SeoError};
 pub use evidence::{Confidence, Evidence, EvidenceKind, EvidenceSource, LayerState};
 pub use finding::{Finding, FindingFamily, Severity};
 pub use hash::ContentHash;
 pub use identity::{POLICY_VERSION, config_digest, new_run_id, site_identity, snapshot_digest};
+pub use intelligence::{
+    CandidatePage, Chunk, ContentProfile, FamilyContent, FamilyMatrix, IntentCoverage,
+    NearDuplicateGroup, OutcomeMetric, SearchIntelligence, SignalLevel, SyntheticStyle, chunk_id,
+    intent_id,
+};
 pub use inventory::{AnalysisMode, Inventory, InventoryCounts};
 pub use link::{LinkLocation, LinkRef};
 pub use locator::Locator;
 pub use media::MediaKind;
-pub use node::{FactEdge, SearchNode, SearchNodeKind, route_id, symbol_id, url_id};
+pub use node::{
+    FactEdge, SearchNode, SearchNodeKind, chunk_node_id, intent_node_id, route_id, symbol_id,
+    url_id,
+};
 pub use observation::{FetchObservation, FetchOutcome};
 pub use page::{
     Alternate, ExtractedPage, Heading, ImageRef, Indexability, JsonLd, JsonLdNode, RedirectHop,
@@ -45,5 +57,9 @@ pub use policy::{IndexabilityPolicy, InternationalPolicy, SearchPolicy, glob_mat
 pub use producer::ProducerFact;
 pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
 pub use scope::EvidenceScope;
+pub use semantics::{
+    ARTIFACT_SCHEMA_VERSION, ENGINE_VERSION, EvidenceSemantics, LEGACY_UNIQUE_SAMPLE_FLOOR,
+    MAX_RISK, MIN_CONFIDENCE, policy_pack_digest, rule_semantics_digest,
+};
 pub use text::strip_bom;
 pub use url::{AbsoluteUrl, Scheme};

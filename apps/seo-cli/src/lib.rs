@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use weavatrix_seo::{
     diff_paths, evaluate_gate, explain_chain, load_baseline, plan_from, render_html, render_text,
-    run_audit,
+    retrieve, run_audit, run_on_report,
 };
 
 /// CLI stdout/stderr + process code.
@@ -35,6 +35,8 @@ Usage:
   weavatrix-seo compare --site URL --competitor URL [--max-pages N] [--json]
   weavatrix-seo diff --base PATH --head PATH [--json]
   weavatrix-seo explain ID --site URL [--json]
+  weavatrix-seo query --site URL --q 'FROM urls WHERE indexable = true LIMIT 20' [--json]
+  weavatrix-seo retrieve --site URL --q QUERY [--json]
   weavatrix-seo mcp
   weavatrix-seo --version
 "
@@ -67,6 +69,7 @@ pub fn run(args: &[String]) -> CliOutput {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn dispatch(args: &[String]) -> Result<CliOutput, String> {
     let (command, flags, positionals) = args::split(args)?;
     let json = flags.contains_key("json") || args.iter().any(|item| item == "--json");
@@ -86,6 +89,20 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
         "audit" if json => encode(&report)?,
         "opportunities" if json => encode(&report.opportunities)?,
         "plan" if json => encode(&plan_from(&report))?,
+        "query" if json => {
+            let q = flags
+                .get("q")
+                .or_else(|| flags.get("query"))
+                .ok_or_else(|| "query requires --q DSL".to_owned())?;
+            encode(&run_on_report(q, &report)?)?
+        }
+        "retrieve" if json => {
+            let q = flags
+                .get("q")
+                .or_else(|| flags.get("query"))
+                .ok_or_else(|| "retrieve requires --q QUERY".to_owned())?;
+            encode(&retrieve(&report, q, 10))?
+        }
         "compare" if json => encode(&report.opportunities)?,
         "explain" => {
             let id = positionals
@@ -130,6 +147,49 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
                 let _ = writeln!(text, "{} {}", item.kind, item.subject);
             }
             text
+        }
+        "query" => {
+            let q = flags
+                .get("q")
+                .or_else(|| flags.get("query"))
+                .ok_or_else(|| "query requires --q DSL".to_owned())?;
+            let result = run_on_report(q, &report)?;
+            if json {
+                encode(&result)?
+            } else {
+                let mut text = format!(
+                    "collection {} rows {}\n",
+                    result.collection,
+                    result.rows.len()
+                );
+                for row in result.rows {
+                    let _ = writeln!(
+                        text,
+                        "  {}",
+                        row.into_iter()
+                            .map(|(k, v)| format!("{k}={v}"))
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    );
+                }
+                text
+            }
+        }
+        "retrieve" => {
+            let q = flags
+                .get("q")
+                .or_else(|| flags.get("query"))
+                .ok_or_else(|| "retrieve requires --q QUERY".to_owned())?;
+            let hits = retrieve(&report, q, 10);
+            if json {
+                encode(&hits)?
+            } else {
+                let mut text = String::new();
+                for hit in hits {
+                    let _ = writeln!(text, "{} lexical={}", hit.url, hit.lexical);
+                }
+                text
+            }
         }
         _ => render_text(&report),
     };

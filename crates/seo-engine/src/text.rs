@@ -52,6 +52,36 @@ pub fn render_text(report: &AuditReport) -> String {
             finding.fingerprint, finding.summary
         );
     }
+    if let Some(intelligence) = &report.intelligence {
+        let _ = writeln!(out, "\nintelligence");
+        let _ = writeln!(
+            out,
+            "  semantics: engine={} artifact={} digest={}",
+            intelligence.semantics.engine_version,
+            intelligence.semantics.artifact_schema_version,
+            &intelligence.semantics.rule_semantics_digest
+                [..8.min(intelligence.semantics.rule_semantics_digest.len())]
+        );
+        let _ = writeln!(
+            out,
+            "  profiles={} families={} chunks={} matrices={} outcomes={}",
+            intelligence.profiles.len(),
+            intelligence.families.len(),
+            intelligence.chunks.len(),
+            intelligence.matrices.len(),
+            intelligence.outcomes.len()
+        );
+        for family in intelligence.families.iter().take(8) {
+            let _ = writeln!(
+                out,
+                "  family {} urls={} shared={:?} unique_facts={:?}",
+                family.family,
+                family.measured_urls,
+                family.template_shared_ratio,
+                family.unique_fact_ratio
+            );
+        }
+    }
     let _ = writeln!(out, "\nopportunities");
     if report.opportunities.is_empty() {
         let _ = writeln!(out, "  none");

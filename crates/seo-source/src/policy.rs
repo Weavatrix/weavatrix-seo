@@ -138,7 +138,13 @@ mod tests {
 
     #[test]
     fn malformed_contract_is_not_an_absent_contract() {
-        let dir = std::env::temp_dir().join(format!("wvx-seo-policy-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "wvx-seo-policy-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_nanos())
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join(".weavatrix")).expect("contract dir");
         std::fs::write(dir.join(".weavatrix").join("seo.json"), "{ oops").expect("write");
@@ -153,7 +159,13 @@ mod tests {
 
     #[test]
     fn absent_contract_reports_no_error() {
-        let dir = std::env::temp_dir().join(format!("wvx-seo-nopolicy-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "wvx-seo-nopolicy-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_nanos())
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("dir");
         let loaded = load(&dir.to_string_lossy());

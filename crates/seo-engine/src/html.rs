@@ -10,6 +10,7 @@ pub fn render_html(report: &AuditReport) -> String {
     write_header(&mut body, report);
     write_axes(&mut body, report);
     write_findings(&mut body, report);
+    write_intelligence(&mut body, report);
     write_opportunities(&mut body, report);
     wrap(&body)
 }
@@ -66,6 +67,38 @@ fn write_axes(body: &mut String, report: &AuditReport) {
         );
     }
     let _ = writeln!(body, "</div></section>");
+}
+
+fn write_intelligence(body: &mut String, report: &AuditReport) {
+    let Some(intelligence) = &report.intelligence else {
+        return;
+    };
+    let _ = writeln!(body, "<section><h2>Intelligence</h2>");
+    let _ = writeln!(
+        body,
+        "<p class=\"meta\">engine {} · artifact {} · digest {}</p>",
+        escape(&intelligence.semantics.engine_version),
+        escape(&intelligence.semantics.artifact_schema_version),
+        escape(&intelligence.semantics.rule_semantics_digest)
+    );
+    if !intelligence.families.is_empty() {
+        let _ = writeln!(
+            body,
+            "<table><thead><tr><th>family</th><th>urls</th><th>shared</th><th>unique facts</th></tr></thead><tbody>"
+        );
+        for family in &intelligence.families {
+            let _ = writeln!(
+                body,
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                escape(&family.family),
+                family.measured_urls,
+                family.template_shared_ratio.unwrap_or(0),
+                family.unique_fact_ratio.unwrap_or(0)
+            );
+        }
+        let _ = writeln!(body, "</tbody></table>");
+    }
+    let _ = writeln!(body, "</section>");
 }
 
 fn write_findings(body: &mut String, report: &AuditReport) {

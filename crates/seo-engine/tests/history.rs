@@ -48,7 +48,7 @@ fn history_roundtrip_diffs_added_url() {
         ..AuditRequest::default()
     })
     .expect("full");
-    let dir = std::env::temp_dir().join(format!("wvx-seo-hist-{}", std::process::id()));
+    let dir = common::unique_temp("wvx-seo-hist");
     let _ = std::fs::remove_dir_all(&dir);
     let base = save_history(dir.to_string_lossy().as_ref(), &small).expect("save base");
     let head = save_history(dir.to_string_lossy().as_ref(), &full).expect("save head");
@@ -66,7 +66,7 @@ fn history_roundtrip_diffs_added_url() {
 fn worktree_dirs_diff_predicted_routes() {
     let fixture =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../seo-nextjs/tests/fixtures");
-    let head_dir = std::env::temp_dir().join(format!("wvx-seo-wt-head-{}", std::process::id()));
+    let head_dir = common::unique_temp("wvx-seo-wt-head");
     let _ = std::fs::remove_dir_all(&head_dir);
     copy_tree(&fixture, &head_dir);
     let extra = head_dir.join("src/app/about/page.tsx");
@@ -94,7 +94,7 @@ fn worktree_dirs_diff_predicted_routes() {
 fn helper_edit_impacts_city_family() {
     let fixture =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../seo-nextjs/tests/fixtures");
-    let head_dir = std::env::temp_dir().join(format!("wvx-seo-wt-helper-{}", std::process::id()));
+    let head_dir = common::unique_temp("wvx-seo-wt-helper");
     let _ = std::fs::remove_dir_all(&head_dir);
     copy_tree(&fixture, &head_dir);
     std::fs::write(
@@ -129,7 +129,7 @@ fn helper_edit_impacts_city_family() {
 fn import_edit_impacts_city_family() {
     let fixture =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../seo-nextjs/tests/fixtures");
-    let head_dir = std::env::temp_dir().join(format!("wvx-seo-wt-import-{}", std::process::id()));
+    let head_dir = common::unique_temp("wvx-seo-wt-import");
     let _ = std::fs::remove_dir_all(&head_dir);
     copy_tree(&fixture, &head_dir);
     std::fs::write(

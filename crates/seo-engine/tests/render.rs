@@ -24,7 +24,7 @@ fn render_title_drift_is_measured() {
     );
     let site = spawn(pages);
     let origin = format!("{}/", site.base);
-    let path = std::env::temp_dir().join(format!("wvx-seo-render-{}.json", std::process::id()));
+    let path = common::unique_temp("wvx-seo-render").with_extension("json");
     std::fs::write(
         &path,
         format!(

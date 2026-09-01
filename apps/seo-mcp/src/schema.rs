@@ -81,6 +81,45 @@ pub fn gate() -> mcport::Value {
     })
 }
 
+/// Bounded analytical query.
+pub fn query() -> mcport::Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "query": { "type": "string", "description": "Bounded DSL: FROM urls WHERE ... RETURN ... LIMIT n." },
+            "mode": { "type": "string" },
+            "site": { "type": "string" },
+            "repo": { "type": "string" },
+            "max_pages": { "type": "integer", "minimum": 1 },
+            "gsc": { "type": "string" },
+            "observations": { "type": "string" },
+            "render": { "type": "string" }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+    })
+}
+
+/// Candidate-page retrieval.
+pub fn retrieve() -> mcport::Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "query": { "type": "string", "description": "Natural-language or keyword query." },
+            "url": { "type": "string", "description": "For seo_similar, the page to compare." },
+            "limit": { "type": "integer", "minimum": 1 },
+            "mode": { "type": "string" },
+            "site": { "type": "string" },
+            "repo": { "type": "string" },
+            "max_pages": { "type": "integer", "minimum": 1 },
+            "gsc": { "type": "string" },
+            "observations": { "type": "string" },
+            "render": { "type": "string" }
+        },
+        "additionalProperties": false
+    })
+}
+
 /// Imported provider evidence.
 pub fn observations() -> mcport::Value {
     json!({

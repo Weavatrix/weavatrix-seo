@@ -54,8 +54,15 @@ mod tests {
             findings: Vec::new(),
             axes: Vec::new(),
             opportunities: Vec::new(),
+            intelligence: None,
         };
-        let dir = std::env::temp_dir().join(format!("wvx-hist-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "wvx-hist-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_nanos())
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         let path = super::save(dir.to_string_lossy().as_ref(), &report).expect("save");
         let loaded = load(&path).expect("load");

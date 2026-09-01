@@ -81,7 +81,15 @@ pub fn split(args: &[String]) -> Result<ParsedArgs, String> {
     let command = args[0].clone();
     if !matches!(
         command.as_str(),
-        "audit" | "inventory" | "opportunities" | "plan" | "compare" | "explain" | "diff"
+        "audit"
+            | "inventory"
+            | "opportunities"
+            | "plan"
+            | "compare"
+            | "explain"
+            | "diff"
+            | "query"
+            | "retrieve"
     ) {
         return Err(format!("unknown command `{command}`\n{}", super::usage()));
     }

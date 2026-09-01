@@ -48,6 +48,14 @@ pub enum Relation {
     /// built from it. Upgrade to [`Relation::ChangedBy`] only with deployment
     /// or build evidence.
     ComparedAgainst,
+    /// URL contains a chunk.
+    Contains,
+    /// Chunk or URL answers an intent or question.
+    Answers,
+    /// Chunk or URL mentions an entity.
+    Mentions,
+    /// Claim is supported by a domain fact.
+    SupportedBy,
 }
 
 /// One recorded graph edge.

@@ -1,8 +1,9 @@
 //! Search-surface inventory.
 
 use crate::{
-    AbsoluteUrl, EvidenceScope, EvidenceSource, ExtractedPage, FactEdge, FetchObservation, Finding,
-    GraphEdge, POLICY_VERSION, ProducerFact, SearchNode, SearchPolicy, snapshot_digest,
+    AbsoluteUrl, EvidenceScope, EvidenceSemantics, EvidenceSource, ExtractedPage, FactEdge,
+    FetchObservation, Finding, GraphEdge, POLICY_VERSION, ProducerFact, SearchNode, SearchPolicy,
+    snapshot_digest,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
@@ -54,6 +55,9 @@ pub struct Inventory {
     /// Policy identifier used for this run.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub policy_version: String,
+    /// Richer evidence-semantics identity. Additive; older snapshots omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics: Option<EvidenceSemantics>,
     /// Crawl/config digest for CI comparability.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub config_digest: String,
@@ -107,6 +111,7 @@ impl Inventory {
             snapshot_id: String::new(),
             run_id: String::new(),
             policy_version: POLICY_VERSION.to_owned(),
+            semantics: Some(EvidenceSemantics::current()),
             config_digest: String::new(),
             repo_revision: None,
             site: None,
@@ -197,6 +202,7 @@ impl Inventory {
         run_id.clone_into(&mut self.run_id);
         self.snapshot_id = snapshot_digest(run_id, seed, &measured);
         POLICY_VERSION.clone_into(&mut self.policy_version);
+        self.semantics = Some(EvidenceSemantics::current());
         let snapshot = self.snapshot_id.clone();
         for page in &mut self.pages {
             page.evidence.snapshot_id = Some(snapshot.clone());

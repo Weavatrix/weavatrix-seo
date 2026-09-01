@@ -47,7 +47,13 @@ fn hybrid_binds_url_to_route_and_metadata_symbol() {
 fn every_declared_producer_reaches_the_graph() {
     // A dedicated repository: the shared fixture deliberately has no JSON-LD
     // producer, because another test proves that case emits ENTITY-002.
-    let root = std::env::temp_dir().join(format!("wvx-seo-producers-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!(
+        "wvx-seo-producers-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_nanos())
+    ));
     let page_dir = root.join("src").join("app").join("[city]");
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&page_dir).expect("app dir");

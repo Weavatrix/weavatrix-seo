@@ -58,9 +58,30 @@ pub struct PageMatrix {
     pub measured_urls: u64,
     /// Verdict.
     pub verdict: SafetyVerdict,
+    /// Pattern dimensions (`city`, `service`, `locale`, …).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dimensions: Vec<String>,
+    /// Estimated cardinality when generators were read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estimated_cardinality: Option<u64>,
+    /// Fact coverage 0–100 when content intelligence ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fact_coverage: Option<u16>,
+    /// Unique-fact ratio 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unique_fact_ratio: Option<u16>,
+    /// Template boilerplate ratio 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_boilerplate_ratio: Option<u16>,
+    /// Semantic distinctness 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic_distinctness: Option<u16>,
+    /// Requirements still unmet for `SAFE_TO_GENERATE`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unmet_requirements: Vec<String>,
 }
 
-pub use compile::compile;
+pub use compile::{compile, enrich};
 
 /// Default compiler output before route generators are wired.
 #[must_use]
@@ -69,6 +90,13 @@ pub fn unmeasured(family: impl Into<String>) -> PageMatrix {
         family: family.into(),
         measured_urls: 0,
         verdict: SafetyVerdict::Unmeasured,
+        dimensions: Vec::new(),
+        estimated_cardinality: None,
+        fact_coverage: None,
+        unique_fact_ratio: None,
+        template_boilerplate_ratio: None,
+        semantic_distinctness: None,
+        unmet_requirements: vec!["no measured URLs".into()],
     }
 }
 

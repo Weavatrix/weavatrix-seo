@@ -4,9 +4,25 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread::{self, JoinHandle};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[allow(dead_code)]
+static TEMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+/// Unique scratch directory. Process id alone collides under parallel tests.
+#[must_use]
+#[allow(dead_code)]
+pub fn unique_temp(prefix: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_nanos());
+    let seq = TEMP_SEQ.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("{prefix}-{}-{nanos}-{seq}", std::process::id()))
+}
 
 pub struct Page {
     pub status: u16,

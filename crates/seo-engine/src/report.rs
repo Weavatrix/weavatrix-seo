@@ -8,15 +8,16 @@ use crate::source::{programmatic_findings, source_findings};
 use weavatrix_seo_architecture::{analyze as analyze_architecture, annotate_templates};
 use weavatrix_seo_claims::audit_with_graph as integrity_audit;
 use weavatrix_seo_competitor::compare_inventories;
-use weavatrix_seo_content::exact_duplicates;
+use weavatrix_seo_content::audit as content_audit;
 use weavatrix_seo_model::{
-    AuditReport, Evidence, Finding, FindingFamily, Inventory, Locator, Severity,
+    AuditReport, Evidence, EvidenceSemantics, FamilyMatrix, Finding, FindingFamily, Inventory,
+    Locator, SearchIntelligence, Severity,
 };
 use weavatrix_seo_observation::{
     load as load_gsc, load_any, unmeasured as observations_unmeasured,
 };
 use weavatrix_seo_opportunity::{opportunities, rank};
-use weavatrix_seo_programmatic::{SafetyVerdict, compile, thin_city_variants};
+use weavatrix_seo_programmatic::{SafetyVerdict, compile, enrich, thin_city_variants};
 use weavatrix_seo_quality::audit as quality_audit;
 use weavatrix_seo_render::{load as load_render, reconcile as reconcile_render};
 use weavatrix_seo_rules::audit as rule_audit;
@@ -38,7 +39,8 @@ pub fn assemble(
     let (architecture, architecture_findings) = analyze_architecture(&inventory);
     findings.extend(architecture_findings);
     findings.extend(quality_audit(&inventory));
-    findings.extend(exact_duplicates(&inventory));
+    let content = content_audit(&inventory);
+    findings.extend(content.findings.clone());
     findings.extend(thin_city_variants(&inventory));
     let (integrity_findings, domain) = integrity_audit(&inventory, request.repo.as_deref());
     findings.extend(integrity_findings);
@@ -51,7 +53,7 @@ pub fn assemble(
         findings.extend(source_findings(&inventory, surface));
         findings.extend(programmatic_findings(surface));
     }
-    let matrices = compile(&inventory, &predicted);
+    let matrices = enrich(compile(&inventory, &predicted), &content.families);
     let semantic = analyze_semantic(&inventory, &architecture);
     findings.extend(semantic.findings);
     let mut items = opportunities(&inventory, &architecture);
@@ -67,6 +69,7 @@ pub fn assemble(
         .or_else(|| request.gsc.as_deref().and_then(|path| load_gsc(path).ok()))
         .unwrap_or_else(observations_unmeasured);
     findings.extend(observe::decorate(&observations, &inventory, &mut items));
+    let outcomes = weavatrix_seo_observation::outcome_metrics(&observations);
     let items = rank(items);
     let render = request
         .render
@@ -90,12 +93,38 @@ pub fn assemble(
             ai_citations: observations.has(weavatrix_seo_observation::ObservationKind::AiCitation),
         },
     );
+    graph::bind_chunks(&mut inventory, &content.chunks);
     inventory.stamp_findings(&mut findings);
+    let intelligence = SearchIntelligence {
+        semantics: EvidenceSemantics::current(),
+        profiles: content.profiles,
+        families: content.families,
+        matrices: matrices
+            .iter()
+            .map(|matrix| FamilyMatrix {
+                family: matrix.family.clone(),
+                measured_urls: matrix.measured_urls,
+                verdict: matrix.verdict.label().to_owned(),
+                dimensions: matrix.dimensions.clone(),
+                estimated_cardinality: matrix.estimated_cardinality,
+                fact_coverage: matrix.fact_coverage,
+                unique_fact_ratio: matrix.unique_fact_ratio,
+                template_boilerplate_ratio: matrix.template_boilerplate_ratio,
+                semantic_distinctness: matrix.semantic_distinctness,
+                unmet_requirements: matrix.unmet_requirements.clone(),
+            })
+            .collect(),
+        chunks: content.chunks,
+        intents: content.intents,
+        outcomes,
+        near_duplicates: content.near_duplicates,
+    };
     AuditReport {
         inventory,
         findings,
         axes,
         opportunities: items,
+        intelligence: Some(intelligence),
     }
 }
 

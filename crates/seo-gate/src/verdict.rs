@@ -119,6 +119,7 @@ mod tests {
             findings: vec![finding],
             axes: Vec::new(),
             opportunities: Vec::new(),
+            intelligence: None,
         }
     }
 
@@ -156,6 +157,7 @@ mod tests {
             findings: Vec::new(),
             axes: Vec::new(),
             opportunities: Vec::new(),
+            intelligence: None,
         };
         let verdict = evaluate(&report, Some(&baseline));
         assert!(verdict.resolved.is_empty(), "{verdict:?}");

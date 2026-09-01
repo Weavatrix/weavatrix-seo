@@ -8,7 +8,7 @@ mod common;
 use common::{html, page, spawn};
 
 fn write_import(name: &str, body: &str) -> String {
-    let path = std::env::temp_dir().join(format!("wvx-seo-{name}-{}.json", std::process::id()));
+    let path = common::unique_temp(&format!("wvx-seo-{name}")).with_extension("json");
     std::fs::write(&path, body).expect("write import");
     path.to_string_lossy().into_owned()
 }

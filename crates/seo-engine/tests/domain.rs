@@ -11,7 +11,7 @@ use common::{html, page, spawn};
 const CLAIM_COPY: &str = "<h1>Licensed electrician in Vancouver WA</h1><p>Licensed electrician serving Clark County and Southwest Washington.</p>";
 
 fn contaminated_repo() -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("wvx-seo-domain-{}", std::process::id()));
+    let dir = common::unique_temp("wvx-seo-domain");
     let _ = std::fs::remove_dir_all(&dir);
     let data = dir.join("src").join("data");
     std::fs::create_dir_all(&data).expect("data dir");

@@ -3,9 +3,12 @@
 use crate::ContentHash;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Policy identifier shipped with this crate. Bump with the crate version
-/// whenever finding semantics change.
-pub const POLICY_VERSION: &str = "0.1.12";
+/// Policy identifier shipped with this crate.
+///
+/// This remains the comparability key used by history and the CI gate. It now
+/// tracks the engine version so two snapshots with different finding semantics
+/// cannot look comparable. The richer identity is [`crate::EvidenceSemantics`].
+pub const POLICY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Origin identity for one site (`scheme://host[:port]`).
 #[must_use]

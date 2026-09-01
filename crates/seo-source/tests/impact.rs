@@ -4,7 +4,13 @@ use weavatrix_seo_source::{RouteFamily, SourceSymbol, unmeasured};
 
 #[test]
 fn hashes_relative_import_of_helper() {
-    let dir = std::env::temp_dir().join(format!("wvx-seo-cone-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!(
+        "wvx-seo-cone-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_nanos())
+    ));
     let lib = dir.join("src").join("lib");
     std::fs::create_dir_all(&lib).expect("lib");
     std::fs::write(lib.join("cities.ts"), "export const CITY = \"A\";\n").expect("cities");

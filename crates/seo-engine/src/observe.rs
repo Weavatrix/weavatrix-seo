@@ -17,6 +17,31 @@ pub fn decorate(
                 item.demand = format!("impressions:{demand}");
             }
         }
+        let mut impressions = 0_u32;
+        let mut clicks = 0_u32;
+        for row in snapshot
+            .rows
+            .iter()
+            .filter(|row| row.kind == ObservationKind::SearchPerformance)
+            .filter(|row| row.url.trim_end_matches('/') == item.subject.trim_end_matches('/'))
+        {
+            impressions = impressions.saturating_add(row.impressions);
+            clicks = clicks.saturating_add(row.clicks);
+        }
+        if impressions > 0 {
+            item.axes.raw_impressions = Some(impressions);
+            item.axes.raw_clicks = Some(clicks);
+            if let Some(gap) = item.axes.visibility_gap {
+                item.axes.recoverable_clicks =
+                    Some(u32::from(gap).saturating_mul(impressions.max(1) / 100));
+            }
+        }
+        if item.kind == "create_family" {
+            item.axes.difficulty_to_build = Some(70);
+        }
+        if item.kind == "content_gap" {
+            item.axes.difficulty_to_build = Some(20);
+        }
         if item.kind == "link_gap" {
             item.axes.graph_leverage = Some(80);
         }

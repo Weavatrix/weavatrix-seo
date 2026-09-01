@@ -33,6 +33,12 @@ pub enum SearchNodeKind {
     Revision,
     /// Policy pack.
     Policy,
+    /// Page chunk used for retrieval and citation.
+    Chunk,
+    /// Search intent.
+    Intent,
+    /// Fan-out question under an intent.
+    Question,
 }
 
 /// One node in the Search Evidence Graph.
@@ -135,4 +141,16 @@ pub fn route_id(pattern: &str) -> String {
 #[must_use]
 pub fn symbol_id(path: &str, name: &str) -> String {
     format!("symbol:{path}#{name}")
+}
+
+/// Chunk node id.
+#[must_use]
+pub fn chunk_node_id(url: &str, index: usize) -> String {
+    format!("chunk:{url}#{index}")
+}
+
+/// Intent node id.
+#[must_use]
+pub fn intent_node_id(label: &str) -> String {
+    format!("intent:{label}")
 }

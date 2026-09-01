@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.6.0 - 2026-09-01
+
+Additive search intelligence. Nothing existing is removed.
+
+- Evidence semantics identity: `POLICY_VERSION` tracks the crate version, and
+  every inventory carries `EvidenceSemantics` (`engine_version`,
+  `artifact_schema_version`, `rule_semantics_digest`, `policy_pack_digest`) so
+  two snapshots with different finding meaning cannot look comparable.
+- `RuleAuthority` on every finding. Severity still gates CI; authority tells an
+  agent whether the rule is a protocol MUST, a documented search-engine SHOULD,
+  a project contract, a jurisdiction requirement, or an experiment.
+- Unknown confidence/risk is a ranking bucket, not 100/0. Trusted+measured,
+  trusted+partial, unknown, then known-untrusted.
+- Unique tempdirs for tests so parallel CI jobs do not clobber fixtures.
+- Content intelligence beside exact duplicates: MinHash/LSH near-duplicates
+  (`WVX-SEO-DUP-002`), per-page `ContentProfile` (MATTR, entropy, fact density,
+  water/readability diagnostics, synthetic-style bands with authorship always
+  `UNMEASURED`), family template decomposition, heading-bounded chunks, and
+  intent fanout coverage.
+- Programmatic `PageMatrix` v2: unique samples are necessary, not sufficient.
+  `SAFE_TO_GENERATE` now requires fact coverage and distinctness; otherwise
+  `SAFE_IF_REQUIREMENTS_MET` with `unmet_requirements`.
+- Outcome metrics (`citation_rate`, `prompts_observed`, `search_clicks`) sit
+  beside findings. Missing providers stay unmeasured, never zero.
+- Opportunity axes gain raw impressions/clicks, recoverable clicks, and
+  difficulty-to-build. `seo_plan` fills real dependencies.
+- Chunk nodes bind `URL ─CONTAINS→ Chunk` on the evidence graph.
+- MCP/CLI: `seo_query` (bounded DSL), `seo_retrieve`, `seo_similar`,
+  `seo_chunks`. Existing eleven tools remain. Rust computes similarity.
+
 ## 0.5.0 - 2026-08-28
 
 The domain layer of the graph. `SearchNodeKind` has declared `Claim`,

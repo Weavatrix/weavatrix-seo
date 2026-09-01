@@ -1,10 +1,10 @@
-//! Eleven-tool catalog and CLI parity of the crawl-backed schema.
+//! Catalog and CLI parity of the crawl-backed schema.
 
 use mcport::ConcurrentToolServer;
 use weavatrix_seo_mcp::{Roots, seo_server};
 
 #[test]
-fn catalog_has_eleven_tools() {
+fn catalog_keeps_existing_tools_and_adds_query_primitives() {
     let server = seo_server(20, &Roots::new(&[]));
     let catalog = server.catalog().to_string();
     for name in [
@@ -19,6 +19,10 @@ fn catalog_has_eleven_tools() {
         "seo_gate",
         "seo_explain",
         "seo_observations",
+        "seo_query",
+        "seo_retrieve",
+        "seo_similar",
+        "seo_chunks",
     ] {
         assert!(catalog.contains(name), "{catalog}");
     }

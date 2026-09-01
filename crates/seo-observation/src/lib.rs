@@ -4,6 +4,7 @@
 
 mod gsc;
 mod kind;
+mod outcome;
 mod provider;
 
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,7 @@ use weavatrix_seo_model::{Evidence, EvidenceSource};
 
 pub use gsc::{disconnected, from_json, load};
 pub use kind::ObservationKind;
+pub use outcome::metrics as outcome_metrics;
 pub use provider::{from_any, load_any};
 
 /// One provider observation.

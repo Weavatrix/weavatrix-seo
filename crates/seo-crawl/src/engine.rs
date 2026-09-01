@@ -109,6 +109,7 @@ impl Crawl {
             snapshot_id: String::new(),
             run_id: String::new(),
             policy_version: String::new(),
+            semantics: None,
             config_digest: String::new(),
             repo_revision: None,
             site: Some(seed.to_string()),

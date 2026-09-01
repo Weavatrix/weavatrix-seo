@@ -1,7 +1,7 @@
 //! Bind live URLs to route families, producers, schema, and revision.
 
 use weavatrix_seo_model::{
-    Confidence, Evidence, EvidenceKind, FactEdge, Inventory, Locator, Relation, SearchNode,
+    Chunk, Confidence, Evidence, EvidenceKind, FactEdge, Inventory, Locator, Relation, SearchNode,
     SearchNodeKind, route_id, symbol_id, url_id,
 };
 use weavatrix_seo_nextjs::route_matches;
@@ -193,6 +193,33 @@ fn stamp_facts(inventory: &mut Inventory) {
 pub fn bind_domain(inventory: &mut Inventory, domain: weavatrix_seo_claims::DomainGraph) {
     inventory.nodes.extend(domain.nodes);
     inventory.facts.extend(domain.facts);
+    stamp_facts(inventory);
+}
+
+/// Attaches chunk nodes with `CONTAINS` edges from their parent URL.
+pub fn bind_chunks(inventory: &mut Inventory, chunks: &[Chunk]) {
+    if chunks.is_empty() {
+        return;
+    }
+    let evidence = Evidence::http();
+    for chunk in chunks {
+        inventory.nodes.push(
+            SearchNode::new(
+                SearchNodeKind::Chunk,
+                chunk.id.clone(),
+                chunk.heading.clone(),
+            )
+            .at(Locator::Url(chunk.url.clone())),
+        );
+        inventory.facts.push(FactEdge::new(
+            url_id(&chunk.url),
+            SearchNodeKind::Url,
+            chunk.id.clone(),
+            SearchNodeKind::Chunk,
+            Relation::Contains,
+            evidence.clone(),
+        ));
+    }
     stamp_facts(inventory);
 }
 

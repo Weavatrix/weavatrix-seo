@@ -1,6 +1,6 @@
 //! Audit findings with stable fingerprints.
 
-use crate::{ContentHash, Evidence, Locator};
+use crate::{ContentHash, Evidence, Locator, RuleAuthority};
 use serde::{Deserialize, Serialize};
 
 /// Gate-facing severity. Folklore length limits are never `error`.
@@ -96,6 +96,33 @@ impl FindingFamily {
             Self::Comp => "WVX-SEO-COMP",
         }
     }
+
+    /// Every catalogue family, in a stable order for the semantics digest.
+    pub const ALL: [Self; 23] = [
+        Self::Crawl,
+        Self::Idx,
+        Self::Canon,
+        Self::Sitemap,
+        Self::I18n,
+        Self::Render,
+        Self::Meta,
+        Self::Schema,
+        Self::Link,
+        Self::Dup,
+        Self::Cann,
+        Self::Content,
+        Self::Entity,
+        Self::Market,
+        Self::Claim,
+        Self::Prog,
+        Self::Perf,
+        Self::A11y,
+        Self::Security,
+        Self::Local,
+        Self::Ai,
+        Self::Obs,
+        Self::Comp,
+    ];
 }
 
 /// One audit finding.
@@ -123,6 +150,9 @@ pub struct Finding {
     pub affected_urls: Vec<String>,
     /// Evidence used to emit the finding.
     pub evidence: Evidence,
+    /// Why the rule is legitimate. Distinct from evidence kind.
+    #[serde(default)]
+    pub authority: RuleAuthority,
 }
 
 impl Finding {
@@ -151,7 +181,15 @@ impl Finding {
             locator,
             affected_urls: Vec::new(),
             evidence,
+            authority: RuleAuthority::for_family(family, number),
         }
+    }
+
+    /// Overrides catalogue authority for a project-specific contract.
+    #[must_use]
+    pub fn with_authority(mut self, authority: RuleAuthority) -> Self {
+        self.authority = authority;
+        self
     }
 
     /// Sets explanation fields.

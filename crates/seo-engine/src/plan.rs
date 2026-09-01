@@ -126,7 +126,7 @@ fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
         subject: item.subject.clone(),
         why: item.why.clone(),
         evidence,
-        dependencies: Vec::new(),
+        dependencies: dependencies(kind, item, source_location.as_deref()),
         source_location,
         required_facts,
         link_placements,
@@ -144,6 +144,39 @@ fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
             PlanKind::Improve => "The listed acceptance condition is true on a new crawl.".into(),
         },
         axes: item.axes.clone(),
+    }
+}
+
+fn dependencies(kind: PlanKind, item: &Opportunity, source_location: Option<&str>) -> Vec<String> {
+    match kind {
+        PlanKind::Create => {
+            let mut deps = vec![
+                "ADD first-party facts".into(),
+                "BIND entity facts".into(),
+                "ADD schema from measured facts".into(),
+                "PASS programmatic distinctness".into(),
+                "PASS claim integrity".into(),
+            ];
+            if let Some(source) = source_location {
+                deps.insert(2, format!("producer:{source}"));
+            }
+            if let Some(verdict) = &item.programmatic_verdict {
+                deps.push(format!("programmatic:{verdict}"));
+            }
+            deps
+        }
+        PlanKind::Link => vec!["target URL is crawlable from the seed".into()],
+        PlanKind::Consolidate => vec![
+            "PASS claim integrity".into(),
+            "KEEP one indexable URL per intent".into(),
+        ],
+        PlanKind::Improve if item.kind == "content_gap" => {
+            vec!["ADD one H1 that names the page purpose".into()]
+        }
+        PlanKind::Noindex => {
+            vec!["KEEP the family out of the sitemap until unique value is proven".into()]
+        }
+        _ => Vec::new(),
     }
 }
 

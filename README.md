@@ -32,14 +32,16 @@ repository source
 
 ## Status
 
-`0.5.0` populates the domain layer of the graph: claims, the data fields they require, the source spans that define those fields, entities, markets, and policy packs — and `seo_explain` walks that chain. `0.4.0` bounds the MCP to an allow-list of filesystem roots and gives JSON-LD nodes their own identity. The 0.3.0 typed observations stay (bot hits are never search demand, `ai_visibility` is separate from `ai_retrieval_readiness`), as does the 0.2.0 evidence work (a live response never carries the worktree revision, source facts carry repository provenance, findings are snapshot-bound). SEO does not own a browser.
+`0.6.0` is additive intelligence on top of the 0.5.0 domain graph. Findings now carry `RuleAuthority` (protocol vs search-engine documented vs experiment). Snapshot comparability uses `EvidenceSemantics` so crate version and rule meaning cannot drift apart. Unknown confidence/risk stays unknown in ranking. Content intelligence adds near-duplicates, per-page profiles, family template decomposition, chunks, and intent fanout — without replacing exact-duplicate detection. `SAFE_TO_GENERATE` now requires fact coverage, not two unique samples. MCP/CLI gain `seo_query`, `seo_retrieve`, `seo_similar`, and `seo_chunks`. Existing tools, findings, and modes stay. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
 - response metadata, canonical, hreflang, schema, links, headings, images, Open Graph
 - deterministic technical audit plus H1 / a11y / origin security-header values / performance checks
 - internal-link architecture (depth, orphans, authority)
-- exact-duplicate detection and thin programmatic city variants
+- exact-duplicate detection, near-duplicate MinHash clusters, and thin programmatic city variants
+- content profiles, family template/fact decomposition, chunks, and intent fanout
+- bounded `query` DSL and candidate-page `retrieve` (Rust computes similarity)
 - HTML report (`--html PATH`) plus JSON
 - directed internal-link recommendations from first-party page vectors, no embedding service
 - market-entity contamination, license claim/fact contradictions, undeclared pack entities, and AI citation identity
@@ -96,6 +98,8 @@ weavatrix-seo inventory --site https://example.com
 weavatrix-seo opportunities --site https://example.com
 weavatrix-seo plan --site https://example.com
 weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
+weavatrix-seo query --site https://example.com --q "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20"
+weavatrix-seo retrieve --site https://example.com --q "licensed electrician vancouver"
 weavatrix-seo mcp
 ```
 
@@ -105,7 +109,7 @@ Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server re
 
 ## MCP
 
-Eleven tools, no shell:
+Existing tools stay. Four analytical primitives are additive:
 
 ```text
 seo_inventory
@@ -119,6 +123,10 @@ seo_diff
 seo_gate
 seo_explain
 seo_observations
+seo_query
+seo_retrieve
+seo_similar
+seo_chunks
 ```
 
 Run `weavatrix-seo mcp` or the `weavatrix-seo-mcp` binary.
@@ -140,7 +148,10 @@ locator:         URL, header, DOM, source span
 confidence:      exact | high | medium | low
 snapshot_id:     measured crawl, not the seed URL
 run_id:          one analysis invocation
-policy_version:  finding semantics for this release
+policy_version:  finding semantics for this release (engine version)
+                 plus EvidenceSemantics (artifact schema + rule digest)
+authority:       protocol | search-engine | contract | jurisdiction |
+                 practice | heuristic | opportunity
 revision:        the worktree a source fact came from, never a live response
 graph:           URL ─RENDERED_BY→ route ─METADATA_FROM→ symbol@span
                  URL ─COMPARED_AGAINST→ revision

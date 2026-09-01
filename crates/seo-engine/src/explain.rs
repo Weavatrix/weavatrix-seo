@@ -213,6 +213,9 @@ fn kind_name(kind: SearchNodeKind) -> &'static str {
         SearchNodeKind::Policy => "policy",
         SearchNodeKind::LegalRequirement => "requirement",
         SearchNodeKind::Topic => "topic",
+        SearchNodeKind::Chunk => "chunk",
+        SearchNodeKind::Intent => "intent",
+        SearchNodeKind::Question => "question",
     }
 }
 
@@ -230,6 +233,10 @@ fn relation_name(relation: Relation) -> &'static str {
         Relation::GovernedBy => "GOVERNED_BY",
         Relation::About => "ABOUT",
         Relation::Declares => "DECLARES",
+        Relation::Contains => "CONTAINS",
+        Relation::Answers => "ANSWERS",
+        Relation::Mentions => "MENTIONS",
+        Relation::SupportedBy => "SUPPORTED_BY",
         _ => "RELATED",
     }
 }

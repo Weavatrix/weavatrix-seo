@@ -1,6 +1,6 @@
 //! Audit and opportunity reports.
 
-use crate::{Finding, Inventory};
+use crate::{Finding, Inventory, MAX_RISK, MIN_CONFIDENCE, SearchIntelligence};
 use serde::{Deserialize, Serialize};
 
 /// Named axis. Never collapsed into one opaque SEO score.
@@ -48,12 +48,22 @@ pub struct OpportunityAxes {
     /// Risk of the change.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub risk: Option<u16>,
+    /// Raw search impressions when a provider supplied them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_impressions: Option<u32>,
+    /// Raw clicks when a provider supplied them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_clicks: Option<u32>,
+    /// Recoverable clicks estimated from expected CTR. Unmeasured when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recoverable_clicks: Option<u32>,
+    /// External ranking difficulty when a provider supplied it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub difficulty_to_rank: Option<u16>,
+    /// Difficulty of building the page truthfully from owned facts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub difficulty_to_build: Option<u16>,
 }
-
-/// Below this, a recommendation is not confident enough to act on first.
-const MIN_CONFIDENCE: u16 = 40;
-/// Above this, a recommendation is too risky to act on first.
-const MAX_RISK: u16 = 70;
 
 impl OpportunityAxes {
     /// Ordering key, highest first.
@@ -65,7 +75,7 @@ impl OpportunityAxes {
     #[must_use]
     pub fn rank_key(&self) -> (u8, u8, u16, u16, u16, u16, u16, u16, u16) {
         (
-            u8::from(self.is_trusted()),
+            self.trust_rank(),
             u8::from(self.demand.is_some()),
             self.demand.unwrap_or(0),
             self.visibility_gap.unwrap_or(0),
@@ -77,13 +87,29 @@ impl OpportunityAxes {
         )
     }
 
+    /// Trust bucket used for ranking.
+    ///
+    /// Higher is better: measured-trusted, partially measured, unknown, then
+    /// known-untrusted. Missing confidence/risk is **unknown**, never 100/0.
+    #[must_use]
+    pub fn trust_rank(&self) -> u8 {
+        match (self.confidence, self.risk) {
+            (Some(confidence), Some(risk)) if confidence >= MIN_CONFIDENCE && risk <= MAX_RISK => 3,
+            (Some(confidence), None) if confidence >= MIN_CONFIDENCE => 2,
+            (None, Some(risk)) if risk <= MAX_RISK => 2,
+            (None, None) => 1,
+            _ => 0,
+        }
+    }
+
     /// Whether this is confident enough and safe enough to act on first.
     ///
     /// An unscored axis is not a low score: a recommendation that never
-    /// declared confidence is not thereby untrustworthy.
+    /// declared confidence is not thereby untrustworthy. A declared low
+    /// confidence or high risk is.
     #[must_use]
     pub fn is_trusted(&self) -> bool {
-        self.confidence.unwrap_or(100) >= MIN_CONFIDENCE && self.risk.unwrap_or(0) <= MAX_RISK
+        self.trust_rank() > 0
     }
 
     /// Cheaper work sorts first. Only a tie-breaker.
@@ -177,6 +203,9 @@ pub struct AuditReport {
     pub axes: Vec<AxisScore>,
     /// Opportunities discovered in the same pass.
     pub opportunities: Vec<Opportunity>,
+    /// Additive content, retrieval, outcome, and matrix intelligence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intelligence: Option<SearchIntelligence>,
 }
 
 impl AuditReport {
@@ -196,6 +225,24 @@ mod tests {
     #[test]
     fn an_unscored_axis_is_not_a_low_score() {
         assert!(OpportunityAxes::default().is_trusted());
+        assert_eq!(OpportunityAxes::default().trust_rank(), 1);
+    }
+
+    #[test]
+    fn unknown_ranks_below_measured_trust_and_above_low_confidence() {
+        let measured = OpportunityAxes {
+            confidence: Some(80),
+            risk: Some(10),
+            ..OpportunityAxes::default()
+        };
+        let unknown = OpportunityAxes::default();
+        let guessy = OpportunityAxes {
+            demand: Some(100),
+            confidence: Some(10),
+            ..OpportunityAxes::default()
+        };
+        assert!(measured.rank_key() > unknown.rank_key());
+        assert!(unknown.rank_key() > guessy.rank_key());
     }
 
     #[test]

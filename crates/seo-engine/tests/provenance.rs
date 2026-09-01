@@ -12,7 +12,7 @@ use common::{html, page, spawn};
 const SHA: &str = "0123456789abcdef0123456789abcdef01234567";
 
 fn temp_repo(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("wvx-seo-{name}-{}", std::process::id()));
+    let dir = common::unique_temp(&format!("wvx-seo-{name}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("create repo dir");
     dir

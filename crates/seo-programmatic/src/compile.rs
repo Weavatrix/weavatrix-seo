@@ -44,28 +44,120 @@ pub fn compile(inventory: &Inventory, predicted: &[String]) -> Vec<PageMatrix> {
             && pages
                 .iter()
                 .all(|page| page.indexability != Indexability::Indexable);
-        let verdict = if pages.is_empty() {
-            SafetyVerdict::Unmeasured
+        let dimensions = dimensions_of(&family);
+        let mut unmet = Vec::new();
+        if unique < 2 {
+            unmet.push("sufficient sample diversity".into());
+        }
+        if sitemap_only {
+            unmet.push("discovery support beyond sitemap".into());
+        }
+        let (verdict, unmet) = if pages.is_empty() {
+            (SafetyVerdict::Unmeasured, vec!["no measured URLs".into()])
         } else if all_noindex {
-            SafetyVerdict::NoindexByDefault
+            (SafetyVerdict::NoindexByDefault, Vec::new())
         } else if thin {
-            SafetyVerdict::Consolidate
-        } else if unique >= 2 {
-            SafetyVerdict::SafeToGenerate
+            (
+                SafetyVerdict::Consolidate,
+                vec!["unique facts per URL".into()],
+            )
+        } else if unique >= 2 && unmet.is_empty() {
+            // Unique samples are necessary, not sufficient. Without fact and
+            // discovery evidence the family stays SAFE_IF_REQUIREMENTS_MET.
+            unmet.push("fact coverage".into());
+            unmet.push("semantic distinctness".into());
+            unmet.push("canonical strategy".into());
+            (SafetyVerdict::SafeIfRequirementsMet, unmet)
         } else if sitemap_only {
-            SafetyVerdict::Review
+            (SafetyVerdict::Review, unmet)
         } else if unique == 1 {
-            SafetyVerdict::SafeIfRequirementsMet
+            unmet.push("unique facts before expansion".into());
+            (SafetyVerdict::SafeIfRequirementsMet, unmet)
         } else {
-            SafetyVerdict::Unmeasured
+            (SafetyVerdict::Unmeasured, unmet)
         };
         matrices.push(PageMatrix {
             family,
             measured_urls: u64::try_from(pages.len()).unwrap_or(0),
             verdict,
+            dimensions,
+            estimated_cardinality: None,
+            fact_coverage: None,
+            unique_fact_ratio: None,
+            template_boilerplate_ratio: None,
+            semantic_distinctness: if unique >= 2 {
+                Some(u16::try_from((unique * 100) / pages.len().max(1)).unwrap_or(100))
+            } else {
+                None
+            },
+            unmet_requirements: unmet,
         });
     }
     matrices.sort_by(|left, right| left.family.cmp(&right.family));
+    matrices
+}
+
+fn dimensions_of(family: &str) -> Vec<String> {
+    let mut dims = Vec::new();
+    for part in family.split('/') {
+        let token = part.strip_prefix(':').unwrap_or(part);
+        if part.starts_with(':') && !dims.contains(&token.to_owned()) {
+            dims.push(token.to_owned());
+        } else if part == "category" && !dims.iter().any(|item| item == "service") {
+            dims.push("service".into());
+        }
+    }
+    dims
+}
+
+/// Fills fact-coverage fields from family content intelligence.
+#[must_use]
+pub fn enrich(
+    mut matrices: Vec<PageMatrix>,
+    families: &[weavatrix_seo_model::FamilyContent],
+) -> Vec<PageMatrix> {
+    for matrix in &mut matrices {
+        let Some(row) = families
+            .iter()
+            .find(|item| item.family == matrix.family || matrix.family.contains(&item.family))
+        else {
+            continue;
+        };
+        matrix.fact_coverage = row.local_fact_coverage;
+        matrix.unique_fact_ratio = row.unique_fact_ratio;
+        matrix.template_boilerplate_ratio = row.template_shared_ratio;
+        if let Some(distinct) = row.unique_semantic_ratio {
+            matrix.semantic_distinctness = Some(
+                distinct
+                    .saturating_add(row.unique_fact_ratio.unwrap_or(0))
+                    .min(100),
+            );
+        }
+        matrix
+            .unmet_requirements
+            .retain(|item| item.as_str() != "fact coverage");
+        if row.local_fact_coverage.unwrap_or(0) < 40 {
+            if !matrix
+                .unmet_requirements
+                .iter()
+                .any(|item| item.contains("fact"))
+            {
+                matrix.unmet_requirements.push("fact coverage".into());
+            }
+        } else {
+            matrix
+                .unmet_requirements
+                .retain(|item| item.as_str() != "fact coverage");
+        }
+        if row.unique_fact_ratio.unwrap_or(0) >= 15
+            && row.local_fact_coverage.unwrap_or(0) >= 40
+            && matrix.measured_urls >= 2
+            && matrix.verdict == SafetyVerdict::SafeIfRequirementsMet
+            && matrix.unmet_requirements.is_empty()
+        {
+            matrix.verdict = SafetyVerdict::SafeToGenerate;
+        }
+    }
     matrices
 }
 

@@ -1,4 +1,4 @@
-//! Agent MCP surface. Eleven tools. No shell.
+//! Agent MCP surface. Existing tools plus query/retrieve/similar/chunks. No shell.
 
 #![forbid(unsafe_code)]
 
@@ -11,8 +11,8 @@ use mcport::{ConcurrentMcpServer, RuntimeConfig, ToolReply, json};
 use serde::Deserialize;
 use std::time::Duration;
 use weavatrix_seo::{
-    AnalysisMode, AuditRequest, diff_paths, evaluate_gate, explain_chain, link_inputs,
-    load_baseline, plan_from, run_audit,
+    AnalysisMode, AuditRequest, chunks_for, diff_paths, evaluate_gate, explain_chain, link_inputs,
+    load_baseline, plan_from, retrieve, run_audit, run_on_report, similar,
 };
 use weavatrix_seo_observation::{
     load as load_gsc, load_any, unmeasured as observations_unmeasured,
@@ -139,6 +139,49 @@ struct GateInput {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct QueryInput {
+    query: String,
+    #[serde(default)]
+    mode: Option<String>,
+    #[serde(default)]
+    site: Option<String>,
+    #[serde(default)]
+    repo: Option<String>,
+    #[serde(default)]
+    max_pages: Option<usize>,
+    #[serde(default)]
+    gsc: Option<String>,
+    #[serde(default)]
+    observations: Option<String>,
+    #[serde(default)]
+    render: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RetrieveInput {
+    #[serde(default)]
+    query: Option<String>,
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    limit: Option<usize>,
+    #[serde(default)]
+    mode: Option<String>,
+    #[serde(default)]
+    site: Option<String>,
+    #[serde(default)]
+    repo: Option<String>,
+    #[serde(default)]
+    max_pages: Option<usize>,
+    #[serde(default)]
+    gsc: Option<String>,
+    #[serde(default)]
+    observations: Option<String>,
+    #[serde(default)]
+    render: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct ObservationsInput {
     #[serde(default)]
     observations: Option<String>,
@@ -150,7 +193,7 @@ struct ObservationsInput {
     limit: Option<usize>,
 }
 
-/// Eleven-tool SEO server.
+/// Bounded SEO server. Existing tools remain; query/retrieve are additive.
 ///
 /// `roots` bounds every caller-supplied path. Without it a connected agent
 /// could read any file the host process can reach.
@@ -159,7 +202,7 @@ struct ObservationsInput {
 pub fn seo_server(max_pages: usize, roots: &Roots) -> ConcurrentMcpServer {
     ConcurrentMcpServer::new("weavatrix-seo", env!("CARGO_PKG_VERSION"))
         .instructions(
-            "Weavatrix SEO. Eleven bounded tools. No shell. Paths are confined to the allowed roots. Missing evidence is unmeasured.",
+            "Weavatrix SEO. Bounded tools. No shell. Paths are confined to the allowed roots. Missing evidence is unmeasured. Prefer seo_query and seo_retrieve over raw vectors.",
         )
         .strict_schemas()
         .typed_tool(
@@ -259,6 +302,42 @@ pub fn seo_server(max_pages: usize, roots: &Roots) -> ConcurrentMcpServer {
             {
                 let roots = roots.clone();
                 move |_ctx, input: ObservationsInput| tool_observations(&roots, &input)
+            },
+        )
+        .typed_tool(
+            "seo_query",
+            "Bounded read-only query over the last audit: FROM urls|findings|claims|route_families|chunks|opportunities WHERE ... RETURN ... LIMIT n.",
+            schema::query(),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: QueryInput| tool_query(max_pages, &roots, &input)
+            },
+        )
+        .typed_tool(
+            "seo_retrieve",
+            "Rank candidate pages for a query. Rust computes similarity; do not re-do vector math.",
+            schema::retrieve(),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: RetrieveInput| tool_retrieve(max_pages, &roots, &input, "retrieve")
+            },
+        )
+        .typed_tool(
+            "seo_similar",
+            "Pages most similar to a URL in the same audit. Lexical, inferred.",
+            schema::retrieve(),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: RetrieveInput| tool_retrieve(max_pages, &roots, &input, "similar")
+            },
+        )
+        .typed_tool(
+            "seo_chunks",
+            "Chunks that best answer a query, with citation-suitability signals.",
+            schema::retrieve(),
+            {
+                let roots = roots.clone();
+                move |_ctx, input: RetrieveInput| tool_retrieve(max_pages, &roots, &input, "chunks")
             },
         )
 }
@@ -481,6 +560,85 @@ fn observation_paths(
         roots.resolve_optional("observations", input.observations.as_ref())?,
         roots.resolve_optional("gsc", input.gsc.as_ref())?,
     ))
+}
+
+fn tool_query(default_pages: usize, roots: &Roots, input: &QueryInput) -> ToolReply {
+    let site = SiteInput {
+        mode: input.mode.clone(),
+        site: input.site.clone(),
+        repo: input.repo.clone(),
+        competitor: None,
+        competitors: Vec::new(),
+        max_pages: input.max_pages,
+        workers: None,
+        render: input.render.clone(),
+        gsc: input.gsc.clone(),
+        observations: input.observations.clone(),
+        history: None,
+    };
+    let request = match audit_request(default_pages, roots, &site) {
+        Ok(request) => request,
+        Err(error) => return ToolReply::error(error),
+    };
+    match run_audit(&request) {
+        Ok(report) => match run_on_report(&input.query, &report) {
+            Ok(result) => ToolReply::structured(result),
+            Err(error) => ToolReply::error(error),
+        },
+        Err(error) => ToolReply::error(error.to_string()),
+    }
+}
+
+fn tool_retrieve(
+    default_pages: usize,
+    roots: &Roots,
+    input: &RetrieveInput,
+    view: &str,
+) -> ToolReply {
+    let site = SiteInput {
+        mode: input.mode.clone(),
+        site: input.site.clone(),
+        repo: input.repo.clone(),
+        competitor: None,
+        competitors: Vec::new(),
+        max_pages: input.max_pages,
+        workers: None,
+        render: input.render.clone(),
+        gsc: input.gsc.clone(),
+        observations: input.observations.clone(),
+        history: None,
+    };
+    let request = match audit_request(default_pages, roots, &site) {
+        Ok(request) => request,
+        Err(error) => return ToolReply::error(error),
+    };
+    let report = match run_audit(&request) {
+        Ok(report) => report,
+        Err(error) => return ToolReply::error(error.to_string()),
+    };
+    let limit = input.limit.unwrap_or(10);
+    match view {
+        "similar" => {
+            let Some(url) = input.url.as_deref() else {
+                return ToolReply::error("seo_similar requires url");
+            };
+            ToolReply::structured(similar(&report, url, limit))
+        }
+        "chunks" => {
+            let query = input
+                .query
+                .as_deref()
+                .or(input.url.as_deref())
+                .unwrap_or("");
+            ToolReply::structured(chunks_for(&report, query, limit))
+        }
+        _ => {
+            let Some(query) = input.query.as_deref() else {
+                return ToolReply::error("seo_retrieve requires query");
+            };
+            ToolReply::structured(retrieve(&report, query, limit))
+        }
+    }
 }
 
 fn tool_observations(roots: &Roots, input: &ObservationsInput) -> ToolReply {
