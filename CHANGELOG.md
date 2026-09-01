@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- `seo_plan` emits a read-only `handoff` toward Weavatrix Refactor: path, symbol,
+  span, required facts, and acceptance. SEO still does not write source.
+- `.weavatrix/seo.pack.yaml` extra packs sit beside the shipped contractor
+  packs. Entity-instance fields (`specialistId` next to `license_verified`)
+  bind as `entity:…:instance:id` on the graph.
+- History directories keep `index.jsonl` so later queries can list runs without
+  re-reading every snapshot.
+
 - Evidence-directed crawl: GSC, bot-log, AI-citation, and previous-snapshot URLs
   are extra frontier seeds, so ranking orphans are measured inside the budget.
   Each URL keeps `discovered_by` provenance; GSC outranks a sitemap loc.

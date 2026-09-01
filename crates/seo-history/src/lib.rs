@@ -8,4 +8,4 @@ mod store;
 
 pub use diff::{DiffRef, SearchDiff, diff, diff_paths};
 pub use snapshot::{StoredFinding, StoredPage, StoredSnapshot};
-pub use store::{load, save};
+pub use store::{HistoryIndexRow, load, load_index, save};

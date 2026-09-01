@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod cite;
+mod decl;
 mod entity;
 mod graph;
 mod license;
@@ -14,6 +15,7 @@ mod repo;
 use weavatrix_seo_model::{Evidence, EvidenceSource, Finding, Inventory};
 
 pub use cite::audit as audit_cite;
+pub use decl::{OwnedPack, load as load_packs};
 pub use entity::audit as audit_entities;
 pub use graph::{DomainGraph, claim_id, domain_graph, entity_id, field_id, market_id, policy_id};
 pub use license::{audit_claims, false_facts, page_claims};

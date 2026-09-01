@@ -9,6 +9,21 @@ use weavatrix_seo_model::{
     Evidence, EvidenceKind, EvidenceSource, Finding, FindingFamily, Locator, Severity,
 };
 
+/// One entity-bound field assignment from source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FactInstance {
+    /// Stable entity id, for example `specialist:123`.
+    pub entity_id: String,
+    /// Field name.
+    pub field: String,
+    /// Repository-relative path.
+    pub path: String,
+    /// Line of the assignment.
+    pub line: Option<u32>,
+    /// True when the assignment is a false/empty literal.
+    pub is_false: bool,
+}
+
 /// Per-pack source facts.
 #[derive(Debug, Clone, Default)]
 pub struct PackFacts {
@@ -18,12 +33,16 @@ pub struct PackFacts {
     pub license_false: bool,
     /// File that set the false fact, with optional line.
     pub false_at: Option<(String, Option<u32>)>,
+    /// Entity-instance field assignments.
+    pub instances: Vec<FactInstance>,
 }
 
 /// Source contamination and pack facts from a repository.
 pub struct RepoSignals {
     /// Pack id → facts.
     pub packs: Vec<(&'static str, PackFacts)>,
+    /// Extra packs loaded from `.weavatrix/seo.pack.yaml`.
+    pub extra_packs: Vec<crate::decl::OwnedPack>,
     /// Market findings already localized to files.
     pub findings: Vec<Finding>,
 }
@@ -50,6 +69,7 @@ pub fn scan(repo: &str) -> RepoSignals {
             .iter()
             .map(|pack| (pack.id, PackFacts::default()))
             .collect(),
+        extra_packs: crate::decl::load(repo),
         findings: Vec::new(),
     };
     let Ok(report) = scan_repository(repo) else {
@@ -127,6 +147,17 @@ fn record_facts(signals: &mut RepoSignals, relative: &str, source: &str) {
                         .position(|row| fact_is_false(row, rule.field))
                         .map(|index| u32::try_from(index + 1).unwrap_or(0));
                     facts.false_at = Some((relative.to_owned(), line));
+                    if let Some(entity) =
+                        nearby_entity_id(source, usize::try_from(line.unwrap_or(1)).unwrap_or(1))
+                    {
+                        facts.instances.push(FactInstance {
+                            entity_id: entity,
+                            field: rule.field.to_owned(),
+                            path: relative.to_owned(),
+                            line,
+                            is_false: true,
+                        });
+                    }
                 }
             }
         }
@@ -170,6 +201,47 @@ fn record_foreign(
     );
 }
 
+fn nearby_entity_id(source: &str, line: usize) -> Option<String> {
+    let lines: Vec<&str> = source.lines().collect();
+    if lines.is_empty() {
+        return None;
+    }
+    let index = line.saturating_sub(1).min(lines.len().saturating_sub(1));
+    let start = index.saturating_sub(16);
+    let end = (index + 16).min(lines.len());
+    for row in &lines[start..end] {
+        if let Some(id) = capture_id(row) {
+            return Some(id);
+        }
+    }
+    None
+}
+
+fn capture_id(row: &str) -> Option<String> {
+    let lower = row.to_ascii_lowercase();
+    for key in ["specialist_id", "specialistid", "entity_id", "entityid"] {
+        if let Some(at) = lower.find(key) {
+            return first_token(&row[at + key.len()..]);
+        }
+    }
+    let trimmed = row.trim_start();
+    if trimmed.starts_with("id:") || trimmed.starts_with("id :") || trimmed.starts_with("\"id\"") {
+        return first_token(trimmed.split(':').nth(1).unwrap_or(""));
+    }
+    None
+}
+
+fn first_token(rest: &str) -> Option<String> {
+    let token = rest
+        .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'))
+        .find(|part| !part.is_empty() && *part != "false" && *part != "true")?;
+    if token.chars().all(|ch| ch.is_ascii_digit()) || token.len() >= 3 {
+        Some(token.to_owned())
+    } else {
+        None
+    }
+}
+
 fn is_test(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
     lower.contains("/__tests__/") || lower.contains(".test.") || lower.contains(".spec.")
@@ -187,4 +259,17 @@ fn is_source(path: &str) -> bool {
             .unwrap_or(""),
         "ts" | "tsx" | "js" | "jsx" | "json" | "md"
     )
+}
+
+#[cfg(test)]
+mod instance_tests {
+    use super::{capture_id, nearby_entity_id};
+
+    #[test]
+    fn captures_a_specialist_id_near_a_false_fact() {
+        let source =
+            "export const specialist = {\n  specialistId: 42,\n  license_verified: false,\n};\n";
+        assert_eq!(capture_id("  specialistId: 42,").as_deref(), Some("42"));
+        assert_eq!(nearby_entity_id(source, 3).as_deref(), Some("42"));
+    }
 }

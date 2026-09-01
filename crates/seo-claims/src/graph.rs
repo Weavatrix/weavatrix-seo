@@ -79,6 +79,7 @@ pub fn domain_graph(inventory: &Inventory, signals: Option<&RepoSignals>) -> Dom
         bind_market(&mut graph, &mut seen, &url, pack);
         bind_entities(&mut graph, &mut seen, &url, &hay);
         bind_claims(&mut graph, &mut seen, &url, &hay, pack, signals);
+        bind_instances(&mut graph, &mut seen, &url, pack, signals);
     }
     graph
 }
@@ -244,6 +245,88 @@ fn bind_definition(
         )
         .at(Locator::source_span(path.clone(), *line, *line)),
     );
+}
+
+/// Entity-instance fields: `entity:specialist:123` and `field:specialist:123#license_verified`.
+fn bind_instances(
+    graph: &mut DomainGraph,
+    seen: &mut BTreeSet<String>,
+    url: &str,
+    pack: &PolicyPack,
+    signals: Option<&RepoSignals>,
+) {
+    let Some(signals) = signals else {
+        return;
+    };
+    let Some((_, facts)) = signals.packs.iter().find(|(id, _)| *id == pack.id) else {
+        return;
+    };
+    for instance in &facts.instances {
+        if !url.contains(&instance.entity_id) {
+            continue;
+        }
+        let entity = format!("entity:{}:instance:{}", pack.id, instance.entity_id);
+        let field = format!(
+            "field:{}:instance:{}#{}",
+            pack.id, instance.entity_id, instance.field
+        );
+        push_node(
+            graph,
+            seen,
+            SearchNode::new(
+                SearchNodeKind::Entity,
+                entity.clone(),
+                instance.entity_id.clone(),
+            ),
+        );
+        push_node(
+            graph,
+            seen,
+            SearchNode::new(
+                SearchNodeKind::DataField,
+                field.clone(),
+                format!("{}#{}", instance.entity_id, instance.field),
+            ),
+        );
+        graph.facts.push(FactEdge::new(
+            url_id(url),
+            SearchNodeKind::Url,
+            entity.clone(),
+            SearchNodeKind::Entity,
+            Relation::About,
+            Evidence::repo(),
+        ));
+        let symbol = symbol_id(&instance.path, &instance.field);
+        push_node(
+            graph,
+            seen,
+            SearchNode::new(
+                SearchNodeKind::SourceSymbol,
+                symbol.clone(),
+                instance.field.clone(),
+            )
+            .at(Locator::source_span(
+                instance.path.clone(),
+                instance.line,
+                instance.line,
+            )),
+        );
+        graph.facts.push(
+            FactEdge::new(
+                field,
+                SearchNodeKind::DataField,
+                symbol,
+                SearchNodeKind::SourceSymbol,
+                Relation::DefinedAt,
+                Evidence::repo(),
+            )
+            .at(Locator::source_span(
+                instance.path.clone(),
+                instance.line,
+                instance.line,
+            )),
+        );
+    }
 }
 
 fn push_node(graph: &mut DomainGraph, seen: &mut BTreeSet<String>, node: SearchNode) {

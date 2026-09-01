@@ -73,22 +73,67 @@ pub struct PlanAction {
     pub axes: OpportunityAxes,
 }
 
+/// One proposed source edit. Weavatrix SEO never applies it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HandoffTarget {
+    /// Repository-relative path.
+    pub path: String,
+    /// Symbol when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol: Option<String>,
+    /// Start line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_line: Option<u32>,
+    /// End line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<u32>,
+    /// Plan verb.
+    pub intent: String,
+    /// URL or family this edit is for.
+    pub subject: String,
+    /// Facts that must be true after the edit.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_facts: Vec<String>,
+    /// Acceptance copied from the plan action.
+    pub acceptance: String,
+}
+
+/// Read-only handoff toward Weavatrix Refactor.
+///
+/// SEO proves and plans. Refactor proposes a mutation after explicit approval.
+/// Quality + SEO verify afterwards. This struct is the contract between them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RefactorHandoff {
+    /// Always `weavatrix-seo`.
+    pub from: String,
+    /// Always `weavatrix-refactor`.
+    pub to: String,
+    /// SEO does not write source.
+    pub read_only: bool,
+    /// Proposed source targets, spans included when producers recorded them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<HandoffTarget>,
+}
+
 /// Machine-checkable search architecture plan.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SearchPlan {
     /// Ordered actions.
     pub actions: Vec<PlanAction>,
+    /// Guarded mutation handoff. Empty when no source span is known.
+    pub handoff: RefactorHandoff,
 }
 
 /// Compiles a plan from the current report. Does not draft copy or mutate source.
 #[must_use]
 pub fn plan_from(report: &AuditReport) -> SearchPlan {
-    let actions = report
+    let actions: Vec<PlanAction> = report
         .opportunities
         .iter()
         .map(|item| from_opportunity(item, report))
         .collect();
-    SearchPlan { actions }
+    let handoff = handoff_from(&actions, report);
+    SearchPlan { actions, handoff }
 }
 
 fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
@@ -110,15 +155,7 @@ fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
         .map(|finding| finding.fingerprint.clone())
         .take(8)
         .collect();
-    let source_location = report.inventory.facts.iter().find_map(|fact| {
-        if fact.source.contains(&item.subject) || fact.target.contains(&item.subject) {
-            fact.locator
-                .as_ref()
-                .map(|locator| locator.subject_url().to_owned())
-        } else {
-            None
-        }
-    });
+    let source_location = source_for(item, report);
     let programmatic_verdict = item.programmatic_verdict.clone();
     let (required_facts, schema_requirements, link_placements) = extras(kind, item);
     PlanAction {
@@ -177,6 +214,92 @@ fn dependencies(kind: PlanKind, item: &Opportunity, source_location: Option<&str
             vec!["KEEP the family out of the sitemap until unique value is proven".into()]
         }
         _ => Vec::new(),
+    }
+}
+
+fn source_for(item: &Opportunity, report: &AuditReport) -> Option<String> {
+    let from_fact = report.inventory.facts.iter().find_map(|fact| {
+        if fact.source.contains(&item.subject) || fact.target.contains(&item.subject) {
+            fact.locator.as_ref().map(|locator| match locator {
+                weavatrix_seo_model::Locator::Source {
+                    path,
+                    start_line,
+                    end_line,
+                } => match (start_line, end_line) {
+                    (Some(start), Some(end)) => format!("{path}:{start}-{end}"),
+                    (Some(start), None) => format!("{path}:{start}"),
+                    _ => path.clone(),
+                },
+                _ => locator.subject_url().to_owned(),
+            })
+        } else {
+            None
+        }
+    });
+    if from_fact.is_some() {
+        return from_fact;
+    }
+    report.inventory.producers.iter().find_map(|producer| {
+        let matches = producer.families.iter().any(|family| {
+            item.subject == *family
+                || item.subject.contains(family)
+                || family.contains(&item.subject)
+        });
+        if !matches {
+            return None;
+        }
+        Some(format_producer(producer))
+    })
+}
+
+fn format_producer(producer: &weavatrix_seo_model::ProducerFact) -> String {
+    match (producer.start_line, producer.end_line) {
+        (Some(start), Some(end)) => {
+            format!("{}#{}:{start}-{end}", producer.path, producer.name)
+        }
+        (Some(start), None) => format!("{}#{}:{start}", producer.path, producer.name),
+        _ => producer.key(),
+    }
+}
+
+fn handoff_from(actions: &[PlanAction], report: &AuditReport) -> RefactorHandoff {
+    let mut targets = Vec::new();
+    for action in actions {
+        let Some(producer) = report.inventory.producers.iter().find(|item| {
+            action.source_location.as_deref().is_some_and(|location| {
+                location.contains(&item.path) && location.contains(&item.name)
+            }) || item
+                .families
+                .iter()
+                .any(|family| action.subject == *family || family.contains(&action.subject))
+        }) else {
+            continue;
+        };
+        if producer.path.starts_with('@') || producer.name == "import" {
+            continue;
+        }
+        targets.push(HandoffTarget {
+            path: producer.path.clone(),
+            symbol: Some(producer.name.clone()),
+            start_line: producer.start_line,
+            end_line: producer.end_line,
+            intent: action.kind.to_string(),
+            subject: action.subject.clone(),
+            required_facts: action.required_facts.clone(),
+            acceptance: action.acceptance.clone(),
+        });
+    }
+    targets.sort_by(|left, right| {
+        left.path
+            .cmp(&right.path)
+            .then(left.subject.cmp(&right.subject))
+    });
+    targets.dedup_by(|left, right| left.path == right.path && left.subject == right.subject);
+    RefactorHandoff {
+        from: "weavatrix-seo".into(),
+        to: "weavatrix-refactor".into(),
+        read_only: true,
+        targets,
     }
 }
 

@@ -237,4 +237,6 @@ fn plan_carries_the_compiled_matrix_verdict() {
             .all(|action| action.programmatic_verdict.is_none()),
         "a URL that is not a matrix family has no verdict"
     );
+    assert!(plan.handoff.read_only, "SEO never writes source");
+    assert_eq!(plan.handoff.to, "weavatrix-refactor");
 }

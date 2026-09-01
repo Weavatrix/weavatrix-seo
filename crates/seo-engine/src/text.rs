@@ -5,6 +5,7 @@ use weavatrix_seo_model::{AuditReport, Severity};
 
 /// Renders a compact text report.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn render_text(report: &AuditReport) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "Weavatrix SEO");
@@ -51,6 +52,30 @@ pub fn render_text(report: &AuditReport) -> String {
             "  [{mark}] {} {}",
             finding.fingerprint, finding.summary
         );
+    }
+    let plan = crate::plan_from(report);
+    if !plan.handoff.targets.is_empty() {
+        let _ = writeln!(
+            out,
+            "\nhandoff: weavatrix-seo → weavatrix-refactor (read-only, {} targets)",
+            plan.handoff.targets.len()
+        );
+        for target in plan.handoff.targets.iter().take(8) {
+            let span = match (target.start_line, target.end_line) {
+                (Some(start), Some(end)) => format!(":{start}-{end}"),
+                (Some(start), None) => format!(":{start}"),
+                _ => String::new(),
+            };
+            let _ = writeln!(
+                out,
+                "  {} {}{}  [{}] {}",
+                target.intent,
+                target.path,
+                span,
+                target.symbol.as_deref().unwrap_or("-"),
+                target.subject
+            );
+        }
     }
     if let Some(intelligence) = &report.intelligence {
         let _ = writeln!(out, "\nintelligence");
