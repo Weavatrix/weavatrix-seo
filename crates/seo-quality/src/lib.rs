@@ -21,6 +21,7 @@ pub fn audit(inventory: &Inventory) -> Vec<Finding> {
         open_graph::audit(page, &mut findings);
         accessibility::audit(page, &mut findings);
         performance::audit(page, &mut findings);
+        security::mixed_content(page, &mut findings);
     }
     accessibility::audit_controls(inventory, &mut findings);
     security::audit_origin(inventory, &mut findings);

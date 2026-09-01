@@ -25,6 +25,28 @@ fn reciprocal(inventory: &Inventory, findings: &mut Vec<Finding>) {
             let Some(dest) = inventory.page(&target) else {
                 continue;
             };
+            if dest.status >= 400 {
+                findings.push(
+                    Finding::new(
+                        FindingFamily::I18n,
+                        4,
+                        Severity::Error,
+                        &page.url.to_string(),
+                        format!(
+                            "{} hreflang {} points at {}",
+                            page.url, alternate.hreflang, dest.status
+                        ),
+                        Locator::dom(&page.url, "link[rel=alternate]"),
+                        page.evidence.clone(),
+                    )
+                    .explained(
+                        "Hreflang must name a live locale URL.",
+                        "Fix or drop the alternate that returns an error.",
+                        "Every hreflang href in the crawl returns 200.",
+                    ),
+                );
+                continue;
+            }
             let returns = dest.alternates.iter().any(|item| {
                 AbsoluteUrl::parse(&item.href)
                     .or_else(|_| dest.url.join(&item.href))

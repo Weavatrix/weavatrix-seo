@@ -159,6 +159,54 @@ fn split_finding(sample: &ExtractedPage, findings: &mut Vec<Finding>, header: &s
     ));
 }
 
+/// Active mixed content on an HTTPS document. One finding per URL.
+pub fn mixed_content(page: &ExtractedPage, findings: &mut Vec<Finding>) {
+    if page.url.scheme() != Scheme::Https {
+        return;
+    }
+    let mut offenders = Vec::new();
+    for href in page
+        .links
+        .iter()
+        .chain(page.images.iter().map(|image| &image.src))
+    {
+        if href.starts_with("http://") {
+            offenders.push(href.clone());
+        }
+    }
+    if let Some(image) = &page.og_image
+        && image.starts_with("http://")
+    {
+        offenders.push(image.clone());
+    }
+    if offenders.is_empty() {
+        return;
+    }
+    offenders.sort();
+    offenders.dedup();
+    findings.push(
+        Finding::new(
+            FindingFamily::Security,
+            8,
+            Severity::Warn,
+            &page.url.to_string(),
+            format!(
+                "{} loads {} http:// resource(s) on HTTPS",
+                page.url,
+                offenders.len()
+            ),
+            Locator::url(&page.url),
+            page.evidence.clone(),
+        )
+        .with_affected(offenders)
+        .explained(
+            "Browsers block or warn on active mixed content, and crawlers may drop the asset.",
+            "Serve those URLs over HTTPS or drop the http:// references.",
+            "Every subresource on an HTTPS document is HTTPS.",
+        ),
+    );
+}
+
 fn origin_finding(
     sample: &ExtractedPage,
     header: &str,

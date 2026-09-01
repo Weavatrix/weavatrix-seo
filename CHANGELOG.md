@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Canonical chains (`WVX-SEO-CANON-003`), hreflang hrefs that resolve to 4xx
+  (`WVX-SEO-I18N-004`), reused meta descriptions (`WVX-SEO-META-006`), and
+  HTTPS pages that still load `http://` assets (`WVX-SEO-SEC-008`).
+
 - Framework adapters stay additive: Next.js Pages Router, Nuxt `pages/*.vue`,
   and Astro `src/pages/*.{astro,md,mdx}` join App Router prediction. `tsconfig`
   `paths` aliases resolve helper producers beyond `@/` and `~/`.

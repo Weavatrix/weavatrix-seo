@@ -1,5 +1,6 @@
 //! Origin HSTS/CSP facts: values and splits, not folklore max-age.
 
+use weavatrix_seo_model::ImageRef;
 use weavatrix_seo_model::{
     AbsoluteUrl, AnalysisMode, ContentHash, Evidence, ExtractedPage, Indexability, Inventory,
     MediaKind,
@@ -149,4 +150,19 @@ fn report_only_csp_is_not_enforcing() {
         vec![("content-security-policy-report-only", "default-src 'self'")],
     )]);
     assert!(found.contains(&"WVX-SEO-SEC-003".into()), "{found:?}");
+}
+
+#[test]
+fn https_page_with_http_image_is_sec_008() {
+    let mut page = page(
+        "https://kablay.us/",
+        vec![("strict-transport-security", "max-age=300")],
+    );
+    page.images.push(ImageRef {
+        src: "http://cdn.example/logo.png".into(),
+        alt: Some("logo".into()),
+        hidden: false,
+    });
+    let found = codes(vec![page]);
+    assert!(found.contains(&"WVX-SEO-SEC-008".into()), "{found:?}");
 }

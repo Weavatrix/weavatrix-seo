@@ -83,4 +83,53 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
         }
         index = end;
     }
+    duplicate_descriptions(inventory, findings);
+}
+
+fn duplicate_descriptions(inventory: &Inventory, findings: &mut Vec<Finding>) {
+    let mut rows: Vec<(&ExtractedPage, String)> = Vec::new();
+    for page in inventory.pages.iter().filter(|page| {
+        page.status == 200 && page.indexability == Indexability::Indexable && page.media.is_html()
+    }) {
+        if let Some(description) = page
+            .description
+            .as_ref()
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+        {
+            rows.push((page, description));
+        }
+    }
+    rows.sort_by(|left, right| left.1.cmp(&right.1));
+    let mut index = 0;
+    while index < rows.len() {
+        let mut end = index + 1;
+        while end < rows.len() && rows[end].1 == rows[index].1 {
+            end += 1;
+        }
+        if end - index > 1 {
+            let urls: Vec<String> = rows[index..end]
+                .iter()
+                .map(|(page, _)| page.url.to_string())
+                .collect();
+            findings.push(
+                Finding::new(
+                    FindingFamily::Meta,
+                    6,
+                    Severity::Warn,
+                    &rows[index].1,
+                    format!("meta description is reused on {} URLs", urls.len()),
+                    Locator::url(&rows[index].0.url),
+                    rows[index].0.evidence.clone(),
+                )
+                .with_affected(urls)
+                .explained(
+                    "Duplicate descriptions collapse snippets the same way duplicate titles do.",
+                    "Give each indexable family its own description template.",
+                    "No two indexable URLs share the same description.",
+                ),
+            );
+        }
+        index = end;
+    }
 }
