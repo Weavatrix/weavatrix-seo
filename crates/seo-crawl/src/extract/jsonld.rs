@@ -55,6 +55,13 @@ fn walk(value: &Value, nodes: &mut Vec<JsonLdNode>) {
         Value::Object(object) => {
             let types = type_names(object.get("@type"));
             if !types.is_empty() {
+                let mut properties: Vec<String> = object
+                    .keys()
+                    .filter(|key| !key.starts_with('@'))
+                    .cloned()
+                    .collect();
+                properties.sort();
+                properties.dedup();
                 nodes.push(JsonLdNode {
                     id: match object.get("@id") {
                         Some(Value::String(id)) => Some(id.clone()),
@@ -62,6 +69,7 @@ fn walk(value: &Value, nodes: &mut Vec<JsonLdNode>) {
                     },
                     types,
                     same_as: same_as_values(object.get("sameAs")),
+                    properties,
                 });
             }
             for nested in object.values() {

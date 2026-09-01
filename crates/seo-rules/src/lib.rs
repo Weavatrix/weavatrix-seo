@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+mod ai;
 mod canonical;
 mod i18n;
 mod links;
@@ -25,6 +26,7 @@ pub fn audit(inventory: &Inventory) -> Vec<Finding> {
     query::audit(inventory, &mut findings);
     schema::audit(inventory, &mut findings);
     links::audit(inventory, &mut findings);
+    ai::audit(inventory, &mut findings);
     findings.sort_by(|left, right| {
         right
             .severity

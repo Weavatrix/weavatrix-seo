@@ -1,15 +1,15 @@
 //! Deterministic BFS crawl over one origin.
 
 use crate::assemble::{mark_inbound, page, record_links, redirect_page};
-use crate::discover::{fetch_robots, fetch_sitemaps};
+use crate::discover::{fetch_llms_txt, fetch_robots, fetch_sitemaps};
 use crate::extract::extract_html;
 use crate::frontier::Frontier;
 use crate::schedule::fetch_batch;
 use crate::{CrawlBudget, Fetcher, Result};
 use std::collections::{BTreeMap, BTreeSet};
 use weavatrix_seo_model::{
-    AbsoluteUrl, AnalysisMode, DiscoverySource, Evidence, ExtractedPage, FetchObservation,
-    FetchOutcome, GraphEdge, Inventory, MediaKind, Relation, new_run_id,
+    AbsoluteUrl, AiSurface, AnalysisMode, DiscoverySource, Evidence, ExtractedPage,
+    FetchObservation, FetchOutcome, GraphEdge, Inventory, MediaKind, Relation, new_run_id,
 };
 
 /// Crawl invocation.
@@ -47,6 +47,10 @@ impl Crawl {
         let seed = &self.config.seed;
         let run_id = new_run_id(&seed.to_string());
         let robots = fetch_robots(&fetcher, seed);
+        let ai_surface = AiSurface {
+            llms_txt_status: fetch_llms_txt(&fetcher, seed),
+            robots_disallow_all: robots.ai_disallow_all.clone(),
+        };
         let sitemap_urls = fetch_sitemaps(&fetcher, seed, &robots);
         let sitemap_set: BTreeSet<AbsoluteUrl> = sitemap_urls.iter().cloned().collect();
         let mut frontier = Frontier::default();
@@ -145,6 +149,7 @@ impl Crawl {
             sitemap_discovered: sitemap_set.len(),
             counts: weavatrix_seo_model::InventoryCounts::default(),
             discovery,
+            ai_surface: Some(ai_surface),
         }
         .bind_run(&run_id, &seed.to_string())
         .with_counts())

@@ -83,6 +83,7 @@ fn each_json_ld_node_keeps_its_own_identity() {
         .expect("organization node");
     assert_eq!(organization.label(), Some("Organization"));
     assert_eq!(organization.same_as, vec!["https://linkedin.test/x"]);
+    assert!(organization.properties.contains(&"sameAs".to_owned()));
     let website = block
         .nodes
         .iter()

@@ -55,3 +55,23 @@ fn predicts_locale_and_city_families() {
         surface.families
     );
 }
+
+#[test]
+fn predicts_nuxt_astro_and_pages_router() {
+    let root = format!(
+        "{}/tests/fixtures-ssg",
+        env!("CARGO_MANIFEST_DIR").replace('\\', "/")
+    );
+    let surface = predict(&root);
+    let patterns = surface.patterns();
+    assert!(patterns.iter().any(|item| item == "/"), "{patterns:?}");
+    assert!(
+        patterns.iter().any(|item| item == "/blog/:slug"),
+        "{patterns:?}"
+    );
+    assert!(
+        patterns.iter().any(|item| item == "/guide/*slug"),
+        "{patterns:?}"
+    );
+    assert!(patterns.iter().any(|item| item == "/about"), "{patterns:?}");
+}

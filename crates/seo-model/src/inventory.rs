@@ -104,6 +104,20 @@ pub struct Inventory {
     /// How each measured URL entered the frontier. Missing means unrecorded.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub discovery: BTreeMap<String, DiscoverySource>,
+    /// AI-crawler surface: `/llms.txt` and robots groups for known agents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_surface: Option<AiSurface>,
+}
+
+/// Measured AI-search fetch surface. Absence of the struct is unmeasured.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct AiSurface {
+    /// HTTP status of `GET /llms.txt`. `None` when the URL was not requested.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub llms_txt_status: Option<u16>,
+    /// Known AI user-agents whose group contains `Disallow: /`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub robots_disallow_all: Vec<String>,
 }
 
 impl Inventory {
@@ -133,6 +147,7 @@ impl Inventory {
             sitemap_discovered: 0,
             counts: InventoryCounts::default(),
             discovery: BTreeMap::new(),
+            ai_surface: None,
         }
     }
 

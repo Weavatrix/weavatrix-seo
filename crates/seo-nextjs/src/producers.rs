@@ -21,6 +21,12 @@ pub struct Producers {
 /// Inspects one TypeScript/JavaScript module.
 #[must_use]
 pub fn inspect(path: &str, source: &str) -> Producers {
+    inspect_with_aliases(path, source, &[])
+}
+
+/// Inspects a module and resolves helpers through `tsconfig` aliases.
+#[must_use]
+pub fn inspect_with_aliases(path: &str, source: &str, aliases: &[(String, String)]) -> Producers {
     let facts = extract(source, Language::TypeScript);
     let mut out = Producers::default();
     for decl in &facts.declarations {
@@ -55,7 +61,7 @@ pub fn inspect(path: &str, source: &str) -> Producers {
             .cloned()
             .unwrap_or_else(|| import.specifier.clone());
         out.helpers.push(SourceSymbol {
-            path: join_relative(path, &import.specifier),
+            path: crate::paths::resolve(path, &import.specifier, aliases),
             name,
             start_line: Some(import.span.line),
             end_line: Some(import.span.end_line),
@@ -71,7 +77,7 @@ fn is_reserved(name: &str) -> bool {
     )
 }
 
-fn join_relative(from_file: &str, specifier: &str) -> String {
+pub(crate) fn join_relative(from_file: &str, specifier: &str) -> String {
     if let Some(rest) = specifier
         .strip_prefix("@/")
         .or_else(|| specifier.strip_prefix("~/"))
@@ -105,6 +111,24 @@ fn looks_like_json_ld(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::inspect;
+
+    #[test]
+    fn tsconfig_alias_resolves_lib() {
+        let source = "import { buildCityMetadata } from \"@lib/citySeo\";\nexport async function generateMetadata() { return buildCityMetadata(); }\n";
+        let producers = super::inspect_with_aliases(
+            "src/app/page.tsx",
+            source,
+            &[("@lib/*".into(), "src/lib/*".into())],
+        );
+        assert!(
+            producers
+                .helpers
+                .iter()
+                .any(|item| item.path == "src/lib/citySeo"),
+            "{:?}",
+            producers.helpers
+        );
+    }
 
     #[test]
     fn aliased_seo_helper_resolves_under_src() {

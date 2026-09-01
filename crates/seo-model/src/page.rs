@@ -77,6 +77,9 @@ pub struct JsonLdNode {
     /// `sameAs` values on this node.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub same_as: Vec<String>,
+    /// Declared property names (not values). Used for required-field checks.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub properties: Vec<String>,
 }
 
 impl JsonLdNode {

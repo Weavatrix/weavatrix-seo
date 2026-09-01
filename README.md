@@ -48,7 +48,12 @@ repository source
 
 `.weavatrix/seo.json` is optional. When present, `indexability.include` / `exclude` decide which route families may be CREATE/SOURCE_ONLY; otherwise private chrome (`/admin`, `/auth`, …) is excluded.
 
-Repo-only Next.js App Router prediction is live. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against the crawl budget. Compare crawls public competitor origins for structural gaps. Rendered DOM is measured only when `--render PATH` supplies a WVQ/Playwright snapshot. GSC/Bing/log imports use `--gsc` / `--observations`. Next.js RSC payloads are captured from HTTP. Missing evidence is never green.
+Repo-only prediction covers Next.js App Router, Pages Router, Nuxt `pages/`,
+and Astro `src/pages/`. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against
+the crawl budget. Compare crawls public competitor origins for structural gaps.
+Rendered DOM is measured only when `--render PATH` supplies a WVQ/Playwright
+snapshot. GSC/Bing/log imports use `--gsc` / `--observations`. Next.js RSC
+payloads are captured from HTTP. Missing evidence is never green.
 
 The ordinary audit path does not call a model.
 
@@ -57,7 +62,7 @@ The ordinary audit path does not call a model.
 | Mode | Input | What it can prove |
 |---|---|---|
 | Site-only | `--site URL` | Live crawl, technical audit, architecture, duplicates |
-| Repo-only | `--repo PATH` | Next.js App Router families, sitemap/robots owners, programmatic flags |
+| Repo-only | `--repo PATH` | Next.js / Nuxt / Astro families, sitemap/robots owners, programmatic flags |
 | Hybrid | `--repo` + `--site` | Source intent versus HTTP inventory |
 | Compare | `--site` + `--competitor` | Public-site structural archetype/schema/locale/cardinality/H1 gaps |
 

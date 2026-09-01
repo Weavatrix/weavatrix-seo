@@ -9,6 +9,8 @@ pub struct Robots {
     disallows: Vec<String>,
     /// Sitemap URLs declared by the file.
     pub sitemaps: Vec<String>,
+    /// Known AI user-agents whose group contains `Disallow: /`.
+    pub ai_disallow_all: Vec<String>,
 }
 
 impl Robots {
@@ -48,6 +50,7 @@ impl Robots {
                 _ => {}
             }
         }
+        robots.ai_disallow_all = ai_disallow_all(body);
         robots
     }
 
@@ -61,6 +64,69 @@ impl Robots {
             (Some(allow_rule), Some(disallow_rule)) => allow_rule.len() >= disallow_rule.len(),
             (None, Some(_)) => false,
             _ => true,
+        }
+    }
+}
+
+const AI_AGENTS: &[&str] = &[
+    "gptbot",
+    "chatgpt-user",
+    "oai-searchbot",
+    "claudebot",
+    "claude-searchbot",
+    "claude-user",
+    "perplexitybot",
+    "google-extended",
+    "google-agent",
+    "applebot-extended",
+    "bytespider",
+    "ccbot",
+    "anthropic-ai",
+];
+
+fn ai_disallow_all(body: &str) -> Vec<String> {
+    let mut agents = Vec::new();
+    let mut disallows = Vec::new();
+    let mut blocked = Vec::new();
+    let mut saw_rule = false;
+    for raw in body.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        let Some((field, value)) = line.split_once(':') else {
+            continue;
+        };
+        let field = field.trim().to_ascii_lowercase();
+        let value = value.trim();
+        match field.as_str() {
+            "user-agent" => {
+                if saw_rule {
+                    record_ai_group(&agents, &disallows, &mut blocked);
+                    agents.clear();
+                    disallows.clear();
+                    saw_rule = false;
+                }
+                agents.push(value.to_ascii_lowercase());
+            }
+            "disallow" => {
+                disallows.push(value.to_owned());
+                saw_rule = true;
+            }
+            "allow" => saw_rule = true,
+            _ => {}
+        }
+    }
+    record_ai_group(&agents, &disallows, &mut blocked);
+    blocked.sort();
+    blocked.dedup();
+    blocked
+}
+
+fn record_ai_group(agents: &[String], disallows: &[String], blocked: &mut Vec<String>) {
+    if !disallows.iter().any(|rule| rule == "/") {
+        return;
+    }
+    for agent in agents {
+        if AI_AGENTS.contains(&agent.as_str()) && !blocked.contains(agent) {
+            blocked.push(agent.clone());
         }
     }
 }
@@ -150,5 +216,21 @@ mod tests {
         assert!(robots.allows(&query));
         assert!(robots.allows(&allowed));
         assert!(robots.allows(&html));
+    }
+
+    #[test]
+    fn records_ai_agents_disallowed_at_origin() {
+        let robots = Robots::parse(
+            "User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /\nUser-agent: ClaudeBot\nDisallow: /\n",
+            "weavatrix-seo",
+        );
+        assert!(robots.allows(&AbsoluteUrl::parse("https://x.test/").unwrap()));
+        assert!(robots.ai_disallow_all.iter().any(|agent| agent == "gptbot"));
+        assert!(
+            robots
+                .ai_disallow_all
+                .iter()
+                .any(|agent| agent == "claudebot")
+        );
     }
 }

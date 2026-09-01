@@ -4,6 +4,15 @@ use crate::{Fetcher, Robots, parse_sitemap};
 use std::collections::{BTreeSet, VecDeque};
 use weavatrix_seo_model::AbsoluteUrl;
 
+/// Fetches `/llms.txt` status. A 404 is measured absence, not a transport miss.
+#[must_use]
+pub fn fetch_llms_txt(fetcher: &Fetcher, seed: &AbsoluteUrl) -> Option<u16> {
+    let Ok(url) = AbsoluteUrl::parse(&format!("{}/llms.txt", seed.origin())) else {
+        return None;
+    };
+    fetcher.get(&url).ok().map(|response| response.status)
+}
+
 pub fn fetch_robots(fetcher: &Fetcher, seed: &AbsoluteUrl) -> Robots {
     let Ok(url) = AbsoluteUrl::parse(&format!("{}/robots.txt", seed.origin())) else {
         return Robots::default();

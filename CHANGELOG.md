@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Framework adapters stay additive: Next.js Pages Router, Nuxt `pages/*.vue`,
+  and Astro `src/pages/*.{astro,md,mdx}` join App Router prediction. `tsconfig`
+  `paths` aliases resolve helper producers beyond `@/` and `~/`.
+- JSON-LD nodes keep property names. `WVX-SEO-SCHEMA-002` flags documented
+  required fields (`FAQPage.mainEntity`, `Offer.price`, `LocalBusiness.address`,
+  …) without copying values.
+- Crawl measures `/llms.txt` and robots groups for known AI agents. Missing
+  `llms.txt` is `WVX-SEO-AI-004` (info, experimental). `Disallow: /` for GPTBot
+  and friends is `WVX-SEO-AI-005`. History `index.jsonl` stores error codes.
 - Benchmarks: `crawl`, `content`, `query`, and `compare` (`cargo bench -p
   weavatrix-seo`). Compare prints first-party artifacts a URL-list crawler
   cannot emit, and optionally probes SiteOne / Screaming Frog when those

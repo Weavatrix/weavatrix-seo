@@ -43,7 +43,7 @@ pub use intelligence::{
     NearDuplicateGroup, OutcomeMetric, SearchIntelligence, SignalLevel, SyntheticStyle, chunk_id,
     intent_id,
 };
-pub use inventory::{AnalysisMode, Inventory, InventoryCounts};
+pub use inventory::{AiSurface, AnalysisMode, Inventory, InventoryCounts};
 pub use link::{LinkLocation, LinkRef};
 pub use locator::Locator;
 pub use media::MediaKind;

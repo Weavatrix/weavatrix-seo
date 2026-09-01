@@ -41,6 +41,9 @@ pub struct HistoryIndexRow {
     pub findings: usize,
     /// Error findings.
     pub errors: usize,
+    /// Distinct error finding codes in this snapshot, cheapest first.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub error_codes: Vec<String>,
 }
 
 fn append_index(dir: &str, report: &AuditReport, snapshot: &StoredSnapshot) {
@@ -55,6 +58,18 @@ fn append_index(dir: &str, report: &AuditReport, snapshot: &StoredSnapshot) {
             .iter()
             .filter(|item| item.severity == weavatrix_seo_model::Severity::Error)
             .count(),
+        error_codes: {
+            let mut codes: Vec<String> = report
+                .findings
+                .iter()
+                .filter(|item| item.severity == weavatrix_seo_model::Severity::Error)
+                .map(|item| item.code.clone())
+                .collect();
+            codes.sort();
+            codes.dedup();
+            codes.truncate(16);
+            codes
+        },
     };
     let Ok(line) = blazingly_json::to_string(&row) else {
         return;

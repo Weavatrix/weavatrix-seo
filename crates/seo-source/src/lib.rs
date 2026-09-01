@@ -6,7 +6,7 @@ mod impact;
 mod policy;
 
 use serde::{Deserialize, Serialize};
-use weavatrix_seo_model::{AnalysisMode, Evidence, EvidenceSource, Locator};
+use weavatrix_seo_model::{AnalysisMode, Evidence, EvidenceKind, EvidenceSource, Locator};
 
 pub use policy::{PolicyLoad, allows_family, load as load_policy};
 
@@ -154,6 +154,29 @@ pub fn is_private_pattern(pattern: &str) -> bool {
 }
 
 impl SourceSurface {
+    /// Merges another predicted surface. Later duplicates of a pattern are dropped.
+    pub fn merge(&mut self, mut other: Self) {
+        self.families.append(&mut other.families);
+        self.sitemaps.append(&mut other.sitemaps);
+        self.sitemap_symbols.append(&mut other.sitemap_symbols);
+        self.robots.append(&mut other.robots);
+        if self.middleware.is_none() {
+            self.middleware = other.middleware;
+        }
+        if self.next_config.is_none() {
+            self.next_config = other.next_config;
+        }
+        self.families
+            .sort_by(|left, right| left.pattern.cmp(&right.pattern));
+        self.families
+            .dedup_by(|left, right| left.pattern == right.pattern);
+        if self.evidence.kind == EvidenceKind::Unmeasured
+            && other.evidence.kind != EvidenceKind::Unmeasured
+        {
+            self.evidence = other.evidence;
+        }
+    }
+
     /// Patterns only.
     #[must_use]
     pub fn patterns(&self) -> Vec<String> {
