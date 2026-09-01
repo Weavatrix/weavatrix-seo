@@ -69,7 +69,14 @@ The ordinary audit path does not call a model.
 ## Install
 
 Nothing is on crates.io yet: every crate in this workspace is `publish = false`.
-Build from a checkout:
+Install the product binaries from their own repos:
+
+```bash
+cargo install --git https://github.com/Weavatrix/weavatrix-seo-cli --locked
+cargo install --git https://github.com/Weavatrix/weavatrix-seo-mcp --locked
+```
+
+Or from this checkout:
 
 ```bash
 cargo install --path apps/seo-cli --locked
