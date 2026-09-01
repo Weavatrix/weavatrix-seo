@@ -1,11 +1,12 @@
 //! Search-surface inventory.
 
 use crate::{
-    AbsoluteUrl, EvidenceScope, EvidenceSemantics, EvidenceSource, ExtractedPage, FactEdge,
-    FetchObservation, Finding, GraphEdge, POLICY_VERSION, ProducerFact, SearchNode, SearchPolicy,
-    snapshot_digest,
+    AbsoluteUrl, DiscoverySource, EvidenceScope, EvidenceSemantics, EvidenceSource, ExtractedPage,
+    FactEdge, FetchObservation, Finding, GraphEdge, POLICY_VERSION, ProducerFact, SearchNode,
+    SearchPolicy, snapshot_digest,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 /// How the run was invoked.
@@ -100,6 +101,9 @@ pub struct Inventory {
     pub sitemap_discovered: usize,
     /// Totals.
     pub counts: InventoryCounts,
+    /// How each measured URL entered the frontier. Missing means unrecorded.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub discovery: BTreeMap<String, DiscoverySource>,
 }
 
 impl Inventory {
@@ -128,6 +132,7 @@ impl Inventory {
             policy_error: None,
             sitemap_discovered: 0,
             counts: InventoryCounts::default(),
+            discovery: BTreeMap::new(),
         }
     }
 

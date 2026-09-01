@@ -127,6 +127,9 @@ fn city_family_without_producer_is_entity_002() {
         name: "Page".into(),
         content_hash: ContentHash::of(b"x"),
         families: vec!["/:locale/category/:city".into()],
+        symbol_hash: None,
+        start_line: None,
+        end_line: None,
     }];
     let codes: Vec<_> = audit_entities(&inventory)
         .into_iter()

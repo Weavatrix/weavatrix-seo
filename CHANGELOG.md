@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Evidence-directed crawl: GSC, bot-log, AI-citation, and previous-snapshot URLs
+  are extra frontier seeds, so ranking orphans are measured inside the budget.
+  Each URL keeps `discovered_by` provenance; GSC outranks a sitemap loc.
+- Producer identities gain `symbol_hash` and span when the parser knew the
+  extent, so an unrelated function in the same file no longer looks like every
+  SEO producer changed. `@/` and `~/` imports resolve under `src/`.
+- Policy packs look at insurance and experience facts as well as
+  `license_verified`. Log+GSC joins emit `WVX-SEO-OBS-002` when demand exists
+  without crawler hits.
+
 ## 0.6.0 - 2026-09-01
 
 Additive search intelligence. Nothing existing is removed.

@@ -137,29 +137,50 @@ const IL_ENTITIES: &[EntityRule] = &[
     },
 ];
 
-const LICENSE_CLAIMS: &[ClaimRule] = &[ClaimRule {
-    id: "license_verified",
-    phrases: &[
-        "license verified",
-        "licenseverification",
-        "licenseverified",
-        "licensed professional",
-        "licensed electrician",
-        "licensed contractor",
-        "document/license verification",
-        "license verification badges",
-    ],
-    requires_fact: "license_verified",
-}];
+const LICENSE_CLAIMS: &[ClaimRule] = &[
+    ClaimRule {
+        id: "license_verified",
+        phrases: &[
+            "license verified",
+            "licenseverification",
+            "licenseverified",
+            "licensed professional",
+            "licensed electrician",
+            "licensed contractor",
+            "document/license verification",
+            "license verification badges",
+        ],
+        requires_fact: "license_verified",
+    },
+    ClaimRule {
+        id: "insured",
+        phrases: &["fully insured", "insured contractor", "liability insurance"],
+        requires_fact: "insurance_verified",
+    },
+];
 
-const LICENSE_FACTS: &[FactRule] = &[FactRule {
-    field: "license_verified",
-    false_literals: &[
-        "license_verified:false",
-        "license_verified=false",
-        "licenseverified:false",
-    ],
-}];
+const LICENSE_FACTS: &[FactRule] = &[
+    FactRule {
+        field: "license_verified",
+        false_literals: &[
+            "license_verified:false",
+            "license_verified=false",
+            "licenseverified:false",
+        ],
+    },
+    FactRule {
+        field: "insurance_verified",
+        false_literals: &[
+            "insurance_verified:false",
+            "insured:false",
+            "insuranceverified:false",
+        ],
+    },
+    FactRule {
+        field: "years_experience",
+        false_literals: &["years_experience:0", "years_experience:null"],
+    },
+];
 
 /// Southwest Washington contractor marketplace. First fixture pack.
 pub const US_WA: PolicyPack = PolicyPack {

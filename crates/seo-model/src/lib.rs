@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 mod authority;
+mod discovery;
 mod edge;
 mod error;
 mod evidence;
@@ -30,6 +31,7 @@ mod url;
 mod url_parse;
 
 pub use authority::RuleAuthority;
+pub use discovery::DiscoverySource;
 pub use edge::{GraphEdge, Relation};
 pub use error::{Result, SeoError};
 pub use evidence::{Confidence, Evidence, EvidenceKind, EvidenceSource, LayerState};

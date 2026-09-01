@@ -14,6 +14,7 @@ mod report;
 mod request;
 mod retrieve;
 mod run;
+mod seeds;
 mod source;
 mod text;
 

@@ -3,7 +3,8 @@
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_crawl::{Crawl, CrawlBudget, CrawlConfig, CrawlError};
 use weavatrix_seo_model::{
-    AbsoluteUrl, AnalysisMode, Inventory, POLICY_VERSION, SeoError, config_digest, new_run_id,
+    AbsoluteUrl, AnalysisMode, DiscoverySource, Inventory, POLICY_VERSION, SeoError, config_digest,
+    new_run_id,
 };
 
 /// Invocation for one engine run.
@@ -120,10 +121,24 @@ pub fn budget(request: &AuditRequest) -> CrawlBudget {
 }
 
 pub fn crawl_site(site: &str, budget: &CrawlBudget) -> Result<Inventory, EngineError> {
+    crawl_site_with_seeds(site, budget, &[])
+}
+
+/// Site crawl that also measures observed URLs from GSC, logs, or history.
+///
+/// # Errors
+///
+/// Returns URL or crawl errors.
+pub fn crawl_site_with_seeds(
+    site: &str,
+    budget: &CrawlBudget,
+    extra_seeds: &[(AbsoluteUrl, DiscoverySource)],
+) -> Result<Inventory, EngineError> {
     let seed = AbsoluteUrl::parse(site).map_err(EngineError::Url)?;
     Crawl::new(CrawlConfig {
         seed,
         budget: budget.clone(),
+        extra_seeds: extra_seeds.to_vec(),
     })
     .inventory()
     .map_err(EngineError::Crawl)

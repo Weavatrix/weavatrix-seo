@@ -6,10 +6,10 @@ use crate::extract::extract_html;
 use crate::frontier::Frontier;
 use crate::schedule::fetch_batch;
 use crate::{CrawlBudget, Fetcher, Result};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use weavatrix_seo_model::{
-    AbsoluteUrl, AnalysisMode, Evidence, ExtractedPage, FetchObservation, FetchOutcome, GraphEdge,
-    Inventory, MediaKind, Relation, new_run_id,
+    AbsoluteUrl, AnalysisMode, DiscoverySource, Evidence, ExtractedPage, FetchObservation,
+    FetchOutcome, GraphEdge, Inventory, MediaKind, Relation, new_run_id,
 };
 
 /// Crawl invocation.
@@ -19,6 +19,8 @@ pub struct CrawlConfig {
     pub seed: AbsoluteUrl,
     /// Budget.
     pub budget: CrawlBudget,
+    /// Extra URLs from GSC, logs, citations, or a previous snapshot.
+    pub extra_seeds: Vec<(AbsoluteUrl, DiscoverySource)>,
 }
 
 /// Prepared crawl.
@@ -39,6 +41,7 @@ impl Crawl {
     /// # Errors
     ///
     /// Returns a crawl error only when the seed URL is unusable as identity.
+    #[allow(clippy::too_many_lines)]
     pub fn inventory(&self) -> Result<Inventory> {
         let fetcher = Fetcher::new(self.config.budget.fetch_budget());
         let seed = &self.config.seed;
@@ -47,9 +50,19 @@ impl Crawl {
         let sitemap_urls = fetch_sitemaps(&fetcher, seed, &robots);
         let sitemap_set: BTreeSet<AbsoluteUrl> = sitemap_urls.iter().cloned().collect();
         let mut frontier = Frontier::default();
+        let mut discovery: BTreeMap<String, DiscoverySource> = BTreeMap::new();
         frontier.seed(seed.clone());
+        remember(&mut discovery, seed, DiscoverySource::Explicit);
         for url in &sitemap_urls {
             frontier.push_sitemap(url.clone());
+            remember(&mut discovery, url, DiscoverySource::Sitemap);
+        }
+        for (url, source) in &self.config.extra_seeds {
+            if url.host() != seed.host() {
+                continue;
+            }
+            frontier.push_observed(url.clone());
+            remember(&mut discovery, url, *source);
         }
         let mut pages = Vec::new();
         let mut edges = Vec::new();
@@ -103,6 +116,11 @@ impl Crawl {
             }
         }
         mark_inbound(&mut pages, &edges);
+        for page in &pages {
+            if page.linked_from_page {
+                remember(&mut discovery, &page.url, DiscoverySource::InternalLink);
+            }
+        }
         pages.sort_by(|left, right| left.url.to_string().cmp(&right.url.to_string()));
         Ok(Inventory {
             mode: AnalysisMode::Site,
@@ -126,10 +144,23 @@ impl Crawl {
             policy_error: None,
             sitemap_discovered: sitemap_set.len(),
             counts: weavatrix_seo_model::InventoryCounts::default(),
+            discovery,
         }
         .bind_run(&run_id, &seed.to_string())
         .with_counts())
     }
+}
+
+fn remember(
+    discovery: &mut BTreeMap<String, DiscoverySource>,
+    url: &AbsoluteUrl,
+    source: DiscoverySource,
+) {
+    let key = url.to_string();
+    discovery
+        .entry(key)
+        .and_modify(|current| *current = current.stronger(source))
+        .or_insert(source);
 }
 
 #[allow(clippy::too_many_arguments)]

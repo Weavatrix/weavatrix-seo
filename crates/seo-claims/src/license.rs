@@ -27,7 +27,6 @@ pub fn page_claims(inventory: &Inventory) -> Vec<(String, String, &'static Polic
                 .any(|phrase| hay_compact.contains(&compact(phrase)))
             {
                 claims.push((page.url.to_string(), rule.id.to_owned(), pack, *rule));
-                break;
             }
         }
     }

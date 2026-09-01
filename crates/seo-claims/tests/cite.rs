@@ -126,6 +126,9 @@ fn faq_producer_without_schema_is_ai_003() {
         name: "faqItems".into(),
         content_hash: ContentHash::of(b"x"),
         families: vec!["/:locale/help".into()],
+        symbol_hash: None,
+        start_line: None,
+        end_line: None,
     }];
     assert_eq!(codes(&inventory), ["WVX-SEO-AI-003"]);
 }

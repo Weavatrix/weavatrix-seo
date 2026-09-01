@@ -51,11 +51,24 @@ impl SourceSurface {
         expand_imports(repo, &mut grouped);
         grouped
             .into_iter()
-            .map(|((path, name), families)| ProducerFact {
-                content_hash: file_hash(repo, &path),
-                path,
-                name,
-                families: families.into_iter().collect(),
+            .map(|((path, name), families)| {
+                let span = self.families.iter().find_map(|family| {
+                    family
+                        .symbols()
+                        .into_iter()
+                        .find(|symbol| symbol.path == path && symbol.name == name)
+                });
+                ProducerFact {
+                    content_hash: file_hash(repo, &path),
+                    symbol_hash: span.and_then(|symbol| {
+                        span_hash(repo, &path, symbol.start_line, symbol.end_line)
+                    }),
+                    start_line: span.and_then(|symbol| symbol.start_line),
+                    end_line: span.and_then(|symbol| symbol.end_line),
+                    path,
+                    name,
+                    families: families.into_iter().collect(),
+                }
             })
             .collect()
     }
@@ -125,7 +138,10 @@ fn merge_families(
 }
 
 fn is_relative(specifier: &str) -> bool {
-    specifier.starts_with("./") || specifier.starts_with("../")
+    specifier.starts_with("./")
+        || specifier.starts_with("../")
+        || specifier.starts_with("@/")
+        || specifier.starts_with("~/")
 }
 
 fn is_route_module(path: &str) -> bool {
@@ -167,6 +183,12 @@ fn stem(path: &str) -> String {
 }
 
 fn join_relative(from_file: &str, specifier: &str) -> String {
+    if let Some(rest) = specifier
+        .strip_prefix("@/")
+        .or_else(|| specifier.strip_prefix("~/"))
+    {
+        return format!("src/{rest}").replace('\\', "/");
+    }
     let parent = from_file.replace('\\', "/");
     let parent = parent.rsplit_once('/').map_or("", |(head, _)| head);
     let mut parts: Vec<&str> = parent.split('/').filter(|part| !part.is_empty()).collect();
@@ -203,6 +225,24 @@ fn read_source(repo: &str, relative: &str) -> Option<(String, String)> {
         return Some((candidate, source));
     }
     None
+}
+
+fn span_hash(
+    repo: &str,
+    relative: &str,
+    start: Option<u32>,
+    end: Option<u32>,
+) -> Option<ContentHash> {
+    let (start, end) = (start?, end?);
+    let (_, source) = read_source(repo, relative)?;
+    let lines: Vec<&str> = source.lines().collect();
+    let start = usize::try_from(start.saturating_sub(1)).ok()?;
+    let end = usize::try_from(end)
+        .ok()?
+        .min(lines.len())
+        .max(start.saturating_add(1));
+    let slice = lines.get(start..end)?;
+    Some(ContentHash::of_str(&slice.join("\n")))
 }
 
 fn file_hash(repo: &str, relative: &str) -> ContentHash {

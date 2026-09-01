@@ -112,17 +112,22 @@ fn record_facts(signals: &mut RepoSignals, relative: &str, source: &str) {
         let Some((_, facts)) = signals.packs.iter_mut().find(|(pack, _)| *pack == id) else {
             continue;
         };
-        if source.contains("license_verified") {
-            facts.license_field = true;
-        }
-        if fact_is_false(source, "license_verified") {
-            facts.license_false = true;
-            if facts.false_at.is_none() {
-                let line = source
-                    .lines()
-                    .position(|row| fact_is_false(row, "license_verified"))
-                    .map(|index| u32::try_from(index + 1).unwrap_or(0));
-                facts.false_at = Some((relative.to_owned(), line));
+        let Some(pack) = pack::all().iter().find(|item| item.id == id) else {
+            continue;
+        };
+        for rule in pack.facts {
+            if source.contains(rule.field) {
+                facts.license_field = true;
+            }
+            if fact_is_false(source, rule.field) {
+                facts.license_false = true;
+                if facts.false_at.is_none() {
+                    let line = source
+                        .lines()
+                        .position(|row| fact_is_false(row, rule.field))
+                        .map(|index| u32::try_from(index + 1).unwrap_or(0));
+                    facts.false_at = Some((relative.to_owned(), line));
+                }
             }
         }
     }

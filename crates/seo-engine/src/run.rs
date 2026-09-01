@@ -2,9 +2,10 @@
 
 use crate::report::assemble;
 use crate::request::{
-    AuditRequest, EngineError, budget, crawl_site, empty_repo_inventory, read_revision,
-    request_config_digest,
+    AuditRequest, EngineError, budget, crawl_site, crawl_site_with_seeds, empty_repo_inventory,
+    read_revision, request_config_digest,
 };
+use crate::seeds::directed_seeds;
 use weavatrix_seo_model::{AnalysisMode, AuditReport, Finding, Inventory};
 use weavatrix_seo_nextjs::predict;
 
@@ -22,7 +23,14 @@ pub fn run_audit(request: &AuditRequest) -> Result<AuditReport, EngineError> {
     let budget = budget(request);
     let surface = request.repo.as_deref().map(predict);
     let mut inventory = if let Some(site) = request.site.as_deref() {
-        crawl_site(site, &budget)?
+        let host = weavatrix_seo_model::AbsoluteUrl::parse(site)
+            .ok()
+            .map(|url| url.host().to_owned());
+        let extra = host
+            .as_deref()
+            .map(|host| directed_seeds(request, host))
+            .unwrap_or_default();
+        crawl_site_with_seeds(site, &budget, &extra)?
     } else {
         empty_repo_inventory(request)
     };

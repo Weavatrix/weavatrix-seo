@@ -83,5 +83,59 @@ pub fn decorate(
             ),
         );
     }
+    findings.extend(crawl_budget_waste(snapshot, inventory));
+    findings
+}
+
+/// Ranking URLs that search still measures but bots barely hit, and the reverse.
+fn crawl_budget_waste(snapshot: &ObservationSnapshot, inventory: &Inventory) -> Vec<Finding> {
+    if !snapshot.has(ObservationKind::BotCrawl) || !snapshot.has(ObservationKind::SearchPerformance)
+    {
+        return Vec::new();
+    }
+    let mut findings = Vec::new();
+    for row in snapshot
+        .rows
+        .iter()
+        .filter(|row| row.kind == ObservationKind::SearchPerformance)
+        .filter(|row| row.impressions >= 50)
+    {
+        let hits: u32 = snapshot
+            .rows
+            .iter()
+            .filter(|item| item.kind == ObservationKind::BotCrawl)
+            .filter(|item| item.url.trim_end_matches('/') == row.url.trim_end_matches('/'))
+            .map(|item| item.hits)
+            .sum();
+        if hits > 0 {
+            continue;
+        }
+        let known = inventory
+            .measured_urls()
+            .iter()
+            .any(|url| url.trim_end_matches('/') == row.url.trim_end_matches('/'));
+        if !known {
+            continue;
+        }
+        findings.push(
+            Finding::new(
+                FindingFamily::Obs,
+                2,
+                Severity::Info,
+                &row.url,
+                format!(
+                    "search demand exists for {} but no bot hits were imported",
+                    row.url
+                ),
+                Locator::Url(row.url.clone()),
+                row.evidence.clone(),
+            )
+            .explained(
+                "Google still reports impressions, yet server logs show no crawler activity.",
+                "Check robots, canonical, and internal links for this URL.",
+                "A later log import shows crawler hits, or the URL is intentionally noindexed.",
+            ),
+        );
+    }
     findings
 }

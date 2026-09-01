@@ -32,8 +32,8 @@ fn hashes_relative_import_of_helper() {
         helpers: vec![SourceSymbol {
             path: "src/lib/citySeo".into(),
             name: "cityTitle".into(),
-            start_line: None,
-            end_line: None,
+            start_line: Some(2),
+            end_line: Some(2),
         }],
         intercepting: None,
     });
@@ -42,6 +42,14 @@ fn hashes_relative_import_of_helper() {
         facts.iter().any(|item| item.path.contains("cities")
             && item.families.iter().any(|family| family.contains(":city"))),
         "{facts:?}"
+    );
+    let helper = facts
+        .iter()
+        .find(|item| item.name == "cityTitle")
+        .expect("helper");
+    assert!(
+        helper.symbol_hash.is_some(),
+        "a spanned producer should hash its extent, not only the file: {helper:?}"
     );
     let _ = std::fs::remove_dir_all(dir);
 }

@@ -72,6 +72,12 @@ fn is_reserved(name: &str) -> bool {
 }
 
 fn join_relative(from_file: &str, specifier: &str) -> String {
+    if let Some(rest) = specifier
+        .strip_prefix("@/")
+        .or_else(|| specifier.strip_prefix("~/"))
+    {
+        return format!("src/{rest}").replace('\\', "/");
+    }
     if !specifier.starts_with('.') {
         return specifier.replace('\\', "/");
     }
@@ -99,6 +105,20 @@ fn looks_like_json_ld(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::inspect;
+
+    #[test]
+    fn aliased_seo_helper_resolves_under_src() {
+        let source = "import { buildCityMetadata } from \"@/lib/citySeo\";\nexport async function generateMetadata() { return buildCityMetadata(); }\n";
+        let producers = inspect("src/app/[locale]/page.tsx", source);
+        assert!(
+            producers
+                .helpers
+                .iter()
+                .any(|item| item.path == "src/lib/citySeo"),
+            "{:?}",
+            producers.helpers
+        );
+    }
 
     #[test]
     fn finds_metadata_span() {

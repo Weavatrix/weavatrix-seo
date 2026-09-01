@@ -46,6 +46,70 @@ fn axis(report: &weavatrix_seo::AuditReport, name: &str) -> weavatrix_seo_model:
 }
 
 #[test]
+fn gsc_url_is_seeded_ahead_of_the_link_graph() {
+    let mut pages = BTreeMap::new();
+    pages.insert(
+        "/".into(),
+        page(
+            200,
+            html(
+                "Home",
+                "<link rel=\"canonical\" href=\"/\">",
+                "<h1>Home</h1><p>Hi.</p>",
+            ),
+        ),
+    );
+    pages.insert(
+        "/ranking".into(),
+        page(
+            200,
+            html(
+                "Ranking",
+                "<link rel=\"canonical\" href=\"/ranking\">",
+                "<h1>Ranking</h1><p>Still in Search Console.</p>",
+            ),
+        ),
+    );
+    let site = spawn(pages);
+    let origin = format!("{}/", site.base);
+    let ranking = format!("{origin}ranking");
+    let import = write_import(
+        "gsc-seed",
+        &format!(
+            r#"{{"provider":"gsc","rows":[{{"url":"{ranking}","impressions":800,"position":4}}]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin.clone()),
+        max_pages: Some(2),
+        gsc: Some(import),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .inventory
+            .pages
+            .iter()
+            .any(|page| page.url.path() == "/ranking"),
+        "GSC-known URL must be measured even when it is not linked: {:?}",
+        report
+            .inventory
+            .pages
+            .iter()
+            .map(|page| page.url.path().to_owned())
+            .collect::<Vec<_>>()
+    );
+    let discovered = report
+        .inventory
+        .discovery
+        .iter()
+        .find(|(url, _)| url.contains("/ranking"))
+        .map(|(_, source)| *source);
+    assert_eq!(discovered, Some(weavatrix_seo_model::DiscoverySource::Gsc));
+}
+
+#[test]
 fn ai_visibility_is_unmeasured_without_a_citation() {
     let site = spawn(one_page_site());
     let report = run_audit(&AuditRequest {

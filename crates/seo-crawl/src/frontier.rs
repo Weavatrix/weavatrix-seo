@@ -19,6 +19,19 @@ impl Frontier {
         self.push_urgent(url, 0);
     }
 
+    /// Enqueues an observed URL (GSC, log, citation, previous snapshot) ahead
+    /// of sitemap flood so ranking orphans are measured.
+    pub fn push_observed(&mut self, url: AbsoluteUrl) {
+        if !self.scheduled.insert(url.clone()) {
+            if let Some(position) = self.sitemap.iter().position(|(item, _)| item == &url) {
+                let _ = self.sitemap.remove(position);
+                self.urgent.push_front((url, 0));
+            }
+            return;
+        }
+        self.urgent.push_front((url, 0));
+    }
+
     /// Enqueues a sitemap loc without blocking link discovery.
     /// City variants are sampled even when they are sitemap-only.
     pub fn push_sitemap(&mut self, url: AbsoluteUrl) {
@@ -220,6 +233,21 @@ mod tests {
         assert!(sampled.iter().any(|(url, _)| *url == second));
         let rest = frontier.pop_batch(4);
         assert!(rest.iter().any(|(url, _)| *url == third));
+    }
+
+    #[test]
+    fn observed_url_beats_sitemap_flood() {
+        let mut frontier = Frontier::default();
+        frontier.seed(AbsoluteUrl::parse("https://x.test/").unwrap());
+        for index in 0..20 {
+            frontier
+                .push_sitemap(AbsoluteUrl::parse(&format!("https://x.test/blog/{index}")).unwrap());
+        }
+        let ranking = AbsoluteUrl::parse("https://x.test/old-landing").unwrap();
+        frontier.push_observed(ranking.clone());
+        let first = frontier.pop_batch(2);
+        assert!(first.iter().any(|(url, _)| *url == ranking), "{first:?}");
+        assert!(first.iter().any(|(url, _)| url.path() == "/"), "{first:?}");
     }
 
     #[test]

@@ -15,6 +15,16 @@ pub struct ProducerFact {
     /// Route families that import or declare this producer.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub families: Vec<String>,
+    /// Hash of the symbol extent when the span was known. A change in an
+    /// unrelated function in the same file does not flip this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol_hash: Option<ContentHash>,
+    /// Start line of the symbol extent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_line: Option<u32>,
+    /// End line of the symbol extent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<u32>,
 }
 
 impl ProducerFact {

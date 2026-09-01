@@ -239,11 +239,21 @@ fn gsc_export_marks_demand_and_unmeasured_urls() {
     .expect("audit");
     assert!(
         report
-            .findings
+            .inventory
+            .pages
             .iter()
-            .any(|finding| finding.code == "WVX-SEO-OBS-001"),
-        "{:?}",
-        report.findings
+            .any(|page| page.url.path() == "/absent")
+            || report
+                .findings
+                .iter()
+                .any(|finding| finding.code == "WVX-SEO-CRAWL-001"),
+        "a GSC URL is now a crawl seed, so it is measured: {:?}",
+        report
+            .inventory
+            .pages
+            .iter()
+            .map(|page| page.url.path().to_owned())
+            .collect::<Vec<_>>()
     );
     assert!(
         report
