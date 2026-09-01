@@ -17,9 +17,11 @@ use weavatrix_seo::{AuditRequest, run_audit};
 fn main() {
     let a = serve(pages());
     let b = serve(alt_pages());
-    measure("origin-a", &a.site, 32);
+    let report = measure("origin-a", &a.site, 32);
     measure("origin-b", &b.site, 8);
+    measure_query(&report);
     probe_external_crawlers(&a.site);
+    print_first_party(&report);
     println!("live fixture origins are not probed from this bench");
     a.stop.store(true, Ordering::SeqCst);
     b.stop.store(true, Ordering::SeqCst);
@@ -66,7 +68,7 @@ fn serve(pages: BTreeMap<String, String>) -> Origin {
     }
 }
 
-fn measure(label: &str, site: &str, max_pages: usize) {
+fn measure(label: &str, site: &str, max_pages: usize) -> weavatrix_seo::AuditReport {
     let started = Instant::now();
     let report = run_audit(&AuditRequest {
         site: Some(site.to_owned()),
@@ -75,12 +77,44 @@ fn measure(label: &str, site: &str, max_pages: usize) {
         ..AuditRequest::default()
     })
     .expect("audit");
+    let elapsed = started.elapsed();
     println!(
-        "weavatrix-seo {label} {} pages in {:?}",
+        "weavatrix-seo {label} pages={} findings={} opportunities={} in {elapsed:?}",
         report.inventory.counts.crawled,
+        report.findings.len(),
+        report.opportunities.len()
+    );
+    black_box(report.clone());
+    report
+}
+
+fn measure_query(report: &weavatrix_seo::AuditReport) {
+    let started = Instant::now();
+    let rows = weavatrix_seo::run_on_report(
+        "FROM urls WHERE indexable = true RETURN url, inbound_links LIMIT 50",
+        report,
+    )
+    .expect("query");
+    let hits = weavatrix_seo::retrieve(report, "home page", 8);
+    println!(
+        "weavatrix-seo query+retrieve rows={} hits={} in {:?}",
+        rows.rows.len(),
+        hits.len(),
         started.elapsed()
     );
-    black_box(report);
+    black_box((rows, hits));
+}
+
+fn print_first_party(report: &weavatrix_seo::AuditReport) {
+    let scored = weavatrix_seo_competitor::score_artifacts(report);
+    let (have, total) = weavatrix_seo_competitor::tally(report);
+    println!("weavatrix-seo first-party artifacts {have}/{total}");
+    for item in scored {
+        println!(
+            "  artifact {:<24} present={:<5} {}",
+            item.id, item.present, item.note
+        );
+    }
 }
 
 fn probe_external_crawlers(site: &str) {

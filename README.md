@@ -59,7 +59,7 @@ The ordinary audit path does not call a model.
 | Site-only | `--site URL` | Live crawl, technical audit, architecture, duplicates |
 | Repo-only | `--repo PATH` | Next.js App Router families, sitemap/robots owners, programmatic flags |
 | Hybrid | `--repo` + `--site` | Source intent versus HTTP inventory |
-| Compare | `--site` + `--competitor` | Public-site structural archetype/schema/locale gaps |
+| Compare | `--site` + `--competitor` | Public-site structural archetype/schema/locale/cardinality/H1 gaps |
 
 ## Install
 
@@ -104,6 +104,28 @@ weavatrix-seo mcp
 ```
 
 `--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports provider JSON. Each row carries a `kind` (`search_performance`, `bot_crawl`, `ai_citation`, `serp_position`, `analytics`) — declared per row or per file, otherwise implied by a known provider name. An unrecognised provider stays `analytics`, so it never becomes search demand. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories and reports producer impact: families whose helper, metadata, or imported data module changed even if the route pattern did not. Git SHAs without snapshot files stay unmeasured. `explain` prints the URL → route → symbol chain.
+
+## Benchmarks
+
+First-party throughput, no Criterion:
+
+```bash
+cargo bench -p weavatrix-seo
+```
+
+`crawl` measures loopback audit + query/retrieve. `content` profiles a synthetic
+inventory. `query` repeats the DSL. `compare` diffs two loopback origins and
+prints the first-party artifact matrix (evidence graph, chunks, authority,
+unknown-stays-unknown). If `siteone-crawler` or `screamingfrogseospider` is on
+`PATH`, those binaries are spawned as optional URL-list baselines — they are
+never a product dependency.
+
+Live competitor dogfood (network, public-only). Thumbtack is often a 1-page
+bot wall; `kablay.co.il` is the structural baseline:
+
+```bash
+WEAVATRIX_SEO_LIVE=1 cargo test -p weavatrix-seo --test live_compare -- --nocapture
+```
 
 Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
 

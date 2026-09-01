@@ -42,5 +42,17 @@ blazingly-json = { workspace = true }
 name = "crawl"
 harness = false
 
+[[bench]]
+name = "content"
+harness = false
+
+[[bench]]
+name = "query"
+harness = false
+
+[[bench]]
+name = "compare"
+harness = false
+
 [lints]
 workspace = true

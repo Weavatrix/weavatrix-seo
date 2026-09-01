@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Benchmarks: `crawl`, `content`, `query`, and `compare` (`cargo bench -p
+  weavatrix-seo`). Compare prints first-party artifacts a URL-list crawler
+  cannot emit, and optionally probes SiteOne / Screaming Frog when those
+  binaries are on `PATH`.
+- Competitor tests cover schema (`FAQPage`), hreflang locale, FAQ archetype,
+  service cardinality, guide prefix, H1 coverage, and a loopback crawl-vs-crawl
+  compare that never copies competitor prose. Live `WEAVATRIX_SEO_LIVE=1`
+  compares `kablay.us` with Thumbtack (often unmeasured under bot protection)
+  and with `kablay.co.il` (locale, schema, and internal-link shape).
+- `sitemap.xml.gz` is discovered when robots is silent, and gzip *files*
+  inflate even without `Content-Encoding`. robots.txt honours Google `*` / `$`.
+- Schema types (`FAQPage`, `HowTo`, `Service`, …) contribute archetypes, so a
+  competitor can flag a missing family from JSON-LD alone.
+
 - `seo_plan` emits a read-only `handoff` toward Weavatrix Refactor: path, symbol,
   span, required facts, and acceptance. SEO still does not write source.
 - `.weavatrix/seo.pack.yaml` extra packs sit beside the shipped contractor

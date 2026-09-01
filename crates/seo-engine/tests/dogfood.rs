@@ -30,6 +30,14 @@ fn repo_audit(path: &Path) {
 }
 
 #[test]
+fn weavatrix_seo_repo_only() {
+    let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..");
+    repo_audit(&here);
+}
+
+#[test]
 fn kablay_us_repo_only() {
     let Some(path) = sibling("kablay-us") else {
         return;

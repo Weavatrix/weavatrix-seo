@@ -52,6 +52,12 @@ pub fn of(inventory: &Inventory) -> Shape {
         }
         for block in &page.json_ld {
             schema_types.extend(block.types.iter().cloned());
+            for ty in &block.types {
+                if let Some(name) = schema_archetype(ty) {
+                    archetypes.insert(name.to_owned());
+                    *archetype_counts.entry(name.to_owned()).or_insert(0) += 1;
+                }
+            }
         }
         if let Some(lang) = &page.html_lang {
             locales.insert(lang.to_ascii_lowercase());
@@ -106,6 +112,19 @@ fn archetypes_in(path: &str) -> Vec<String> {
         }
     }
     out
+}
+
+fn schema_archetype(ty: &str) -> Option<&'static str> {
+    let lower = ty.to_ascii_lowercase();
+    match lower.as_str() {
+        "faqpage" | "qapage" => Some("faq"),
+        "howto" => Some("guide"),
+        "product" => Some("product"),
+        "service" => Some("service"),
+        "review" | "aggregaterating" => Some("reviews"),
+        _ if lower.contains("localbusiness") => Some("local_business"),
+        _ => None,
+    }
 }
 
 fn prefix_of(path: &str) -> Option<String> {

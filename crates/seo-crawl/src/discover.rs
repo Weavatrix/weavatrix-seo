@@ -21,6 +21,7 @@ pub fn fetch_sitemaps(fetcher: &Fetcher, seed: &AbsoluteUrl, robots: &Robots) ->
     let mut declared = robots.sitemaps.clone();
     if declared.is_empty() {
         declared.push(format!("{}/sitemap.xml", seed.origin()));
+        declared.push(format!("{}/sitemap.xml.gz", seed.origin()));
         declared.push(format!("{}/sitemap_index.xml", seed.origin()));
     }
     let mut queue = VecDeque::new();

@@ -4,12 +4,20 @@ use crate::{HttpError, Result};
 use flate2::read::{DeflateDecoder, GzDecoder};
 use std::io::Read;
 
-/// Decodes `body` according to `Content-Encoding`.
+/// Decodes `body` according to `Content-Encoding`, then a gzip-file payload.
+///
+/// `sitemap.xml.gz` is often served as `application/gzip` without
+/// `Content-Encoding`. Those bytes still start with the gzip magic.
 ///
 /// # Errors
 ///
 /// Returns [`HttpError::Transport`] when the payload is not valid gzip/deflate.
 pub fn decode_body(encoding: Option<&str>, body: Vec<u8>, max_body: usize) -> Result<Vec<u8>> {
+    let decoded = decode_encoding(encoding, body, max_body)?;
+    unwrap_gzip_file(decoded, max_body)
+}
+
+fn decode_encoding(encoding: Option<&str>, body: Vec<u8>, max_body: usize) -> Result<Vec<u8>> {
     let Some(encoding) = encoding else {
         return Ok(body);
     };
@@ -21,6 +29,19 @@ pub fn decode_body(encoding: Option<&str>, body: Vec<u8>, max_body: usize) -> Re
         return inflate(DeflateDecoder::new(body.as_slice()), max_body);
     }
     Ok(body)
+}
+
+/// Inflates a gzip *file* (magic `1f 8b`) when `Content-Encoding` was absent.
+fn unwrap_gzip_file(body: Vec<u8>, max_body: usize) -> Result<Vec<u8>> {
+    if is_gzip(&body) {
+        inflate(GzDecoder::new(body.as_slice()), max_body)
+    } else {
+        Ok(body)
+    }
+}
+
+fn is_gzip(body: &[u8]) -> bool {
+    body.len() >= 2 && body[0] == 0x1f && body[1] == 0x8b
 }
 
 fn inflate(decoder: impl Read, max_body: usize) -> Result<Vec<u8>> {
@@ -49,5 +70,17 @@ mod tests {
         let gz = encoder.finish().unwrap();
         let out = decode_body(Some("gzip"), gz, 1024).unwrap();
         assert_eq!(out, b"hello-seo");
+    }
+
+    #[test]
+    fn inflates_gzip_file_without_content_encoding() {
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder
+            .write_all(b"<?xml version=\"1.0\"?><urlset></urlset>")
+            .unwrap();
+        let gz = encoder.finish().unwrap();
+        assert_eq!(gz[0], 0x1f);
+        let out = decode_body(None, gz, 4096).unwrap();
+        assert!(out.starts_with(b"<?xml"));
     }
 }
