@@ -60,6 +60,7 @@ pub fn predict(repo: &str) -> SourceSurface {
     }
     families.sort_by(|left, right| left.pattern.cmp(&right.pattern));
     families.dedup_by(|left, right| left.pattern == right.pattern);
+    let capabilities = surface_capabilities(&families);
     SourceSurface {
         mode: AnalysisMode::Repo,
         families,
@@ -76,6 +77,57 @@ pub fn predict(repo: &str) -> SourceSurface {
             revision: None,
             policy_version: None,
         },
+        capabilities: Some(capabilities),
+    }
+}
+
+fn surface_capabilities(families: &[RouteFamily]) -> weavatrix_seo_source::FrameworkCapabilities {
+    let app = families.iter().any(|family| {
+        family
+            .owner
+            .as_deref()
+            .is_some_and(|path| path.contains("/app/"))
+    });
+    let ts = families.iter().any(|family| {
+        family.owner.as_deref().is_some_and(|path| {
+            let ext = std::path::Path::new(path)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .unwrap_or("");
+            ext.eq_ignore_ascii_case("tsx") || ext.eq_ignore_ascii_case("ts")
+        })
+    });
+    let helpers = if families.iter().any(|family| !family.helpers.is_empty()) {
+        "high"
+    } else {
+        "partial"
+    };
+    weavatrix_seo_source::FrameworkCapabilities {
+        route_prediction: "exact".into(),
+        page_producer: if app {
+            "exact".into()
+        } else if ts {
+            "high".into()
+        } else {
+            "partial".into()
+        },
+        metadata_producer: if families.iter().any(|family| family.has_metadata) {
+            "exact".into()
+        } else {
+            "unmeasured".into()
+        },
+        schema_producer: if families
+            .iter()
+            .any(|family| !family.json_ld_symbols.is_empty())
+        {
+            "high".into()
+        } else {
+            "unmeasured".into()
+        },
+        static_generation: if app { "high".into() } else { "partial".into() },
+        helper_graph: helpers.into(),
+        import_graph: helpers.into(),
+        dataflow: "unmeasured".into(),
     }
 }
 

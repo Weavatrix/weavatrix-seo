@@ -1,6 +1,9 @@
-//! JSON-LD parse evidence and required properties.
+//! JSON-LD parse evidence and search-feature eligibility.
 
-use weavatrix_seo_model::{Finding, FindingFamily, Inventory, Locator, Severity};
+use weavatrix_seo_model::{
+    Finding, FindingFamily, Inventory, Locator, SchemaProvider, Severity, schema_features,
+    schema_missing,
+};
 
 pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
     for page in &inventory.pages {
@@ -33,58 +36,46 @@ fn required_fields(page: &weavatrix_seo_model::ExtractedPage, findings: &mut Vec
     for block in page.json_ld.iter().filter(|block| block.valid_json) {
         for node in &block.nodes {
             for ty in &node.types {
-                let missing: Vec<&str> = required_for(ty)
+                let short = short_type(ty);
+                for profile in schema_features()
                     .iter()
-                    .copied()
-                    .filter(|field| {
-                        !node
-                            .properties
-                            .iter()
-                            .any(|name| name.eq_ignore_ascii_case(field))
-                    })
-                    .collect();
-                if missing.is_empty() {
-                    continue;
-                }
-                let label = short_type(ty);
-                findings.push(
-                    Finding::new(
-                        FindingFamily::Schema,
-                        2,
-                        Severity::Warn,
-                        &page.url.to_string(),
-                        format!(
-                            "{} `{label}` JSON-LD is missing {}",
-                            page.url,
-                            missing.join(", ")
+                    .filter(|profile| profile.applies_to.eq_ignore_ascii_case(short))
+                {
+                    let missing = schema_missing(profile.required, &node.properties);
+                    if missing.is_empty() {
+                        continue;
+                    }
+                    let (number, severity) = match profile.provider {
+                        SchemaProvider::Google => (2, Severity::Warn),
+                        SchemaProvider::SchemaOrg => (3, Severity::Info),
+                    };
+                    let label = profile.feature;
+                    findings.push(
+                        Finding::new(
+                            FindingFamily::Schema,
+                            number,
+                            severity,
+                            &page.url.to_string(),
+                            format!(
+                                "{} `{short}` fails {label}: missing {}",
+                                page.url,
+                                missing.join(" OR ")
+                            ),
+                            Locator::JsonLd {
+                                url: page.url.to_string(),
+                                path: format!("{short}/{label}"),
+                            },
+                            page.evidence.clone(),
+                        )
+                        .explained(
+                            "Rich-result eligibility is not the same as schema.org validity.",
+                            "Emit the missing fields from first-party facts, not invented values.",
+                            "The declared type satisfies the documented feature profile, or the feature is not claimed.",
                         ),
-                        Locator::JsonLd {
-                            url: page.url.to_string(),
-                            path: label.to_owned(),
-                        },
-                        page.evidence.clone(),
-                    )
-                    .explained(
-                        "Search-engine rich results require those properties on the typed node.",
-                        "Emit the missing fields from first-party facts, not invented values.",
-                        "Each declared type has the documented required properties.",
-                    ),
-                );
+                    );
+                }
             }
         }
-    }
-}
-
-fn required_for(ty: &str) -> &'static [&'static str] {
-    match short_type(ty) {
-        "FAQPage" | "QAPage" => &["mainEntity"],
-        "HowTo" => &["name", "step"],
-        "Offer" => &["price"],
-        "LocalBusiness" => &["name", "address"],
-        "Article" | "BlogPosting" | "NewsArticle" => &["headline"],
-        "BreadcrumbList" => &["itemListElement"],
-        "Question" | "Product" | "Organization" | "Person" | "Service" => &["name"],
-        _ => &[],
     }
 }
 

@@ -7,9 +7,8 @@ authors.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "../../README.md"
 description = "Source-aware Search Intelligence engine for Weavatrix SEO"
-publish = false
 keywords = ["weavatrix", "seo", "search"]
 categories = ["development-tools", "command-line-utilities"]
 

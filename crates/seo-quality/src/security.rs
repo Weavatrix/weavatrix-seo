@@ -165,11 +165,7 @@ pub fn mixed_content(page: &ExtractedPage, findings: &mut Vec<Finding>) {
         return;
     }
     let mut offenders = Vec::new();
-    for href in page
-        .links
-        .iter()
-        .chain(page.images.iter().map(|image| &image.src))
-    {
+    for href in page.images.iter().map(|image| &image.src) {
         if href.starts_with("http://") {
             offenders.push(href.clone());
         }
@@ -191,7 +187,7 @@ pub fn mixed_content(page: &ExtractedPage, findings: &mut Vec<Finding>) {
             Severity::Warn,
             &page.url.to_string(),
             format!(
-                "{} loads {} http:// resource(s) on HTTPS",
+                "{} loads {} http:// subresource(s) on HTTPS",
                 page.url,
                 offenders.len()
             ),
@@ -200,9 +196,9 @@ pub fn mixed_content(page: &ExtractedPage, findings: &mut Vec<Finding>) {
         )
         .with_affected(offenders)
         .explained(
-            "Browsers block or warn on active mixed content, and crawlers may drop the asset.",
+            "Mixed content applies to loaded subresources (img, og:image), not navigation links.",
             "Serve those URLs over HTTPS or drop the http:// references.",
-            "Every subresource on an HTTPS document is HTTPS.",
+            "Every loaded subresource on an HTTPS document is HTTPS.",
         ),
     );
 }

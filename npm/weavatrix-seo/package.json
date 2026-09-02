@@ -1,0 +1,36 @@
+{
+  "name": "weavatrix-seo",
+  "version": "0.6.1",
+  "description": "Native Weavatrix SEO CLI and MCP host: Search Evidence Graph audits, plans, and retrieval for code-driven websites.",
+  "author": "Sergii Ziborov <sergii.ziborov@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://weavatrix.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Weavatrix/weavatrix-seo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Weavatrix/weavatrix-seo/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "weavatrix-seo": "bin/weavatrix-seo.mjs",
+    "weavatrix-seo-mcp": "bin/weavatrix-seo-mcp.mjs"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "seo",
+    "mcp",
+    "model-context-protocol",
+    "search-evidence",
+    "weavatrix",
+    "rust"
+  ]
+}

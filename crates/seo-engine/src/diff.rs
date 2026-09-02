@@ -82,6 +82,7 @@ fn from_worktree(repo: &str) -> StoredSnapshot {
         pages: Vec::new(),
         findings: Vec::new(),
         counts: InventoryCounts::default(),
+        semantics: None,
     }
 }
 
@@ -101,6 +102,7 @@ fn unmeasured_revision(revision: &str) -> StoredSnapshot {
         pages: Vec::new(),
         findings: Vec::new(),
         counts: InventoryCounts::default(),
+        semantics: None,
     }
 }
 

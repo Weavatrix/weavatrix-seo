@@ -1,5 +1,7 @@
 //! Declarative extra policy packs. Built-in Rust packs stay; these extend them.
 
+use std::fmt::Write as _;
+
 use crate::pack::Market;
 use std::path::Path;
 
@@ -49,6 +51,42 @@ pub struct OwnedPack {
     pub claims: Vec<OwnedClaim>,
     /// Facts.
     pub facts: Vec<OwnedFact>,
+}
+
+/// Digest of extra packs loaded from a repo. Empty when the file is absent.
+#[must_use]
+pub fn extra_digest(repo: &str) -> String {
+    let mut material = String::new();
+    for pack in load(repo) {
+        let _ = writeln!(
+            material,
+            "{}\n{}\n{}",
+            pack.id,
+            pack.jurisdiction,
+            pack.markers.join(",")
+        );
+        for entity in pack.entities {
+            let _ = writeln!(material, "entity:{}:{}", entity.token, entity.label);
+        }
+        for claim in pack.claims {
+            let _ = writeln!(
+                material,
+                "claim:{}:{}:{}",
+                claim.id,
+                claim.requires,
+                claim.phrases.join("|")
+            );
+        }
+        for fact in pack.facts {
+            let _ = writeln!(
+                material,
+                "fact:{}:{}",
+                fact.field,
+                fact.false_literals.join("|")
+            );
+        }
+    }
+    weavatrix_seo_model::ContentHash::of_str(&material).hex()
 }
 
 /// Loads `.weavatrix/seo.pack.yaml` when present. Missing file is empty, not an error.

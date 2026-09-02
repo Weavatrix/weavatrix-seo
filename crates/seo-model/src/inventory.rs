@@ -166,6 +166,7 @@ impl Inventory {
             self.policy_version.clone(),
             self.config_digest.clone(),
         )
+        .with_semantics(self.semantics.as_ref())
     }
 
     /// Binds snapshot, policy, and revision onto findings produced from this run.

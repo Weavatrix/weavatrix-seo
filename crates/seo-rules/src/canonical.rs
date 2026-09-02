@@ -39,6 +39,22 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
             continue;
         };
         let Some(dest) = inventory.page(&target) else {
+            findings.push(
+                Finding::new(
+                    FindingFamily::Canon,
+                    4,
+                    Severity::Info,
+                    &page.url.to_string(),
+                    format!("{} canonical target is unmeasured in this crawl", page.url),
+                    Locator::dom(&page.url, "link[rel=canonical]"),
+                    page.evidence.clone(),
+                )
+                .explained(
+                    "A canonical outside the crawl budget is not proof the target is healthy.",
+                    "Raise the budget or fetch the canonical URL before treating it as resolved.",
+                    "The canonical target is measured, or the gap is recorded as unmeasured.",
+                ),
+            );
             continue;
         };
         if dest.status >= 400 {

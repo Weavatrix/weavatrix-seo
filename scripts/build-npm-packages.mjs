@@ -1,0 +1,78 @@
+// Assembles the universal weavatrix-seo npm package around prebuilt binaries.
+// Node built-ins only: no third-party code, no install scripts, no network.
+//
+//   node scripts/build-npm-packages.mjs universal <artifacts-root> [version]
+//   node scripts/build-npm-packages.mjs current <platform-key> <binary-path> [version]
+import {
+    chmodSync,
+    copyFileSync,
+    cpSync,
+    mkdirSync,
+    readFileSync,
+    rmSync,
+    writeFileSync,
+} from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const WRAPPER = join(ROOT, 'npm', 'weavatrix-seo')
+const DIST = join(ROOT, 'npm', 'dist')
+
+const PLATFORMS = {
+    'win32-x64': { os: 'win32', cpu: 'x64', binary: 'weavatrix-seo.exe' },
+    'win32-arm64': { os: 'win32', cpu: 'arm64', binary: 'weavatrix-seo.exe' },
+    'darwin-x64': { os: 'darwin', cpu: 'x64', binary: 'weavatrix-seo' },
+    'darwin-arm64': { os: 'darwin', cpu: 'arm64', binary: 'weavatrix-seo' },
+    'linux-x64': { os: 'linux', cpu: 'x64', binary: 'weavatrix-seo' },
+    'linux-arm64': { os: 'linux', cpu: 'arm64', binary: 'weavatrix-seo' },
+}
+
+const wrapperManifest = JSON.parse(
+    readFileSync(join(WRAPPER, 'package.json'), 'utf8').replace(/^\uFEFF/, ''),
+)
+const [, , mode, ...rest] = process.argv
+if (!mode) usage()
+
+if (mode === 'current') {
+    const [platform, binaryPath, versionArg] = rest
+    const entry = PLATFORMS[platform]
+    if (!entry || !binaryPath) usage()
+    assemble(versionArg || wrapperManifest.version, {
+        [platform]: binaryPath,
+    })
+} else if (mode === 'universal') {
+    const [artifactsRoot, versionArg] = rest
+    if (!artifactsRoot) usage()
+    const binaries = {}
+    for (const [platform, { binary }] of Object.entries(PLATFORMS)) {
+        binaries[platform] = join(artifactsRoot, platform, binary)
+    }
+    assemble(versionArg || wrapperManifest.version, binaries)
+} else {
+    usage()
+}
+
+function assemble(version, binaries) {
+    const target = join(DIST, 'weavatrix-seo')
+    rmSync(target, { recursive: true, force: true })
+    cpSync(WRAPPER, target, { recursive: true })
+    const manifest = { ...wrapperManifest, version }
+    writeFileSync(join(target, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+    copyFileSync(join(ROOT, 'LICENSE'), join(target, 'LICENSE'))
+    for (const [platform, source] of Object.entries(binaries)) {
+        const { os, binary } = PLATFORMS[platform]
+        const destination = join(target, 'bin', 'native', platform, binary)
+        mkdirSync(dirname(destination), { recursive: true })
+        copyFileSync(source, destination)
+        if (os !== 'win32') chmodSync(destination, 0o755)
+    }
+    console.log(`assembled ${target} @ ${version}`)
+}
+
+function usage() {
+    console.error('usage:')
+    console.error('  node scripts/build-npm-packages.mjs universal <artifacts-root> [version]')
+    console.error('  node scripts/build-npm-packages.mjs current <platform-key> <binary-path> [version]')
+    process.exit(1)
+}

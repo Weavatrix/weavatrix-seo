@@ -1,5 +1,8 @@
 //! Policy packs. Kablay is the first fixture, not core engine behaviour.
 
+use std::fmt::Write as _;
+use weavatrix_seo_model::ContentHash;
+
 /// Declared or inferred public market of a page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Market {
@@ -213,6 +216,42 @@ pub const ISRAEL: PolicyPack = PolicyPack {
 #[must_use]
 pub fn all() -> &'static [PolicyPack] {
     &[US_WA, ISRAEL]
+}
+
+/// Hash of built-in pack *content*, not only pack ids.
+#[must_use]
+pub fn content_digest() -> String {
+    let mut material = String::new();
+    for pack in all() {
+        let _ = writeln!(
+            material,
+            "{}\n{}\n{}",
+            pack.id,
+            pack.jurisdiction,
+            pack.markers.join(",")
+        );
+        for entity in pack.entities {
+            let _ = writeln!(material, "entity:{}:{}", entity.token, entity.label);
+        }
+        for claim in pack.claims {
+            let _ = writeln!(
+                material,
+                "claim:{}:{}:{}",
+                claim.id,
+                claim.requires_fact,
+                claim.phrases.join("|")
+            );
+        }
+        for fact in pack.facts {
+            let _ = writeln!(
+                material,
+                "fact:{}:{}",
+                fact.field,
+                fact.false_literals.join("|")
+            );
+        }
+    }
+    ContentHash::of_str(&material).hex()
 }
 
 /// Pack for a classified market.

@@ -8,7 +8,6 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 description = "Search Evidence Graph types for Weavatrix SEO"
-publish = false
 keywords = ["weavatrix", "seo", "search", "evidence"]
 categories = ["development-tools"]
 

@@ -24,6 +24,7 @@ use weavatrix_seo_rules::audit as rule_audit;
 use weavatrix_seo_semantic::analyze as analyze_semantic;
 use weavatrix_seo_source::SourceSurface;
 
+#[allow(clippy::too_many_lines)]
 pub fn assemble(
     request: &AuditRequest,
     mut inventory: Inventory,
@@ -95,8 +96,20 @@ pub fn assemble(
     );
     graph::bind_chunks(&mut inventory, &content.chunks);
     inventory.stamp_findings(&mut findings);
+    let mut semantics = EvidenceSemantics::current();
+    let extra = request
+        .repo
+        .as_deref()
+        .map(weavatrix_seo_claims::extra_pack_digest)
+        .unwrap_or_default();
+    semantics.policy_pack_digest = weavatrix_seo_model::ContentHash::of_str(&format!(
+        "{}\n{extra}",
+        weavatrix_seo_claims::pack_digest()
+    ))
+    .hex();
+    inventory.semantics = Some(semantics.clone());
     let intelligence = SearchIntelligence {
-        semantics: EvidenceSemantics::current(),
+        semantics,
         profiles: content.profiles,
         families: content.families,
         matrices: matrices

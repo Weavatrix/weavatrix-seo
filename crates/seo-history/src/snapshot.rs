@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{
-    AnalysisMode, AuditReport, ContentHash, EvidenceScope, ExtractedPage, Finding, Indexability,
-    InventoryCounts, ProducerFact, Severity,
+    AnalysisMode, AuditReport, ContentHash, EvidenceScope, EvidenceSemantics, ExtractedPage,
+    Finding, Indexability, InventoryCounts, ProducerFact, Severity,
 };
 
 /// One measured URL without body text.
@@ -85,6 +85,9 @@ pub struct StoredSnapshot {
     pub findings: Vec<StoredFinding>,
     /// Inventory totals.
     pub counts: InventoryCounts,
+    /// Evidence-semantics identity. Missing means a legacy snapshot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics: Option<EvidenceSemantics>,
 }
 
 impl StoredSnapshot {
@@ -106,6 +109,7 @@ impl StoredSnapshot {
             pages: report.inventory.pages.iter().map(store_page).collect(),
             findings: report.findings.iter().map(store_finding).collect(),
             counts: report.inventory.counts.clone(),
+            semantics: report.inventory.semantics.clone(),
         }
     }
 
@@ -118,6 +122,7 @@ impl StoredSnapshot {
             self.policy_version.clone(),
             self.config_digest.clone(),
         )
+        .with_semantics(self.semantics.as_ref())
     }
 }
 

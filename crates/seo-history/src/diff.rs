@@ -19,6 +19,7 @@ pub struct DiffRef {
 }
 
 /// Search-surface delta between two snapshots.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SearchDiff {
     /// Base side.
@@ -33,6 +34,9 @@ pub struct SearchDiff {
     /// not a removal.
     #[serde(default)]
     pub config_changed: bool,
+    /// One side lacked `EvidenceSemantics`, so comparability is partial.
+    #[serde(default)]
+    pub legacy_semantics: bool,
     /// URLs in head not in base.
     pub urls_added: Vec<String>,
     /// URLs in base not in head.
@@ -143,6 +147,7 @@ pub fn diff(base: &StoredSnapshot, head: &StoredSnapshot) -> SearchDiff {
         },
         comparable,
         config_changed,
+        legacy_semantics: base_scope.legacy_semantics(&head_scope),
         urls_added,
         urls_removed,
         urls_changed,
@@ -174,7 +179,7 @@ fn producer_delta(base: &StoredSnapshot, head: &StoredSnapshot) -> (Vec<String>,
     for producer in &head.producers {
         let key = producer.key();
         match old.get(&key) {
-            Some(previous) if previous.content_hash == producer.content_hash => {}
+            Some(previous) if producer_unchanged(previous, producer) => {}
             Some(previous) => {
                 changed.push(key);
                 families.extend(previous.families.iter().cloned());
@@ -197,6 +202,16 @@ fn producer_delta(base: &StoredSnapshot, head: &StoredSnapshot) -> (Vec<String>,
         }
     }
     (changed, families.into_iter().collect())
+}
+
+fn producer_unchanged(
+    previous: &weavatrix_seo_model::ProducerFact,
+    producer: &weavatrix_seo_model::ProducerFact,
+) -> bool {
+    match (previous.symbol_hash, producer.symbol_hash) {
+        (Some(left), Some(right)) => left == right,
+        _ => previous.content_hash == producer.content_hash,
+    }
 }
 
 /// Loads two snapshot files and diffs them.
@@ -253,6 +268,7 @@ mod tests {
                 })
                 .collect(),
             counts: InventoryCounts::default(),
+            semantics: None,
         }
     }
 

@@ -23,6 +23,25 @@ fn reciprocal(inventory: &Inventory, findings: &mut Vec<Finding>) {
                 continue;
             };
             let Some(dest) = inventory.page(&target) else {
+                findings.push(
+                    Finding::new(
+                        FindingFamily::I18n,
+                        5,
+                        Severity::Info,
+                        &page.url.to_string(),
+                        format!(
+                            "{} hreflang {} target is unmeasured in this crawl",
+                            page.url, alternate.hreflang
+                        ),
+                        Locator::dom(&page.url, "link[rel=alternate]"),
+                        page.evidence.clone(),
+                    )
+                    .explained(
+                        "An alternate outside the crawl budget is not a live locale.",
+                        "Measure the alternate URL before treating the cluster as complete.",
+                        "Every hreflang href is crawled, or the gap is recorded as unmeasured.",
+                    ),
+                );
                 continue;
             };
             if dest.status >= 400 {

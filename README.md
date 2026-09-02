@@ -1,6 +1,8 @@
 # Weavatrix SEO
 
 [![CI](https://github.com/Weavatrix/weavatrix-seo/actions/workflows/ci.yml/badge.svg)](https://github.com/Weavatrix/weavatrix-seo/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/weavatrix-seo.svg)](https://crates.io/crates/weavatrix-seo)
+[![npm](https://img.shields.io/npm/v/weavatrix-seo.svg)](https://www.npmjs.com/package/weavatrix-seo)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](Cargo.toml)
 
@@ -32,7 +34,7 @@ repository source
 
 ## Status
 
-`0.6.0` is additive intelligence on top of the 0.5.0 domain graph. Findings now carry `RuleAuthority` (protocol vs search-engine documented vs experiment). Snapshot comparability uses `EvidenceSemantics` so crate version and rule meaning cannot drift apart. Unknown confidence/risk stays unknown in ranking. Content intelligence adds near-duplicates, per-page profiles, family template decomposition, chunks, and intent fanout — without replacing exact-duplicate detection. `SAFE_TO_GENERATE` now requires fact coverage, not two unique samples. MCP/CLI gain `seo_query`, `seo_retrieve`, `seo_similar`, and `seo_chunks`. Existing tools, findings, and modes stay. SEO does not own a browser.
+`0.6.1` is Precision & Surface Contracts on top of 0.6.0 intelligence. Every strong conclusion names a method, authority, scope, and evidence. Rules are registered per code. Schema findings separate Google rich-result eligibility from schema.org vocabulary. History snapshots persist `EvidenceSemantics`. Mixed content is subresources, not navigation. Canonical and hreflang targets outside the crawl stay `UNMEASURED`. Existing tools, findings, and modes stay. SEO does not own a browser.
 
 - bounded first-party HTTP crawl with keep-alive workers (default 5)
 - robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
@@ -68,31 +70,32 @@ The ordinary audit path does not call a model.
 
 ## Install
 
-Nothing is on crates.io yet: every crate in this workspace is `publish = false`.
-Install the product binaries from their own repos:
-
 ```bash
-cargo install --git https://github.com/Weavatrix/weavatrix-seo-cli --locked
-cargo install --git https://github.com/Weavatrix/weavatrix-seo-mcp --locked
+cargo install weavatrix-seo-cli --locked
+npm install -g weavatrix-seo
 ```
 
-Or from this checkout:
+The npm package is a zero-dependency Node launcher around the native `weavatrix-seo` binary (`weavatrix-seo-mcp` is the same binary with `mcp`). GitHub Actions publishes it with the company `NPM_TOKEN`; nothing in this repository holds a registry secret.
+
+From this checkout:
 
 ```bash
 cargo install --path apps/seo-cli --locked
 ```
 
-Or straight from git:
+From git:
 
 ```bash
 cargo install --git https://github.com/Weavatrix/weavatrix-seo weavatrix-seo-cli --locked
+cargo install --git https://github.com/Weavatrix/weavatrix-seo-cli --locked
+cargo install --git https://github.com/Weavatrix/weavatrix-seo-mcp --locked
 ```
 
-The library is consumed the same way until the crates are published:
+Library:
 
 ```toml
 [dependencies]
-weavatrix-seo = { git = "https://github.com/Weavatrix/weavatrix-seo" }
+weavatrix-seo = "0.6.1"
 ```
 
 ## CLI

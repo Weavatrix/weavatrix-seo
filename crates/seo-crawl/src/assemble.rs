@@ -142,6 +142,26 @@ pub fn record_links(
             Evidence::http(),
         ));
     }
+    for alternate in &page.alternates {
+        if let Ok(target) =
+            AbsoluteUrl::parse(&alternate.href).or_else(|_| page.url.join(&alternate.href))
+        {
+            edges.push(
+                GraphEdge::new(
+                    page.url.clone(),
+                    target,
+                    Relation::AlternateOf,
+                    Evidence::http(),
+                )
+                .with_link(
+                    None,
+                    Some(format!("alternate {}", alternate.hreflang)),
+                    None,
+                    None,
+                ),
+            );
+        }
+    }
     let links: Vec<&weavatrix_seo_model::LinkRef> = page.link_refs.iter().collect();
     if links.is_empty() {
         for href in &page.links {

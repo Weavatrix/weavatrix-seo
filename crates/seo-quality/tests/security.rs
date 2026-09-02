@@ -166,3 +166,17 @@ fn https_page_with_http_image_is_sec_008() {
     let found = codes(vec![page]);
     assert!(found.contains(&"WVX-SEO-SEC-008".into()), "{found:?}");
 }
+
+#[test]
+fn https_navigation_http_link_is_not_mixed_content() {
+    let mut page = page(
+        "https://kablay.us/",
+        vec![("strict-transport-security", "max-age=300")],
+    );
+    page.links.push("http://example.com/about".into());
+    let found = codes(vec![page]);
+    assert!(
+        !found.contains(&"WVX-SEO-SEC-008".into()),
+        "navigation links are not mixed content: {found:?}"
+    );
+}

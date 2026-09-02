@@ -181,7 +181,7 @@ impl Finding {
             locator,
             affected_urls: Vec::new(),
             evidence,
-            authority: RuleAuthority::for_family(family, number),
+            authority: crate::registry::authority(family, number),
         }
     }
 

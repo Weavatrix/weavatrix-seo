@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.6.1 - 2026-09-02
+
+Precision & Surface Contracts. Nothing existing is removed.
+
+- Precision contracts: per-code `RuleDefinition` registry feeds
+  `rule_semantics_digest`; policy-pack digest hashes pack *content* including
+  `.weavatrix/seo.pack.yaml`; history snapshots persist `EvidenceSemantics`;
+  producer diff prefers `symbol_hash`. Schema findings name a Google feature or
+  schema.org vocabulary, not a generic required-field list. AI robots findings
+  carry agent *role* (training vs search discovery vs citation fetch). Mixed
+  content looks at subresources only. robots.txt is group-parsed. Canonical and
+  hreflang targets outside the crawl are `UNMEASURED`. Lexical retrieve no
+  longer copies itself into `semantic`. Framework adapters advertise
+  `FrameworkCapabilities` so source claims cannot outrun measurement.
+- Workspace crates are publishable on crates.io. The native CLI/MCP launcher
+  ships on npm as `weavatrix-seo`.
+
 - Canonical chains (`WVX-SEO-CANON-003`), hreflang hrefs that resolve to 4xx
   (`WVX-SEO-I18N-004`), reused meta descriptions (`WVX-SEO-META-006`), and
   HTTPS pages that still load `http://` assets (`WVX-SEO-SEC-008`).

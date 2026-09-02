@@ -21,6 +21,12 @@ pub struct EvidenceScope {
     /// Crawl and request configuration digest.
     #[serde(default)]
     pub config_digest: String,
+    /// Rule-semantics digest. Empty means a legacy snapshot.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub rule_semantics_digest: String,
+    /// Policy-pack digest. Empty means a legacy snapshot.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub policy_pack_digest: String,
 }
 
 impl EvidenceScope {
@@ -37,7 +43,21 @@ impl EvidenceScope {
             mode,
             policy_version: policy_version.into(),
             config_digest: config_digest.into(),
+            rule_semantics_digest: String::new(),
+            policy_pack_digest: String::new(),
         }
+    }
+
+    /// Attaches evidence-semantics identity.
+    #[must_use]
+    pub fn with_semantics(mut self, semantics: Option<&crate::EvidenceSemantics>) -> Self {
+        if let Some(semantics) = semantics {
+            self.rule_semantics_digest
+                .clone_from(&semantics.rule_semantics_digest);
+            self.policy_pack_digest
+                .clone_from(&semantics.policy_pack_digest);
+        }
+        self
     }
 
     /// True when origin, mode, and policy allow a comparison.
@@ -52,6 +72,18 @@ impl EvidenceScope {
             && (self.policy_version.is_empty()
                 || other.policy_version.is_empty()
                 || self.policy_version == other.policy_version)
+            && (self.rule_semantics_digest.is_empty()
+                || other.rule_semantics_digest.is_empty()
+                || self.rule_semantics_digest == other.rule_semantics_digest)
+            && (self.policy_pack_digest.is_empty()
+                || other.policy_pack_digest.is_empty()
+                || self.policy_pack_digest == other.policy_pack_digest)
+    }
+
+    /// True when either side is a legacy snapshot without semantics identity.
+    #[must_use]
+    pub fn legacy_semantics(&self, other: &Self) -> bool {
+        self.rule_semantics_digest.is_empty() || other.rule_semantics_digest.is_empty()
     }
 
     /// True when the crawl configuration differs between two comparable runs.

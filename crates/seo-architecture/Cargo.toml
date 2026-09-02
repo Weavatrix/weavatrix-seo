@@ -8,7 +8,6 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 description = "Internal-link architecture over the Search Evidence Graph"
-publish = false
 keywords = ["weavatrix", "seo", "graph"]
 categories = ["development-tools"]
 

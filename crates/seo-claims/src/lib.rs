@@ -15,13 +15,13 @@ mod repo;
 use weavatrix_seo_model::{Evidence, EvidenceSource, Finding, Inventory};
 
 pub use cite::audit as audit_cite;
-pub use decl::{OwnedPack, load as load_packs};
+pub use decl::{OwnedPack, extra_digest as extra_pack_digest, load as load_packs};
 pub use entity::audit as audit_entities;
 pub use graph::{DomainGraph, claim_id, domain_graph, entity_id, field_id, market_id, policy_id};
 pub use license::{audit_claims, false_facts, page_claims};
 pub use local::audit as audit_local;
 pub use market::{audit_pages, foreign_entities, infer_market};
-pub use pack::{Market, PolicyPack, US_WA, all as packs};
+pub use pack::{Market, PolicyPack, US_WA, all as packs, content_digest as pack_digest};
 pub use repo::{RepoSignals, scan as scan_repo};
 
 /// Combined live + repo integrity pass.

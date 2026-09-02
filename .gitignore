@@ -1,6 +1,7 @@
 /target
 /target-*
 /tmp
+/npm/dist
 **/*.rs.bk
 .DS_Store
 Thumbs.db

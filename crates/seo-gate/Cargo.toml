@@ -8,7 +8,6 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 description = "Evidence-graph CI gate for Weavatrix SEO"
-publish = false
 keywords = ["weavatrix", "seo", "ci"]
 categories = ["development-tools"]
 

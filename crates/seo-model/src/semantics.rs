@@ -4,7 +4,8 @@
 //! still disagree on rule meaning. [`EvidenceSemantics`] hashes the catalogue,
 //! authorities, and thresholds so history/diff can refuse a false comparison.
 
-use crate::{ContentHash, FindingFamily, RuleAuthority};
+use crate::schema_feature::FeatureStatus;
+use crate::{ContentHash, FindingFamily, RuleAuthority, Severity, registry, schema_feature};
 use std::fmt::Write as _;
 
 /// Artifact schema for the current report shape.
@@ -53,17 +54,45 @@ impl Default for EvidenceSemantics {
     }
 }
 
-/// Digest of rule identity: codes, severity ranks, authorities, thresholds.
+/// Digest of rule identity: registered codes, severity, authority, thresholds, features.
 #[must_use]
 pub fn rule_semantics_digest() -> String {
     let mut material = String::new();
+    for rule in registry::all() {
+        let _ = writeln!(
+            material,
+            "{}-{:03}:{}:{}:{}:{}",
+            rule.family.prefix(),
+            rule.number,
+            severity_name(rule.default_severity),
+            authority_token(rule.authority),
+            rule.semantics_version,
+            rule.provider_or_standard
+        );
+    }
     for family in FindingFamily::ALL {
-        material.push_str(family.prefix());
-        material.push(':');
-        material.push_str(severity_token(family));
-        material.push(':');
-        material.push_str(authority_token(RuleAuthority::for_family(family, 1)));
-        material.push('\n');
+        let _ = writeln!(
+            material,
+            "fallback:{}:{}:{}",
+            family.prefix(),
+            severity_token(family),
+            authority_token(RuleAuthority::for_family(family, 1))
+        );
+    }
+    for profile in schema_feature::profiles() {
+        let _ = writeln!(
+            material,
+            "feature:{}:{}:{}:{}:{}",
+            profile.feature,
+            profile.applies_to,
+            profile.docs_revision,
+            match profile.status {
+                FeatureStatus::Active => "active",
+                FeatureStatus::Deprecated => "deprecated",
+                FeatureStatus::Experimental => "experimental",
+            },
+            profile.recommended.join(",")
+        );
     }
     let _ = write!(
         material,
@@ -77,6 +106,14 @@ pub fn rule_semantics_digest() -> String {
 #[must_use]
 pub fn policy_pack_digest() -> String {
     ContentHash::of_str("marketplace.contractor.us-wa\nmarketplace.contractor.il\n").hex()
+}
+
+fn severity_name(severity: Severity) -> &'static str {
+    match severity {
+        Severity::Error => "error",
+        Severity::Warn => "warn",
+        Severity::Info => "info",
+    }
 }
 
 fn severity_token(family: FindingFamily) -> &'static str {

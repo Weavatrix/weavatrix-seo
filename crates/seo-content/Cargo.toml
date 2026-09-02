@@ -8,7 +8,6 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 description = "Duplicate and content-identity analysis for Weavatrix SEO"
-publish = false
 keywords = ["weavatrix", "seo"]
 categories = ["development-tools"]
 

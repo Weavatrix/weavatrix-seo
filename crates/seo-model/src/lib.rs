@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+mod ai_agent;
 mod authority;
 mod discovery;
 mod edge;
@@ -23,13 +24,16 @@ mod observation;
 mod page;
 mod policy;
 mod producer;
+mod registry;
 mod report;
+mod schema_feature;
 mod scope;
 mod semantics;
 mod text;
 mod url;
 mod url_parse;
 
+pub use ai_agent::{AiAgentDefinition, AiAgentRole, all as ai_agents, lookup as ai_agent};
 pub use authority::RuleAuthority;
 pub use discovery::DiscoverySource;
 pub use edge::{GraphEdge, Relation};
@@ -57,7 +61,12 @@ pub use page::{
 };
 pub use policy::{IndexabilityPolicy, InternationalPolicy, SearchPolicy, glob_match};
 pub use producer::ProducerFact;
+pub use registry::{RuleDefinition, all as rules, authority as rule_authority, lookup as rule};
 pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
+pub use schema_feature::{
+    FeatureStatus, Requirement, SchemaFeatureProfile, SchemaProvider, missing as schema_missing,
+    profiles as schema_features, satisfied as schema_satisfied,
+};
 pub use scope::EvidenceScope;
 pub use semantics::{
     ARTIFACT_SCHEMA_VERSION, ENGINE_VERSION, EvidenceSemantics, LEGACY_UNIQUE_SAMPLE_FLOOR,

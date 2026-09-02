@@ -117,6 +117,36 @@ pub struct SourceSurface {
     pub next_config: Option<NextConfig>,
     /// Evidence for the prediction.
     pub evidence: Evidence,
+    /// How completely this adapter measured source producers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<FrameworkCapabilities>,
+}
+
+/// Honesty about what a framework adapter can prove.
+///
+/// Values are `exact`, `high`, `partial`, or `unmeasured`. Source claims in
+/// `seo_explain` / `seo_plan` must not outrun this.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FrameworkCapabilities {
+    /// Route family prediction.
+    pub route_prediction: String,
+    /// Page/default export producer.
+    pub page_producer: String,
+    /// Metadata producer.
+    pub metadata_producer: String,
+    /// Schema/JSON-LD producer.
+    pub schema_producer: String,
+    /// Static generation / SSG evidence.
+    #[serde(default)]
+    pub static_generation: String,
+    /// Helper import graph.
+    pub helper_graph: String,
+    /// Broader import graph (workspace, package exports).
+    #[serde(default)]
+    pub import_graph: String,
+    /// Dataflow from domain facts to public copy.
+    #[serde(default)]
+    pub dataflow: String,
 }
 
 /// Repo analysis produced no surface.
@@ -132,6 +162,7 @@ pub fn unmeasured(repo: &str) -> SourceSurface {
         middleware: None,
         next_config: None,
         evidence: Evidence::unmeasured(EvidenceSource::Repo),
+        capabilities: None,
     }
 }
 
@@ -165,6 +196,9 @@ impl SourceSurface {
         }
         if self.next_config.is_none() {
             self.next_config = other.next_config;
+        }
+        if self.capabilities.is_none() {
+            self.capabilities = other.capabilities;
         }
         self.families
             .sort_by(|left, right| left.pattern.cmp(&right.pattern));

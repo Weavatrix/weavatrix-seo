@@ -41,7 +41,7 @@ pub fn retrieve(report: &AuditReport, query: &str, limit: usize) -> Vec<Candidat
         scored.push(CandidatePage {
             url: page.url.to_string(),
             lexical,
-            semantic: Some(lexical),
+            semantic: None,
             entities: overlapping_entities(&query_tokens, &text),
             language,
             impressions: report.opportunities.iter().find_map(|item| {

@@ -36,20 +36,33 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
             .site
             .clone()
             .unwrap_or_else(|| inventory.hosts.first().cloned().unwrap_or_default());
+        let definition = weavatrix_seo_model::ai_agent(agent);
+        let impact = definition.map_or("unclassified", |item| item.search_visibility_effect);
+        let role = definition.map_or("other", |item| match item.roles.first() {
+            Some(weavatrix_seo_model::AiAgentRole::SearchDiscovery) => "search_discovery",
+            Some(weavatrix_seo_model::AiAgentRole::CitationFetch) => "citation_fetch",
+            Some(weavatrix_seo_model::AiAgentRole::UserInitiatedFetch) => "user_fetch",
+            Some(weavatrix_seo_model::AiAgentRole::Training) => "training",
+            Some(weavatrix_seo_model::AiAgentRole::GroundingControl) => "grounding_control",
+            Some(weavatrix_seo_model::AiAgentRole::Archive) => "archive",
+            _ => "other",
+        });
         findings.push(
             Finding::new(
                 FindingFamily::Ai,
                 5,
                 Severity::Warn,
                 &host,
-                format!("{host} robots.txt disallows `{agent}` from the whole origin"),
+                format!(
+                    "{host} robots.txt disallows `{agent}` ({role}; impact: {impact}) from the whole origin"
+                ),
                 Locator::Url(format!("{}/robots.txt", host.trim_end_matches('/'))),
                 Evidence::http(),
             )
             .explained(
-                "Citation and search-index bots honour robots.txt. Disallow: / hides the site from them.",
-                "Allow the agent on the public indexable surface, or keep the block if that is the policy.",
-                "The agent group is not Disallow: / unless the origin intends to opt out.",
+                "AI crawler tokens have different roles. Training disallow is not a Google Search indexing change.",
+                "Allow discovery/citation agents on the public surface, or keep the block if that is the policy.",
+                "The agent group is not Disallow: / unless the origin intends to opt out of that role.",
             ),
         );
     }
