@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## 0.6.2 - 2026-09-02
+
+Product README, npm README, and a unique crates.io README for every published crate. CLI commands and 15 MCP tools are documented with agent configs and examples. MCP is the same binary as the CLI.
+
 ## 0.6.1 - 2026-09-02
 
 Precision & Surface Contracts. Nothing existing is removed.

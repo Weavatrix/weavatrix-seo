@@ -1,6 +1,6 @@
 {
   "name": "weavatrix-seo",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Native Weavatrix SEO CLI and MCP host: Search Evidence Graph audits, plans, and retrieval for code-driven websites.",
   "author": "Sergii Ziborov <sergii.ziborov@gmail.com>",
   "license": "MIT",

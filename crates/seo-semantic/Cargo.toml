@@ -7,6 +7,7 @@ authors.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
+readme = "README.md"
 description = "Adapter from Weavatrix SEO pages to weavatrix-semantic profiles"
 keywords = ["weavatrix", "seo", "semantic"]
 categories = ["development-tools"]

@@ -3,6 +3,7 @@
 [![CI](https://github.com/Weavatrix/weavatrix-seo/actions/workflows/ci.yml/badge.svg)](https://github.com/Weavatrix/weavatrix-seo/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/weavatrix-seo.svg)](https://crates.io/crates/weavatrix-seo)
 [![npm](https://img.shields.io/npm/v/weavatrix-seo.svg)](https://www.npmjs.com/package/weavatrix-seo)
+[![docs.rs](https://docs.rs/weavatrix-seo/badge.svg)](https://docs.rs/weavatrix-seo)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](Cargo.toml)
 
@@ -10,16 +11,15 @@ Source-aware Search Intelligence for the [Weavatrix ecosystem](https://weavatrix
 
 **Audit the site you shipped, understand the code that produced it, and build the search architecture you are missing.**
 
-Weavatrix SEO turns repository source, live HTTP, rendered DOM, sitemaps, entities, claims, and search observations into one revision-bound Search Evidence Graph. It is not a detached crawler report and not a keyword database.
+Weavatrix SEO is not Screaming Frog with a JSON dump. It is a **Search Evidence Graph**: live HTTP, repository routes, schema, claims, and search observations bound to one revision. A finding on `/iphone-repair/haifa` can name the Next.js helper that emitted the title. Missing evidence stays `unmeasured`. It never turns green by silence.
 
 ```text
 repository source
-    + build/runtime routes
-    + live/raw/rendered website
-    + sitemap/canonical/hreflang/schema
+    + live / raw / rendered website
+    + sitemap / canonical / hreflang / schema
     + internal links
-    + search observations
-    + domain/legal/business facts
+    + GSC / logs / AI citations
+    + domain / legal / business facts
     + git revision
                      │
                      ▼
@@ -27,233 +27,254 @@ repository source
                      │
         AUDIT  ·  OPPORTUNITY  ·  BUILD
                      │
-              EXPLAIN / DIFF / PLAN
+         CLI commands  =  MCP tools
                      │
          source-level fix location
 ```
 
-## Status
+The **CLI** (`weavatrix-seo`) and the **MCP host** (`weavatrix-seo mcp` / `weavatrix-seo-mcp`) are the **same native binary**. MCP is not a second product. It is the agent socket for the same inventory, audit, plan, query, and retrieve pipeline.
 
-`0.6.1` is Precision & Surface Contracts on top of 0.6.0 intelligence. Every strong conclusion names a method, authority, scope, and evidence. Rules are registered per code. Schema findings separate Google rich-result eligibility from schema.org vocabulary. History snapshots persist `EvidenceSemantics`. Mixed content is subresources, not navigation. Canonical and hreflang targets outside the crawl stay `UNMEASURED`. Existing tools, findings, and modes stay. SEO does not own a browser.
+## Install in 30 seconds
 
-- bounded first-party HTTP crawl with keep-alive workers (default 5)
-- robots and sitemap discovery, landings before sitemap loc floods, first city URL per family sampled
-- response metadata, canonical, hreflang, schema, links, headings, images, Open Graph
-- deterministic technical audit plus H1 / a11y / origin security-header values / performance checks
-- internal-link architecture (depth, orphans, authority)
-- exact-duplicate detection, near-duplicate MinHash clusters, and thin programmatic city variants
-- content profiles, family template/fact decomposition, chunks, and intent fanout
-- bounded `query` DSL and candidate-page `retrieve` (Rust computes similarity)
-- HTML report (`--html PATH`) plus JSON
-- directed internal-link recommendations from first-party page vectors, no embedding service
-- market-entity contamination, license claim/fact contradictions, undeclared pack entities, and AI citation identity
+```bash
+npm install -g weavatrix-seo
+# or: npx -y weavatrix-seo
+# or: cargo install weavatrix-seo-cli --locked
 
-`.weavatrix/seo.json` is optional. When present, `indexability.include` / `exclude` decide which route families may be CREATE/SOURCE_ONLY; otherwise private chrome (`/admin`, `/auth`, …) is excluded.
+weavatrix-seo --version
+weavatrix-seo audit --site https://example.com --json
+```
 
-Repo-only prediction covers Next.js App Router, Pages Router, Nuxt `pages/`,
-and Astro `src/pages/`. Hybrid classifies SOURCE_ONLY / RESPONSE_ONLY against
-the crawl budget. Compare crawls public competitor origins for structural gaps.
-Rendered DOM is measured only when `--render PATH` supplies a WVQ/Playwright
-snapshot. GSC/Bing/log imports use `--gsc` / `--observations`. Next.js RSC
-payloads are captured from HTTP. Missing evidence is never green.
+Prebuilt binaries cover Windows, macOS, and Linux on x64 and arm64. The npm package has **zero dependencies** and **no install scripts**.
 
-The ordinary audit path does not call a model.
+| Surface | How you run it |
+|---|---|
+| CLI | `weavatrix-seo <command>` |
+| MCP | `weavatrix-seo mcp` or `weavatrix-seo-mcp` |
+| Library | `weavatrix-seo = "0.6.2"` |
+
+## Why this is not another crawler
+
+- **Code-aware.** Next.js App/Pages, Nuxt, and Astro families are predicted from source. Hybrid mode classifies SOURCE_ONLY vs RESPONSE_ONLY against the crawl budget.
+- **Evidence-honest.** Authority, method, and scope sit on every finding. A Google rich-result miss is not a schema.org vocabulary miss. A target outside the crawl is `UNMEASURED`, not healthy.
+- **Agent-native.** Fifteen MCP tools match the CLI. An agent can `seo_query` orphans, `seo_retrieve` a service page, and `seo_explain` a fingerprint without a shell.
+- **Read-only.** SEO never writes pages, never generates articles, never applies patches. `seo_plan` can hand a location to Weavatrix Refactor; SEO still does not mutate source.
+- **No model on the default path.** Similarity is first-party lexical (`wvx-seo-lexhash-v1`). There is no embedding API and no browser unless you import a WVQ render snapshot.
+
+## CLI commands
+
+Every command takes `--json` for structured output. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--public-only` refuses loopback and private destinations (MCP default).
+
+| Command | What it does |
+|---|---|
+| `audit` | Crawl + deterministic findings by axis, severity, authority |
+| `inventory` | Measured URLs, routes, producers — no ranking |
+| `opportunities` | Gaps to *build*, not current errors |
+| `plan` | Target search architecture + Refactor handoff |
+| `compare` | Owned site vs public competitor origins |
+| `query` | Bounded DSL over the last audit |
+| `retrieve` | Candidate pages for a query (lexical) |
+| `explain` | URL → route → symbol chain for one fingerprint |
+| `diff` | Two snapshots, audit JSON files, or worktrees |
+| `opportunities` | Ranked construction work |
+| `mcp` | Same engine over stdio MCP |
+
+### First audit
+
+```bash
+weavatrix-seo audit --site https://example.com --json
+weavatrix-seo audit --site https://example.com --html report.html
+weavatrix-seo audit --site https://example.com --ci --baseline previous.json
+```
+
+`--ci` exits non-zero on error findings. `--baseline` treats missing URLs as coverage regressions, not resolved issues.
+
+### Hybrid: production vs the repo that should have built it
+
+```bash
+weavatrix-seo audit --site https://kablay.us --repo ./kablay-us --json
+```
+
+The edge is `COMPARED_AGAINST`, never `CHANGED_BY`. Hybrid does not prove the live site was built from this worktree.
+
+### Compare
+
+```bash
+weavatrix-seo compare --site https://kablay.us --competitor https://kablay.co.il --json
+```
+
+Structural gaps only: schema types, hreflang locales, FAQ archetypes, service cardinality, H1 coverage. Competitor prose is never copied.
+
+### Query and retrieve
+
+```bash
+weavatrix-seo query --site https://example.com --q "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20" --json
+weavatrix-seo retrieve --site https://example.com --q "licensed electrician vancouver" --json
+weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234 --site https://example.com --json
+```
+
+`retrieve` returns `lexical` scores. `semantic` is `null` for `wvx-seo-lexhash-v1`. That is intentional.
+
+### History and CI
+
+```bash
+weavatrix-seo audit --site https://example.com --history ./seo-history --json
+weavatrix-seo diff --base ./seo-history/aaa.json --head ./seo-history/bbb.json --json
+weavatrix-seo audit --site https://example.com --gsc gsc.json --observations logs.json --render render.json --json
+```
+
+## Add the MCP host
+
+MCP is the same binary. Point the agent at `weavatrix-seo mcp` (or `weavatrix-seo-mcp`). Paths a tool accepts are confined to `--allow-root` (cwd when omitted).
+
+### Claude Code
+
+```bash
+claude mcp add weavatrix-seo -- npx -y weavatrix-seo mcp --allow-root .
+```
+
+### Codex
+
+```toml
+[mcp_servers.weavatrix-seo]
+command = "npx"
+args = ["-y", "weavatrix-seo", "mcp", "--allow-root", "."]
+```
+
+### Cursor
+
+```json
+{
+  "mcpServers": {
+    "weavatrix-seo": {
+      "command": "npx",
+      "args": ["-y", "weavatrix-seo", "mcp", "--allow-root", "."]
+    }
+  }
+}
+```
+
+### Cargo
+
+```bash
+cargo install weavatrix-seo-cli --locked
+weavatrix-seo mcp --allow-root /path/to/site-repo
+```
+
+## MCP tools (15)
+
+CLI command on the left, MCP tool on the right. Same engine.
+
+| MCP tool | CLI | What the agent gets |
+|---|---|---|
+| `seo_inventory` | `inventory` | Measured URLs, routes, producers |
+| `seo_audit` | `audit` | Findings by axis, severity, authority |
+| `seo_opportunities` | `opportunities` | Construction gaps, not current errors |
+| `seo_plan` | `plan` | Architecture plan + read-only Refactor handoff |
+| `seo_compare` | `compare` | Structural gaps vs public competitors |
+| `seo_links` | *(audit vectors)* | Directed internal-link recommendations |
+| `seo_vectors` | *(audit vectors)* | Page vectors, lexical model id |
+| `seo_diff` | `diff` | Snapshot / worktree delta |
+| `seo_gate` | `audit --ci` | Gate verdict instead of an exit code |
+| `seo_explain` | `explain` | Evidence chain for one fingerprint |
+| `seo_observations` | `--gsc` / `--observations` | Imported GSC / logs / citations |
+| `seo_query` | `query` | Bounded `FROM … WHERE … LIMIT` |
+| `seo_retrieve` | `retrieve` | Ranked candidate pages |
+| `seo_similar` | *(retrieve)* | Pages similar to a URL |
+| `seo_chunks` | *(retrieve)* | Chunks that best answer a query |
+
+Crawl-backed tools accept `site`, `repo`, `mode`, `max_pages`, `workers`, `gsc`, `observations`, `render`, `history`. MCP crawls are public-only.
+
+Example calls:
+
+```json
+{ "name": "seo_audit", "arguments": { "site": "https://example.com", "max_pages": 80 } }
+```
+
+```json
+{ "name": "seo_query", "arguments": { "site": "https://example.com", "q": "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20" } }
+```
+
+```json
+{ "name": "seo_retrieve", "arguments": { "site": "https://example.com", "q": "iphone screen repair haifa" } }
+```
+
+```json
+{ "name": "seo_explain", "arguments": { "id": "WVX-SEO-META-001:abcd1234", "site": "https://example.com", "repo": "." } }
+```
+
+What an agent can ask:
+
+```text
+Which indexable URLs have zero internal inlinks?
+Where does this canonical chain end, and is the target measured?
+What source symbol emits the missing FAQPage.mainEntity?
+Which competitor locales or schema types are we missing?
+Hand me a plan for the city family that is SOURCE_ONLY.
+```
+
+## Sample output
+
+```json
+{
+  "inventory": {
+    "mode": "hybrid",
+    "site": "https://example.com/",
+    "counts": { "pages": 80, "indexable": 61, "errors": 3 }
+  },
+  "findings": [
+    {
+      "code": "WVX-SEO-LINK-001",
+      "severity": "error",
+      "authority": "search_engine_documented",
+      "summary": "https://example.com/old is a broken internal link",
+      "fingerprint": "WVX-SEO-LINK-001:a1b2c3d4"
+    }
+  ]
+}
+```
+
+Missing evidence is never a pass. `semantic` on retrieve is `null` until a real embedding model is bound.
 
 ## Modes
 
 | Mode | Input | What it can prove |
 |---|---|---|
 | Site-only | `--site URL` | Live crawl, technical audit, architecture, duplicates |
-| Repo-only | `--repo PATH` | Next.js / Nuxt / Astro families, sitemap/robots owners, programmatic flags |
+| Repo-only | `--repo PATH` | Next.js / Nuxt / Astro families, sitemap/robots owners |
 | Hybrid | `--repo` + `--site` | Source intent versus HTTP inventory |
-| Compare | `--site` + `--competitor` | Public-site structural archetype/schema/locale/cardinality/H1 gaps |
+| Compare | `--site` + `--competitor` | Structural archetype / schema / locale / H1 gaps |
 
-## Install
+## Library crates
 
-```bash
-cargo install weavatrix-seo-cli --locked
-npm install -g weavatrix-seo
-```
-
-The npm package is a zero-dependency Node launcher around the native `weavatrix-seo` binary (`weavatrix-seo-mcp` is the same binary with `mcp`). GitHub Actions publishes it with the company `NPM_TOKEN`; nothing in this repository holds a registry secret.
-
-From this checkout:
-
-```bash
-cargo install --path apps/seo-cli --locked
-```
-
-From git:
-
-```bash
-cargo install --git https://github.com/Weavatrix/weavatrix-seo weavatrix-seo-cli --locked
-cargo install --git https://github.com/Weavatrix/weavatrix-seo-cli --locked
-cargo install --git https://github.com/Weavatrix/weavatrix-seo-mcp --locked
-```
-
-Library:
+Install the engine:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.6.1"
+weavatrix-seo = "0.6.2"
 ```
 
-## CLI
+Or compose a layer:
 
-```bash
-weavatrix-seo audit --site https://example.com
-weavatrix-seo audit --site https://example.com --workers 5 --html report.html --ci --baseline previous.json
-weavatrix-seo audit --site https://example.com --public-only --json
-weavatrix-seo plan --site https://example.com --gsc gsc.json --json
-weavatrix-seo audit --site https://example.com --render render.json --json
-weavatrix-seo audit --site https://example.com --history ./seo-history --json
-weavatrix-seo diff --base ./seo-history/aaa.json --head ./seo-history/bbb.json --json
-weavatrix-seo diff --base ./worktree-a --head ./worktree-b --json
-weavatrix-seo inventory --site https://example.com
-weavatrix-seo opportunities --site https://example.com
-weavatrix-seo plan --site https://example.com
-weavatrix-seo explain WVX-SEO-CRAWL-001:abcd1234
-weavatrix-seo query --site https://example.com --q "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20"
-weavatrix-seo retrieve --site https://example.com --q "licensed electrician vancouver"
-weavatrix-seo mcp
-```
+| Crate | Owns |
+|---|---|
+| [`weavatrix-seo-model`](https://crates.io/crates/weavatrix-seo-model) | Graph types, findings, rule registry |
+| [`weavatrix-seo-http`](https://crates.io/crates/weavatrix-seo-http) | Keep-alive HTTP/1.1 |
+| [`weavatrix-seo-crawl`](https://crates.io/crates/weavatrix-seo-crawl) | Bounded discovery crawl |
+| [`weavatrix-seo-rules`](https://crates.io/crates/weavatrix-seo-rules) | Deterministic technical rules |
+| [`weavatrix-seo-source`](https://crates.io/crates/weavatrix-seo-source) / [`-nextjs`](https://crates.io/crates/weavatrix-seo-nextjs) | Repo surface + framework adapters |
+| [`weavatrix-seo-cli`](https://crates.io/crates/weavatrix-seo-cli) / [`-mcp`](https://crates.io/crates/weavatrix-seo-mcp) | CLI and MCP hosts |
 
-`--json` prints the structured report. `--max-pages N` bounds the crawl. `--workers N` sets parallel fetches (default 5). `--html PATH` writes a standalone HTML report. `--ci` fails on error findings. `--baseline PATH` compares a previous audit or compact baseline; missing URLs are coverage regressions, not resolved. `--public-only` refuses loopback, private, and metadata destinations (MCP default). CLI still allows private/staging unless this flag is set. `--gsc PATH` or `--observations PATH` imports provider JSON. Each row carries a `kind` (`search_performance`, `bot_crawl`, `ai_citation`, `serp_position`, `analytics`) — declared per row or per file, otherwise implied by a known provider name. An unrecognised provider stays `analytics`, so it never becomes search demand. `--render PATH` imports a `weavatrix-seo-render/v1` snapshot from WVQ/Playwright; missing import is `unmeasured`, not a pass. `--history DIR` writes a compact snapshot (no page text). `diff --base/--head` compares two snapshots, audit JSON files, or worktree directories and reports producer impact: families whose helper, metadata, or imported data module changed even if the route pattern did not. Git SHAs without snapshot files stay unmeasured. `explain` prints the URL → route → symbol chain.
+Each crate README on crates.io names its API. Nothing is a silent re-export of the product README.
 
-## Benchmarks
-
-First-party throughput, no Criterion:
-
-```bash
-cargo bench -p weavatrix-seo
-```
-
-`crawl` measures loopback audit + query/retrieve. `content` profiles a synthetic
-inventory. `query` repeats the DSL. `compare` diffs two loopback origins and
-prints the first-party artifact matrix (evidence graph, chunks, authority,
-unknown-stays-unknown). If `siteone-crawler` or `screamingfrogseospider` is on
-`PATH`, those binaries are spawned as optional URL-list baselines — they are
-never a product dependency.
-
-Live competitor dogfood (network, public-only). Thumbtack is often a 1-page
-bot wall; `kablay.co.il` is the structural baseline:
-
-```bash
-WEAVATRIX_SEO_LIVE=1 cargo test -p weavatrix-seo --test live_compare -- --nocapture
-```
-
-Evidence is snapshot-bound. `/foo` and `/foo/` stay distinct until the server redirects or canonicalizes. Redirect hops are graph edges; the final 200 is indexable. HTML-only rules skip PDF/JSON/image. Arbitrary inline script is not public copy.
-
-## MCP
-
-Existing tools stay. Four analytical primitives are additive:
-
-```text
-seo_inventory
-seo_audit
-seo_opportunities
-seo_plan
-seo_compare
-seo_links
-seo_vectors
-seo_diff
-seo_gate
-seo_explain
-seo_observations
-seo_query
-seo_retrieve
-seo_similar
-seo_chunks
-```
-
-Run `weavatrix-seo mcp` or the `weavatrix-seo-mcp` binary.
-
-The crawl-backed tools accept every evidence import the CLI accepts: `gsc`, `observations`, `render`, `history`, `workers`, `max_pages`. `seo_gate` is `--ci` / `--baseline` and returns the verdict instead of an exit code. `seo_observations` reads a provider export; without one it stays unmeasured. MCP crawls are public-only.
-
-Every path a tool accepts is confined to an allow-list. `weavatrix-seo mcp --allow-root PATH` is repeatable; with none declared the boundary is the working directory. Paths are canonicalised before the check, so `..` segments and symlinks cannot escape.
-
-`seo_links` returns directed internal-link recommendations, and `seo_vectors` returns the page vectors and link profiles they were computed from. The embedding model is `wvx-seo-lexhash-v1`: first-party, deterministic, 64-dimension, and **lexical**. It needs no embedding service, and it cannot match synonyms or cross-language pairs. Node identities are `page:<url>`, so these are page-graph inputs, not repository-graph inputs. Similarity is `INFERRED` and is never upgraded to a ranking claim.
-
-## Evidence
-
-Every fact carries:
-
-```text
-kind:            DETERMINISTIC | OBSERVED | EXTERNAL | INFERRED | UNMEASURED
-source:          repo | http | rendered_dom | sitemap | logs | gsc | provider | semantic
-locator:         URL, header, DOM, source span
-confidence:      exact | high | medium | low
-snapshot_id:     measured crawl, not the seed URL
-run_id:          one analysis invocation
-policy_version:  finding semantics for this release (engine version)
-                 plus EvidenceSemantics (artifact schema + rule digest)
-authority:       protocol | search-engine | contract | jurisdiction |
-                 practice | heuristic | opportunity
-revision:        the worktree a source fact came from, never a live response
-graph:           URL ─RENDERED_BY→ route ─METADATA_FROM→ symbol@span
-                 URL ─COMPARED_AGAINST→ revision
-                 URL ─CLAIMS→ claim ─REQUIRES→ field ─DEFINED_AT→ span
-                 claim ─GOVERNED_BY→ policy · URL ─ABOUT→ entity / market
-```
-
-Rules:
+## Evidence rules
 
 - crawler success is not proof of indexation
-- a sitemap entry is not proof a page is indexed
-- semantic similarity is never upgraded to deterministic truth
-- missing evidence is `unmeasured`, not a pass
-- an observation says what it measured; crawler hits, analytics sessions, and AI
-  citations are never read as search demand
-- retrieval readiness is inferable, AI visibility is not: `ai_visibility` stays
-  unmeasured until a generative-search citation is imported
-- a hybrid run compares production against a worktree; it does not prove
-  production was built from it, so the edge is `COMPARED_AGAINST` and never
-  `CHANGED_BY`
-- an HTTP response is never the provenance of a source fact
-- an explicit `.weavatrix/seo.*` contract beats the built-in private-path
-  heuristic; a contract that is present but unreadable is an error, not silence
-
-## Findings
-
-Stable families and fingerprints:
-
-```text
-WVX-SEO-CRAWL-*      crawl/discovery
-WVX-SEO-IDX-*        indexability
-WVX-SEO-CANON-*      canonical
-WVX-SEO-SITEMAP-*    sitemap
-WVX-SEO-I18N-*       hreflang/locale
-WVX-SEO-RENDER-*     raw/render drift
-WVX-SEO-META-*       metadata
-WVX-SEO-SCHEMA-*     structured data
-WVX-SEO-LINK-*       internal links
-WVX-SEO-DUP-*        duplication
-WVX-SEO-CANN-*       cannibalization
-WVX-SEO-CONTENT-*    content coverage
-WVX-SEO-ENTITY-*     entities
-WVX-SEO-MARKET-*     market/jurisdiction
-WVX-SEO-CLAIM-*      public claim integrity
-WVX-SEO-PROG-*       programmatic SEO
-WVX-SEO-PERF-*       performance
-WVX-SEO-A11Y-*       accessibility
-WVX-SEO-SEC-*        security headers
-WVX-SEO-LOCAL-*      local SEO
-WVX-SEO-AI-*         AI-search readiness
-WVX-SEO-OBS-*        imported observations
-WVX-SEO-COMP-*       competitive gaps
-```
-
-## Ecosystem
-
-```text
-weavatrix-rust / Weavatrix Core   source graph, spans, impact
-weavatrix-semantic                similarity, SEO link policy, anchors
-weavatrix-seo                     search evidence, audit, architecture, plan
-Weavatrix Quality                 runtime/browser proof
-weavatrix-refactor                guarded source mutation after explicit approval
-```
-
-Weavatrix SEO is read-only. It does not write pages, generate articles, or apply patches.
+- a sitemap loc is not proof a page is indexed
+- lexical similarity is never a ranking claim
+- mixed content is subresources, not navigation `<a href>`
+- canonical/hreflang targets outside the crawl are `UNMEASURED`
+- AI crawler tokens have roles (training vs search discovery vs citation)
 
 ## License
 
