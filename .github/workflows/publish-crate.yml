@@ -25,6 +25,7 @@ jobs:
     if: github.repository == 'Weavatrix/weavatrix-seo'
     name: Publish workspace crates
     runs-on: ubuntu-24.04
+    timeout-minutes: 360
     environment: crates-io
     permissions:
       contents: write
@@ -79,13 +80,37 @@ jobs:
             fi
             echo "publishing $crate@$version"
             published=false
-            for attempt in $(seq 1 24); do
-              if cargo publish -p "$crate" --locked --no-verify; then
+            for attempt in $(seq 1 60); do
+              set +e
+              output="$(cargo publish -p "$crate" --locked --no-verify 2>&1)"
+              status=$?
+              set -e
+              printf '%s\n' "$output"
+              if [[ "$status" -eq 0 ]]; then
                 published=true
                 break
               fi
-              echo "publish attempt $attempt/24 for $crate failed; waiting for crates.io index"
-              sleep 15
+              if printf '%s\n' "$output" | grep -q "already uploaded"; then
+                echo "$crate@$version was uploaded concurrently"
+                published=true
+                break
+              fi
+              wait_secs=20
+              if printf '%s\n' "$output" | grep -q "Too Many Requests"; then
+                retry_after="$(printf '%s\n' "$output" | sed -n 's/.*try again after \(.*\) GMT and see.*/\1 GMT/p' | tail -n 1)"
+                if [[ -n "$retry_after" ]]; then
+                  now="$(date -u +%s)"
+                  until_ts="$(date -u -d "$retry_after" +%s)"
+                  wait_secs=$((until_ts - now + 15))
+                else
+                  wait_secs=600
+                fi
+                if (( wait_secs < 60 )); then
+                  wait_secs=60
+                fi
+              fi
+              echo "publish attempt $attempt/60 for $crate failed; waiting ${wait_secs}s"
+              sleep "$wait_secs"
             done
             [[ "$published" == true ]] || { echo "failed to publish $crate@$version" >&2; exit 1; }
           done
