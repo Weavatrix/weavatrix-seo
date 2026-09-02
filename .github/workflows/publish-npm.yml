@@ -122,10 +122,19 @@ jobs:
         run: |
           PACKAGE="$(npm pack ./npm/dist/weavatrix-seo --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s)[0].filename))")"
           ROOT="$(mktemp -d)"
-          trap 'rm -rf "$ROOT" "$PACKAGE"' EXIT
+          trap 'rm -rf "$ROOT"' EXIT
           npm install --prefix "$ROOT" --ignore-scripts --no-audit --no-fund "./$PACKAGE"
           VERSION="$(node -p "require('./npm/weavatrix-seo/package.json').version")"
           [[ "$("$ROOT/node_modules/.bin/weavatrix-seo" --version)" == "weavatrix-seo $VERSION" ]]
+          mkdir -p npm-tarball
+          mv "$PACKAGE" npm-tarball/
+      - name: Preserve the publish tarball
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: weavatrix-seo-npm-tarball
+          path: npm-tarball/*.tgz
+          if-no-files-found: error
+          retention-days: 7
       - name: Publish with provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

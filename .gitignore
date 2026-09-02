@@ -2,6 +2,9 @@
 /target-*
 /tmp
 /npm/dist
+/binaries
+/artifacts
+/*.tgz
 **/*.rs.bk
 .DS_Store
 Thumbs.db
