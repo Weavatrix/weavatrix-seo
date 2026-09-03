@@ -23,6 +23,15 @@ struct File {
     lines: Vec<String>,
     #[serde(default)]
     rows: Vec<Row>,
+    /// Keyword-tool rows. Always `keyword_volume`, never GSC demand.
+    #[serde(default)]
+    keywords: Vec<Row>,
+    /// SERP snapshot rows.
+    #[serde(default)]
+    serp: Vec<Row>,
+    /// Backlink / referring-domain rows.
+    #[serde(default)]
+    backlinks: Vec<Row>,
     #[serde(default)]
     prompts: Vec<weavatrix_seo_model::PromptObservation>,
 }
@@ -53,6 +62,22 @@ struct Row {
     status: Option<u16>,
     #[serde(default)]
     referer: Option<String>,
+    #[serde(default)]
+    volume: u32,
+    #[serde(default)]
+    search_volume: u32,
+    #[serde(default)]
+    difficulty: Option<u16>,
+    #[serde(default)]
+    keyword_difficulty: Option<u16>,
+    #[serde(default)]
+    features: Vec<String>,
+    #[serde(default)]
+    referring_domains: Option<u32>,
+    #[serde(default)]
+    source_url: Option<String>,
+    #[serde(default)]
+    backlinks: u32,
 }
 
 /// Loads GSC, Bing, bot-log, analytics, or AI-citation JSON.
@@ -104,41 +129,48 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
             if classified.is_some() && kind == ObservationKind::Analytics {
                 kind = ObservationKind::BotCrawl;
             }
-            let source = kind.source(&provider);
-            Observation {
-                kind,
-                query: row.query,
-                url: row.url,
-                provider,
-                evidence: Evidence {
-                    kind: EvidenceKind::Observed,
-                    source,
-                    confidence: weavatrix_seo_model::Confidence::High,
-                    snapshot_id: None,
-                    revision: None,
-                    policy_version: None,
-                },
-                clicks: row.clicks,
-                impressions: if kind.is_search_demand() {
-                    row.impressions
-                } else {
-                    0
-                },
-                hits: if kind.is_search_demand() {
-                    0
-                } else {
-                    row.hits.max(row.impressions)
-                },
-                position: row.position,
-                period: row.period,
-                user_agent: row.user_agent,
-                status: row.status,
-                bot_role: classified.map(|bot| bot.role.to_owned()),
-                verified_bot: classified.map(|bot| bot.verified),
-                referer: row.referer,
-            }
+            observation_from_row(kind, provider, row, classified)
         })
         .collect();
+    rows.extend(file.keywords.into_iter().map(|row| {
+        let provider = row
+            .provider
+            .clone()
+            .unwrap_or_else(|| default_provider.clone())
+            .to_ascii_lowercase();
+        let kind = row
+            .kind
+            .as_deref()
+            .and_then(ObservationKind::parse)
+            .unwrap_or(ObservationKind::KeywordVolume);
+        observation_from_row(kind, provider, row, None)
+    }));
+    rows.extend(file.serp.into_iter().map(|row| {
+        let provider = row
+            .provider
+            .clone()
+            .unwrap_or_else(|| default_provider.clone())
+            .to_ascii_lowercase();
+        let kind = row
+            .kind
+            .as_deref()
+            .and_then(ObservationKind::parse)
+            .unwrap_or(ObservationKind::SerpPosition);
+        observation_from_row(kind, provider, row, None)
+    }));
+    rows.extend(file.backlinks.into_iter().map(|row| {
+        let provider = row
+            .provider
+            .clone()
+            .unwrap_or_else(|| default_provider.clone())
+            .to_ascii_lowercase();
+        let kind = row
+            .kind
+            .as_deref()
+            .and_then(ObservationKind::parse)
+            .unwrap_or(ObservationKind::Backlink);
+        observation_from_row(kind, provider, row, None)
+    }));
     let combined_format = file
         .format
         .as_deref()
@@ -177,6 +209,71 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
         input,
         prompts,
     })
+}
+
+fn observation_from_row(
+    kind: ObservationKind,
+    provider: String,
+    row: Row,
+    classified: Option<crate::logs::ClassifiedBot>,
+) -> Observation {
+    let source = kind.source(&provider);
+    let evidence_kind = if kind.is_external_market() {
+        EvidenceKind::External
+    } else {
+        EvidenceKind::Observed
+    };
+    let confidence = if kind.is_external_market() {
+        weavatrix_seo_model::Confidence::Medium
+    } else {
+        weavatrix_seo_model::Confidence::High
+    };
+    let volume = if kind == ObservationKind::KeywordVolume {
+        row.volume.max(row.search_volume).max(row.impressions)
+    } else {
+        0
+    };
+    let hits = if kind.is_search_demand() {
+        0
+    } else if kind == ObservationKind::Backlink {
+        row.backlinks.max(row.hits).max(row.impressions).max(1)
+    } else if kind == ObservationKind::KeywordVolume {
+        0
+    } else {
+        row.hits.max(row.impressions)
+    };
+    Observation {
+        kind,
+        query: row.query,
+        url: row.url,
+        provider,
+        evidence: Evidence {
+            kind: evidence_kind,
+            source,
+            confidence,
+            snapshot_id: None,
+            revision: None,
+            policy_version: None,
+        },
+        clicks: row.clicks,
+        impressions: if kind.is_search_demand() {
+            row.impressions
+        } else {
+            0
+        },
+        hits,
+        position: row.position,
+        period: row.period,
+        user_agent: row.user_agent,
+        status: row.status,
+        bot_role: classified.map(|bot| bot.role.to_owned()),
+        verified_bot: classified.map(|bot| bot.verified),
+        referer: row.referer.or(row.source_url),
+        volume,
+        difficulty: row.difficulty.or(row.keyword_difficulty),
+        serp_features: row.features,
+        referring_domains: row.referring_domains,
+    }
 }
 
 #[cfg(test)]
@@ -238,5 +335,34 @@ mod tests {
         assert_eq!(snap.prompts.len(), 1);
         assert_eq!(snap.rows[0].kind, ObservationKind::AiCitation);
         assert_eq!(snap.rows[0].url, "https://x.test/a");
+    }
+
+    #[test]
+    fn keyword_json_is_external_and_not_search_demand() {
+        let snap = from_any(
+            r#"{"provider":"semrush","keywords":[{"query":"electrician vancouver","url":"https://x.test/a","volume":2400,"difficulty":47}]}"#,
+        )
+        .expect("semrush");
+        assert_eq!(snap.rows[0].kind, ObservationKind::KeywordVolume);
+        assert_eq!(snap.rows[0].volume, 2400);
+        assert_eq!(snap.rows[0].impressions, 0);
+        assert_eq!(snap.rows[0].hits, 0);
+        assert_eq!(snap.rows[0].difficulty, Some(47));
+        assert_eq!(
+            snap.rows[0].evidence.kind,
+            weavatrix_seo_model::EvidenceKind::External
+        );
+        assert!(!snap.rows[0].kind.is_search_demand());
+    }
+
+    #[test]
+    fn keyword_volume_on_rows_does_not_become_impressions() {
+        let snap = from_any(
+            r#"{"provider":"ahrefs","rows":[{"url":"https://x.test/a","impressions":900,"volume":900}]}"#,
+        )
+        .expect("ahrefs");
+        assert_eq!(snap.rows[0].kind, ObservationKind::KeywordVolume);
+        assert_eq!(snap.rows[0].volume, 900);
+        assert_eq!(snap.rows[0].impressions, 0);
     }
 }

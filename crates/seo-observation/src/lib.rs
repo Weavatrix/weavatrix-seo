@@ -7,6 +7,7 @@ mod gsc;
 mod intel;
 mod kind;
 mod logs;
+mod market;
 mod outcome;
 mod prompts;
 mod provider;
@@ -20,6 +21,10 @@ pub use gsc::{disconnected, from_json, load};
 pub use intel::{ObservationIntel, analyze as analyze_gsc, expected_ctr};
 pub use kind::ObservationKind;
 pub use logs::{analyze as analyze_logs, classify_agent, from_combined};
+pub use market::{
+    BacklinkProvider, BacklinkRecord, JsonMarket, KeywordProvider, KeywordRecord, MarketProvider,
+    SerpProvider, SerpRecord, observations as market_observations,
+};
 pub use outcome::metrics as outcome_metrics;
 pub use prompts::citation_drops;
 pub use provider::{from_any, load_any};
@@ -71,6 +76,23 @@ pub struct Observation {
     /// Referer when a log row supplied it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub referer: Option<String>,
+    /// Keyword-tool search volume. Never copied into `impressions`.
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    pub volume: u32,
+    /// Keyword difficulty 0–100 when a market provider supplied it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub difficulty: Option<u16>,
+    /// SERP feature labels (`paa`, `ai_overview`, `featured_snippet`, …).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub serp_features: Vec<String>,
+    /// Referring domains when a backlink import supplied them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub referring_domains: Option<u32>,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_zero_u32(value: &u32) -> bool {
+    *value == 0
 }
 
 /// Snapshot of imported observations.
@@ -275,6 +297,17 @@ mod tests {
         );
         assert_eq!(other.rows[0].kind, ObservationKind::Analytics);
         assert_eq!(axes_for(&other, "https://x.test/a"), (None, None));
+    }
+
+    #[test]
+    fn keyword_volume_is_not_search_demand() {
+        let keywords = snapshot(
+            r#"{"provider":"semrush","keywords":[{"url":"https://x.test/a","query":"electrician","volume":2400}]}"#,
+        );
+        assert_eq!(keywords.rows[0].kind, ObservationKind::KeywordVolume);
+        assert_eq!(keywords.rows[0].volume, 2400);
+        assert_eq!(keywords.rows[0].impressions, 0);
+        assert_eq!(axes_for(&keywords, "https://x.test/a"), (None, None));
     }
 
     #[test]

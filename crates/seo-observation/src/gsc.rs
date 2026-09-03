@@ -71,6 +71,10 @@ pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
             bot_role: None,
             verified_bot: None,
             referer: None,
+            volume: 0,
+            difficulty: None,
+            serp_features: Vec::new(),
+            referring_domains: None,
         })
         .collect::<Vec<_>>();
     let input = if rows.is_empty() {

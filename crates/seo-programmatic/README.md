@@ -4,7 +4,7 @@
 [![docs.rs](https://docs.rs/weavatrix-seo-programmatic/badge.svg)](https://docs.rs/weavatrix-seo-programmatic)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Weavatrix/weavatrix-seo/blob/main/LICENSE)
 
-Programmatic SEO **safety compiler**. City/service matrices, thin variants, `SAFE_TO_GENERATE` that requires fact coverage — not two unique samples.
+Programmatic SEO **safety compiler**. City/service matrices, thin variants, typed `RequirementKind` gates beside `unmet_requirements` strings. `SAFE_TO_GENERATE` only when required gates are `PASSED` — not two unique samples.
 
 ```rust
 use weavatrix_seo_programmatic::{compile, enrich, thin_city_variants, SafetyVerdict};

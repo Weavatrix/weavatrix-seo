@@ -2,7 +2,7 @@
 //!
 //! These sit beside findings. They never collapse into one SEO score.
 
-use crate::EvidenceSemantics;
+use crate::{EvidenceSemantics, RequirementResult};
 use serde::{Deserialize, Serialize};
 
 /// Qualitative band. Prefer this over a fake percentage of "AI writing".
@@ -303,6 +303,9 @@ pub struct FamilyMatrix {
     /// Requirements still unmet for a safe generate.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unmet_requirements: Vec<String>,
+    /// Typed gates beside the historical string list. Empty in older snapshots.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requirements: Vec<RequirementResult>,
 }
 
 /// First-class chunk of a page.

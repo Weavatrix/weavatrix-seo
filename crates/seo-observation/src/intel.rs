@@ -187,6 +187,7 @@ fn ctr_gaps(current: &[&Observation]) -> (Vec<Finding>, Vec<Opportunity>) {
         item.axes.recoverable_clicks = Some(recoverable);
         item.axes.expected_ctr = Some(ctr_pct(expected));
         item.axes.confidence = Some(55);
+        item.axes.expected_value = item.axes.compute_expected_value();
         opportunities.push(item);
     }
     (findings, opportunities)
@@ -422,6 +423,10 @@ mod tests {
             bot_role: None,
             verified_bot: None,
             referer: None,
+            volume: 0,
+            difficulty: None,
+            serp_features: Vec::new(),
+            referring_domains: None,
         }
     }
 

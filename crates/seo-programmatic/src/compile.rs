@@ -1,8 +1,8 @@
 //! Compile route families into programmatic safety verdicts.
 
-use crate::{PageMatrix, SafetyVerdict};
+use crate::{PageMatrix, RequirementKind, RequirementState, SafetyVerdict, unmeasured_gates};
 use std::collections::BTreeMap;
-use weavatrix_seo_model::{ContentHash, Indexability, Inventory};
+use weavatrix_seo_model::{ContentHash, Indexability, Inventory, required_gates_passed};
 
 /// Compiles measured URLs and predicted families into a page matrix.
 #[must_use]
@@ -20,81 +20,160 @@ pub fn compile(inventory: &Inventory, predicted: &[String]) -> Vec<PageMatrix> {
     }
     let mut matrices = Vec::new();
     for (family, pages) in families {
-        let indexable: Vec<_> = pages
-            .iter()
-            .filter(|page| page.indexability == Indexability::Indexable)
-            .copied()
-            .collect();
-        let hashes: Vec<_> = indexable
-            .iter()
-            .map(|page| ContentHash::of_str(&page.visible_text()))
-            .collect();
-        let unique = {
-            let mut sorted = hashes.clone();
-            sorted.sort();
-            sorted.dedup();
-            sorted.len()
-        };
-        let thin = indexable.len() >= 2 && unique == 1;
-        let sitemap_only = !pages.is_empty()
-            && pages
-                .iter()
-                .all(|page| page.in_sitemap && !page.linked_from_page);
-        let all_noindex = !pages.is_empty()
-            && pages
-                .iter()
-                .all(|page| page.indexability != Indexability::Indexable);
-        let dimensions = dimensions_of(&family);
-        let mut unmet = Vec::new();
-        if unique < 2 {
-            unmet.push("sufficient sample diversity".into());
-        }
-        if sitemap_only {
-            unmet.push("discovery support beyond sitemap".into());
-        }
-        let (verdict, unmet) = if pages.is_empty() {
-            (SafetyVerdict::Unmeasured, vec!["no measured URLs".into()])
-        } else if all_noindex {
-            (SafetyVerdict::NoindexByDefault, Vec::new())
-        } else if thin {
-            (
-                SafetyVerdict::Consolidate,
-                vec!["unique facts per URL".into()],
-            )
-        } else if unique >= 2 && unmet.is_empty() {
-            // Unique samples are necessary, not sufficient. Without fact and
-            // discovery evidence the family stays SAFE_IF_REQUIREMENTS_MET.
-            unmet.push("fact coverage".into());
-            unmet.push("semantic distinctness".into());
-            unmet.push("canonical strategy".into());
-            (SafetyVerdict::SafeIfRequirementsMet, unmet)
-        } else if sitemap_only {
-            (SafetyVerdict::Review, unmet)
-        } else if unique == 1 {
-            unmet.push("unique facts before expansion".into());
-            (SafetyVerdict::SafeIfRequirementsMet, unmet)
-        } else {
-            (SafetyVerdict::Unmeasured, unmet)
-        };
-        matrices.push(PageMatrix {
-            family,
-            measured_urls: u64::try_from(pages.len()).unwrap_or(0),
-            verdict,
-            dimensions,
-            estimated_cardinality: None,
-            fact_coverage: None,
-            unique_fact_ratio: None,
-            template_boilerplate_ratio: None,
-            semantic_distinctness: if unique >= 2 {
-                Some(u16::try_from((unique * 100) / pages.len().max(1)).unwrap_or(100))
-            } else {
-                None
-            },
-            unmet_requirements: unmet,
-        });
+        matrices.push(compile_family(family, &pages));
     }
     matrices.sort_by(|left, right| left.family.cmp(&right.family));
     matrices
+}
+
+#[allow(clippy::too_many_lines)]
+fn compile_family(family: String, pages: &[&weavatrix_seo_model::ExtractedPage]) -> PageMatrix {
+    let indexable: Vec<_> = pages
+        .iter()
+        .filter(|page| page.indexability == Indexability::Indexable)
+        .copied()
+        .collect();
+    let hashes: Vec<_> = indexable
+        .iter()
+        .map(|page| ContentHash::of_str(&page.visible_text()))
+        .collect();
+    let unique = {
+        let mut sorted = hashes.clone();
+        sorted.sort();
+        sorted.dedup();
+        sorted.len()
+    };
+    let thin = indexable.len() >= 2 && unique == 1;
+    let sitemap_only = !pages.is_empty()
+        && pages
+            .iter()
+            .all(|page| page.in_sitemap && !page.linked_from_page);
+    let all_noindex = !pages.is_empty()
+        && pages
+            .iter()
+            .all(|page| page.indexability != Indexability::Indexable);
+    let dimensions = dimensions_of(&family);
+    let mut matrix = PageMatrix {
+        family,
+        measured_urls: u64::try_from(pages.len()).unwrap_or(0),
+        verdict: SafetyVerdict::Unmeasured,
+        dimensions,
+        estimated_cardinality: None,
+        fact_coverage: None,
+        unique_fact_ratio: None,
+        template_boilerplate_ratio: None,
+        semantic_distinctness: if unique >= 2 {
+            Some(u16::try_from((unique * 100) / pages.len().max(1)).unwrap_or(100))
+        } else {
+            None
+        },
+        unmet_requirements: Vec::new(),
+        requirements: unmeasured_gates(),
+    };
+    if pages.is_empty() {
+        matrix.verdict = SafetyVerdict::Unmeasured;
+        matrix.unmet_requirements = vec!["no measured URLs".into()];
+        return matrix;
+    }
+    let diversity_state = if unique >= 2 {
+        RequirementState::Passed
+    } else {
+        RequirementState::Failed
+    };
+    matrix.set_requirement(
+        RequirementKind::SampleDiversity,
+        diversity_state,
+        u16::try_from(unique).ok(),
+        Some(format!("{unique} unique samples")),
+    );
+    let discovery_state = if sitemap_only {
+        RequirementState::Failed
+    } else {
+        RequirementState::Passed
+    };
+    matrix.set_requirement(
+        RequirementKind::DiscoverySupport,
+        discovery_state,
+        None,
+        Some(if sitemap_only {
+            "sitemap-only URLs".into()
+        } else {
+            "linked from a page".into()
+        }),
+    );
+    let with_canonical = indexable
+        .iter()
+        .filter(|page| page.canonical.as_ref().is_some_and(|item| !item.is_empty()))
+        .count();
+    if indexable.is_empty() {
+        matrix.set_requirement(
+            RequirementKind::CanonicalStrategy,
+            RequirementState::Unmeasured,
+            None,
+            None,
+        );
+    } else {
+        let percent = u16::try_from((with_canonical * 100) / indexable.len().max(1)).unwrap_or(0);
+        let state = if with_canonical == indexable.len() {
+            RequirementState::Passed
+        } else {
+            RequirementState::Failed
+        };
+        matrix.set_requirement(
+            RequirementKind::CanonicalStrategy,
+            state,
+            Some(percent),
+            Some(format!(
+                "{with_canonical}/{} pages declare a canonical",
+                indexable.len()
+            )),
+        );
+    }
+    // Unique hashes are not fact coverage or semantic distinctness.
+    matrix.set_requirement(
+        RequirementKind::FactCoverage,
+        RequirementState::Unmeasured,
+        None,
+        Some("awaiting content intelligence".into()),
+    );
+    matrix.set_requirement(
+        RequirementKind::SemanticDistinctness,
+        RequirementState::Unmeasured,
+        None,
+        Some("awaiting content intelligence".into()),
+    );
+    matrix.verdict = if all_noindex {
+        SafetyVerdict::NoindexByDefault
+    } else if thin {
+        SafetyVerdict::Consolidate
+    } else if unique >= 2 && !sitemap_only {
+        SafetyVerdict::SafeIfRequirementsMet
+    } else if sitemap_only {
+        SafetyVerdict::Review
+    } else if unique == 1 {
+        SafetyVerdict::SafeIfRequirementsMet
+    } else {
+        SafetyVerdict::Unmeasured
+    };
+    if thin {
+        matrix.unmet_requirements = vec!["unique facts per URL".into()];
+        matrix
+            .unmet_requirements
+            .extend(weavatrix_seo_model::unmet_labels(&matrix.requirements));
+        matrix.unmet_requirements.sort();
+        matrix.unmet_requirements.dedup();
+    } else if unique == 1
+        && !all_noindex
+        && !matrix
+            .unmet_requirements
+            .iter()
+            .any(|item| item.contains("unique facts"))
+    {
+        matrix
+            .unmet_requirements
+            .insert(0, "unique facts before expansion".into());
+    }
+    matrix
 }
 
 fn dimensions_of(family: &str) -> Vec<String> {
@@ -133,27 +212,34 @@ pub fn enrich(
                     .min(100),
             );
         }
-        matrix
-            .unmet_requirements
-            .retain(|item| item.as_str() != "fact coverage");
-        if row.local_fact_coverage.unwrap_or(0) < 40 {
-            if !matrix
-                .unmet_requirements
-                .iter()
-                .any(|item| item.contains("fact"))
-            {
-                matrix.unmet_requirements.push("fact coverage".into());
-            }
-        } else {
-            matrix
-                .unmet_requirements
-                .retain(|item| item.as_str() != "fact coverage");
-        }
-        if row.unique_fact_ratio.unwrap_or(0) >= 15
-            && row.local_fact_coverage.unwrap_or(0) >= 40
+        let fact = row.local_fact_coverage;
+        matrix.fact_coverage = fact;
+        let fact_state = match fact {
+            Some(value) if value >= 40 => RequirementState::Passed,
+            Some(_) => RequirementState::Failed,
+            None => RequirementState::Unmeasured,
+        };
+        matrix.set_requirement(
+            RequirementKind::FactCoverage,
+            fact_state,
+            fact,
+            fact.map(|value| format!("local fact coverage {value}")),
+        );
+        let unique_facts = row.unique_fact_ratio;
+        let semantic_state = match (unique_facts, matrix.semantic_distinctness) {
+            (Some(ratio), Some(_)) if ratio >= 15 => RequirementState::Passed,
+            (Some(ratio), _) if ratio < 15 => RequirementState::Failed,
+            _ => RequirementState::Unmeasured,
+        };
+        matrix.set_requirement(
+            RequirementKind::SemanticDistinctness,
+            semantic_state,
+            matrix.semantic_distinctness,
+            unique_facts.map(|value| format!("unique fact ratio {value}")),
+        );
+        if matrix.verdict == SafetyVerdict::SafeIfRequirementsMet
             && matrix.measured_urls >= 2
-            && matrix.verdict == SafetyVerdict::SafeIfRequirementsMet
-            && matrix.unmet_requirements.is_empty()
+            && required_gates_passed(&matrix.requirements)
         {
             matrix.verdict = SafetyVerdict::SafeToGenerate;
         }
@@ -195,5 +281,106 @@ mod tests {
     fn city_pattern_is_programmatic() {
         assert!(is_programmatic("/:locale/category/:city"));
         assert!(!is_programmatic("/about"));
+    }
+
+    #[test]
+    fn unique_samples_leave_required_gates_unmeasured() {
+        use crate::{PageMatrix, RequirementKind, RequirementState, SafetyVerdict};
+        use weavatrix_seo_model::required_gates_passed;
+
+        let mut matrix = PageMatrix {
+            family: "category/electrician".into(),
+            measured_urls: 2,
+            verdict: SafetyVerdict::SafeIfRequirementsMet,
+            dimensions: vec!["service".into()],
+            estimated_cardinality: None,
+            fact_coverage: None,
+            unique_fact_ratio: None,
+            template_boilerplate_ratio: None,
+            semantic_distinctness: Some(100),
+            unmet_requirements: Vec::new(),
+            requirements: crate::unmeasured_gates(),
+        };
+        matrix.set_requirement(
+            RequirementKind::SampleDiversity,
+            RequirementState::Passed,
+            Some(2),
+            None,
+        );
+        matrix.set_requirement(
+            RequirementKind::CanonicalStrategy,
+            RequirementState::Passed,
+            Some(100),
+            None,
+        );
+        assert!(!required_gates_passed(&matrix.requirements));
+        assert_ne!(matrix.verdict, SafetyVerdict::SafeToGenerate);
+        assert!(
+            matrix
+                .unmet_requirements
+                .iter()
+                .any(|item| item == "fact coverage")
+        );
+    }
+
+    #[test]
+    fn enrich_promotes_only_when_required_gates_pass() {
+        use crate::{PageMatrix, RequirementKind, RequirementState, SafetyVerdict, enrich};
+        use weavatrix_seo_model::FamilyContent;
+
+        let ready = |unique_facts: u16, coverage: u16| {
+            let mut matrix = PageMatrix {
+                family: "category/electrician".into(),
+                measured_urls: 2,
+                verdict: SafetyVerdict::SafeIfRequirementsMet,
+                dimensions: vec!["service".into()],
+                estimated_cardinality: None,
+                fact_coverage: None,
+                unique_fact_ratio: None,
+                template_boilerplate_ratio: None,
+                semantic_distinctness: Some(80),
+                unmet_requirements: Vec::new(),
+                requirements: crate::unmeasured_gates(),
+            };
+            matrix.set_requirement(
+                RequirementKind::SampleDiversity,
+                RequirementState::Passed,
+                Some(2),
+                None,
+            );
+            matrix.set_requirement(
+                RequirementKind::CanonicalStrategy,
+                RequirementState::Passed,
+                Some(100),
+                None,
+            );
+            let families = [FamilyContent {
+                family: "category/electrician".into(),
+                measured_urls: 2,
+                template_shared_ratio: Some(40),
+                parameter_substitution_ratio: None,
+                unique_fact_ratio: Some(unique_facts),
+                unique_semantic_ratio: Some(40),
+                local_fact_coverage: Some(coverage),
+                schema_fact_coverage: None,
+                primary_producer: None,
+                gsc_clicks: None,
+                gsc_impressions: None,
+                error_findings: None,
+            }];
+            enrich(vec![matrix], &families).remove(0)
+        };
+        let blocked = ready(10, 80);
+        assert_eq!(blocked.verdict, SafetyVerdict::SafeIfRequirementsMet);
+        assert!(
+            blocked
+                .requirements
+                .iter()
+                .any(|item| item.kind == RequirementKind::SemanticDistinctness
+                    && item.state == RequirementState::Failed)
+        );
+        let allowed = ready(20, 80);
+        assert_eq!(allowed.verdict, SafetyVerdict::SafeToGenerate);
+        assert!(allowed.unmet_requirements.is_empty());
     }
 }

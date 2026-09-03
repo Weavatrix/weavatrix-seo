@@ -124,6 +124,10 @@ mod tests {
             bot_role: Some(role.into()),
             verified_bot: Some(true),
             referer: None,
+            volume: 0,
+            difficulty: None,
+            serp_features: Vec::new(),
+            referring_domains: None,
         }
     }
 

@@ -153,6 +153,7 @@ pub fn assemble(
                 template_boilerplate_ratio: matrix.template_boilerplate_ratio,
                 semantic_distinctness: matrix.semantic_distinctness,
                 unmet_requirements: matrix.unmet_requirements.clone(),
+                requirements: matrix.requirements.clone(),
             })
             .collect(),
         chunks: content.chunks,

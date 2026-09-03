@@ -108,6 +108,10 @@ pub fn from_combined(origin: &str, lines: &[String], provider: &str) -> Vec<Obse
             bot_role: Some(bot.role.to_owned()),
             verified_bot: Some(bot.verified),
             referer: parsed.referer.clone(),
+            volume: 0,
+            difficulty: None,
+            serp_features: Vec::new(),
+            referring_domains: None,
         });
         entry.hits = entry.hits.saturating_add(1);
     }

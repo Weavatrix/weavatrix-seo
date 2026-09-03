@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use weavatrix_seo_model::{
     ContentHash, Evidence, Finding, FindingFamily, Indexability, Inventory, Locator, Severity,
+    unmet_labels,
 };
+
+pub use weavatrix_seo_model::{RequirementKind, RequirementResult, RequirementState};
 
 /// Safety verdict for one generated page family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -77,8 +80,44 @@ pub struct PageMatrix {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub semantic_distinctness: Option<u16>,
     /// Requirements still unmet for `SAFE_TO_GENERATE`.
+    ///
+    /// Historical string list. Typed gates live in [`Self::requirements`]; this
+    /// field is derived from them and is never removed.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unmet_requirements: Vec<String>,
+    /// Typed gates. `SAFE_TO_GENERATE` only when required kinds are `PASSED`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requirements: Vec<RequirementResult>,
+}
+
+impl PageMatrix {
+    /// Syncs string `unmet_requirements` from typed gates.
+    pub fn sync_unmet(&mut self) {
+        self.unmet_requirements = unmet_labels(&self.requirements);
+    }
+
+    /// Sets one gate and refreshes the string list.
+    pub fn set_requirement(
+        &mut self,
+        kind: RequirementKind,
+        state: RequirementState,
+        value: Option<u16>,
+        evidence: Option<String>,
+    ) {
+        if let Some(item) = self.requirements.iter_mut().find(|item| item.kind == kind) {
+            item.state = state;
+            item.value = value;
+            item.evidence = evidence;
+        } else {
+            self.requirements.push(RequirementResult {
+                kind,
+                state,
+                value,
+                evidence,
+            });
+        }
+        self.sync_unmet();
+    }
 }
 
 pub use compile::{compile, enrich};
@@ -97,7 +136,15 @@ pub fn unmeasured(family: impl Into<String>) -> PageMatrix {
         template_boilerplate_ratio: None,
         semantic_distinctness: None,
         unmet_requirements: vec!["no measured URLs".into()],
+        requirements: unmeasured_gates(),
     }
+}
+
+pub(crate) fn unmeasured_gates() -> Vec<RequirementResult> {
+    RequirementKind::ALL
+        .iter()
+        .map(|kind| RequirementResult::new(*kind, RequirementState::Unmeasured))
+        .collect()
 }
 
 /// Flags city/service variants whose remaining facts are identical after the city token is removed.

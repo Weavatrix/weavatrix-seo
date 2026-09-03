@@ -435,3 +435,48 @@ fn a_dropped_ai_citation_is_obs_012() {
     );
     let _ = std::fs::remove_file(import);
 }
+
+#[test]
+fn keyword_volume_does_not_become_gsc_demand() {
+    let site = spawn(one_page_site());
+    let origin = format!("{}/", site.base);
+    let page_a = format!("{origin}a");
+    let import = write_import(
+        "keyword-volume",
+        &format!(
+            r#"{{"provider":"semrush","keywords":[{{"query":"home service","url":"{page_a}","volume":2400,"difficulty":47}}]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin),
+        max_pages: Some(4),
+        observations: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    let intelligence = report.intelligence.as_ref().expect("intelligence");
+    assert!(
+        intelligence
+            .url_metrics
+            .iter()
+            .any(
+                |row| row.url.trim_end_matches('/') == page_a.trim_end_matches('/')
+                    && row.gsc_impressions.is_none()
+            ),
+        "keyword volume must not roll up as GSC impressions: {:?}",
+        intelligence.url_metrics
+    );
+    assert!(
+        report
+            .opportunities
+            .iter()
+            .all(|item| item.axes.demand.is_none()),
+        "keyword-tool volume must not fill GSC demand: {:?}",
+        report
+            .opportunities
+            .iter()
+            .map(|item| (item.kind.as_str(), item.axes.demand))
+            .collect::<Vec<_>>()
+    );
+    let _ = std::fs::remove_file(import);
+}

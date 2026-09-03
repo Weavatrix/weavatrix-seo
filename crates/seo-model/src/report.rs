@@ -66,6 +66,15 @@ pub struct OpportunityAxes {
     /// Expected CTR percent inferred from average position. Never exact truth.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_ctr: Option<u16>,
+    /// Conversion rate percent when a provider supplied it. Unmeasured when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_rate: Option<u16>,
+    /// Display-only expected value: recoverable clicks × value × confidence / effort.
+    ///
+    /// Never consulted by [`Self::rank_key`]. Missing factors use a neutral 50
+    /// so the number stays a display helper, not a hidden ranking score.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_value: Option<u32>,
 }
 
 impl OpportunityAxes {
@@ -119,6 +128,20 @@ impl OpportunityAxes {
     #[must_use]
     pub fn cheapness(&self) -> u16 {
         100_u16.saturating_sub(self.implementation_cost.unwrap_or(0).min(100))
+    }
+
+    /// Display-only expected value. [`Self::rank_key`] never calls this.
+    ///
+    /// Returns `None` when recoverable clicks were not measured. Unmeasured
+    /// value, confidence, and effort use 50 as a neutral display factor.
+    #[must_use]
+    #[allow(clippy::integer_division)]
+    pub fn compute_expected_value(&self) -> Option<u32> {
+        let clicks = self.recoverable_clicks?;
+        let value = u32::from(self.business_value.unwrap_or(50).min(100));
+        let confidence = u32::from(self.confidence.unwrap_or(50).min(100));
+        let effort = u32::from(self.implementation_cost.unwrap_or(50).clamp(1, 100));
+        Some(clicks.saturating_mul(value).saturating_mul(confidence) / effort)
     }
 }
 
@@ -309,5 +332,34 @@ mod tests {
             ..OpportunityAxes::default()
         };
         assert!(valuable.rank_key() > OpportunityAxes::default().rank_key());
+    }
+
+    #[test]
+    fn expected_value_is_display_only_and_never_ranks() {
+        let low = OpportunityAxes {
+            demand: Some(50),
+            recoverable_clicks: Some(10),
+            expected_value: Some(1),
+            ..OpportunityAxes::default()
+        };
+        let high = OpportunityAxes {
+            demand: Some(50),
+            recoverable_clicks: Some(9_999),
+            expected_value: Some(999_999),
+            ..OpportunityAxes::default()
+        };
+        assert_eq!(
+            low.rank_key(),
+            high.rank_key(),
+            "expected_value must not collapse prioritization"
+        );
+        let computed = OpportunityAxes {
+            recoverable_clicks: Some(100),
+            business_value: Some(80),
+            confidence: Some(50),
+            implementation_cost: Some(20),
+            ..OpportunityAxes::default()
+        };
+        assert_eq!(computed.compute_expected_value(), Some(20_000));
     }
 }

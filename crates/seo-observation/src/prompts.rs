@@ -31,6 +31,10 @@ pub fn expand(
                 bot_role: None,
                 verified_bot: None,
                 referer: None,
+                volume: 0,
+                difficulty: None,
+                serp_features: Vec::new(),
+                referring_domains: None,
             });
         }
         if prompt.cited_urls.is_empty() {
@@ -50,6 +54,10 @@ pub fn expand(
                 bot_role: None,
                 verified_bot: None,
                 referer: None,
+                volume: 0,
+                difficulty: None,
+                serp_features: Vec::new(),
+                referring_domains: None,
             });
         }
     }

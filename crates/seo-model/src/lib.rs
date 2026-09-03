@@ -27,6 +27,7 @@ mod policy;
 mod producer;
 mod registry;
 mod report;
+mod requirement;
 mod schema_feature;
 mod scope;
 mod semantics;
@@ -65,6 +66,9 @@ pub use policy::{IndexabilityPolicy, InternationalPolicy, SearchPolicy, glob_mat
 pub use producer::ProducerFact;
 pub use registry::{RuleDefinition, all as rules, authority as rule_authority, lookup as rule};
 pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
+pub use requirement::{
+    RequirementKind, RequirementResult, RequirementState, required_gates_passed, unmet_labels,
+};
 pub use schema_feature::{
     FeatureStatus, KNOWLEDGE_CHECKED_AT, Requirement, SchemaFeatureProfile, SchemaProvider,
     missing as schema_missing, profiles as schema_features, satisfied as schema_satisfied,

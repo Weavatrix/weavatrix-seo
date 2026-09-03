@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win market provider, opportunity expected value, typed
+programmatic requirements. Nothing existing is removed.
+
+- Keyword / SERP / backlink JSON import (`keywords[]`, `serp[]`,
+  `backlinks[]`, providers `semrush` / `ahrefs` / `dataforseo`). Evidence is
+  `EXTERNAL`. Search volume is `volume`, never GSC `impressions` or demand.
+  `KeywordProvider` / `SerpProvider` / `BacklinkProvider` / `MarketProvider`
+  are file contracts; there is no vendor crawler and no in-house keyword DB.
+- `OpportunityAxes.expected_value` is display-only
+  (`recoverable_clicks × value × confidence / effort`). `rank_key` is still
+  lexicographic and never consults it. `conversion_rate` is stored when known.
+  Query DSL exposes `expected_value` and `difficulty_to_rank`.
+- Programmatic compiler emits typed `RequirementKind` / `RequirementState` /
+  `RequirementResult` beside the historical `unmet_requirements` strings.
+  `SAFE_TO_GENERATE` only when required gates are `PASSED`. Unique samples
+  still leave fact coverage and semantic distinctness unmeasured.
+
 Finish-to-win prompt provider, stale source guard, Codex plugin. Nothing
 existing is removed.
 

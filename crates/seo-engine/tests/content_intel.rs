@@ -127,6 +127,17 @@ fn unique_samples_alone_are_not_safe_to_generate() {
                     || matrix.verdict == "REVIEW",
                 "{matrix:?}"
             );
+            assert!(
+                !matrix.requirements.is_empty(),
+                "typed requirements sit beside unmet_requirements: {matrix:?}"
+            );
+            assert!(
+                matrix.requirements.iter().any(|item| {
+                    item.kind.required_for_generate()
+                        && item.state != weavatrix_seo_model::RequirementState::Passed
+                }),
+                "unique samples must leave a required gate unpassed: {matrix:?}"
+            );
         }
     }
 }

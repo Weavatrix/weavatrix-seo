@@ -60,6 +60,27 @@ pub fn decorate(
                     Some(u32::from(gap).saturating_mul(impressions.max(1) / 100));
             }
         }
+        let mut rank_difficulty: Option<u16> = None;
+        for row in snapshot.rows.iter().filter(|row| {
+            row.kind == ObservationKind::KeywordVolume || row.kind == ObservationKind::SerpPosition
+        }) {
+            let url_hit = row.url.trim_end_matches('/') == item.subject.trim_end_matches('/');
+            let query_hit = row.query.as_ref().is_some_and(|query| {
+                item.summary
+                    .to_ascii_lowercase()
+                    .contains(&query.to_ascii_lowercase())
+            });
+            if !(url_hit || query_hit) {
+                continue;
+            }
+            if let Some(difficulty) = row.difficulty {
+                rank_difficulty =
+                    Some(rank_difficulty.map_or(difficulty, |current| current.max(difficulty)));
+            }
+        }
+        if let Some(difficulty) = rank_difficulty {
+            item.axes.difficulty_to_rank = Some(difficulty);
+        }
         if item.kind == "create_family" {
             item.axes.difficulty_to_build = Some(70);
         }
@@ -69,6 +90,7 @@ pub fn decorate(
         if item.kind == "link_gap" {
             item.axes.graph_leverage = Some(80);
         }
+        item.axes.expected_value = item.axes.compute_expected_value();
     }
     if snapshot.input.kind == InputStateKind::Invalid {
         return vec![

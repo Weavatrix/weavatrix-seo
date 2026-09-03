@@ -6,7 +6,7 @@
 
 Imported **search-observation** contracts. No vendor crawlers.
 
-Kinds: `search_performance`, `bot_crawl`, `ai_citation`, `ai_prompt`, `ai_referral`, `serp_position`, `analytics`. Bot hits never become demand. Combined nginx/Apache logs classify Googlebot and AI crawlers. `prompts[]` is the AI-visibility import (not demand). An unknown provider stays `analytics`. Tagged `previous`/`current` windows drive decay; CTR and striking-distance views work on a single export. Expected CTR is inferred.
+Kinds: `search_performance`, `bot_crawl`, `ai_citation`, `ai_prompt`, `ai_referral`, `serp_position`, `keyword_volume`, `backlink`, `serp_feature`, `analytics`. Bot hits never become demand. Keyword-tool volume is `EXTERNAL` and never GSC demand (`keywords[]` / providers `semrush`, `ahrefs`, `dataforseo`). Combined nginx/Apache logs classify Googlebot and AI crawlers. `prompts[]` is the AI-visibility import (not demand). An unknown provider stays `analytics`. Tagged `previous`/`current` windows drive decay; CTR and striking-distance views work on a single export. Expected CTR is inferred.
 
 ```rust
 use weavatrix_seo_observation::{load_any, unmeasured, ObservationKind};

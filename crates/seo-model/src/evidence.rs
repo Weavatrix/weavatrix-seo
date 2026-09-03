@@ -135,6 +135,19 @@ impl Evidence {
         }
     }
 
+    /// Third-party keyword / SERP / backlink import. Never search demand.
+    #[must_use]
+    pub fn external() -> Self {
+        Self {
+            kind: EvidenceKind::External,
+            source: EvidenceSource::Provider,
+            confidence: Confidence::Medium,
+            snapshot_id: None,
+            revision: None,
+            policy_version: None,
+        }
+    }
+
     /// Explicitly unmeasured axis.
     #[must_use]
     pub fn unmeasured(source: EvidenceSource) -> Self {

@@ -19,6 +19,12 @@ pub enum ObservationKind {
     AiReferral,
     /// A measured SERP position for one query.
     SerpPosition,
+    /// Keyword-tool search volume. Never Search Console demand.
+    KeywordVolume,
+    /// Referring-domain / backlink import. External, not demand.
+    Backlink,
+    /// A SERP feature (PAA, AI Overview, featured snippet) on a query.
+    SerpFeature,
     /// Site analytics sessions or pageviews.
     Analytics,
 }
@@ -28,6 +34,15 @@ impl ObservationKind {
     #[must_use]
     pub const fn is_search_demand(self) -> bool {
         matches!(self, Self::SearchPerformance)
+    }
+
+    /// Third-party keyword / SERP / backlink imports. Evidence is `EXTERNAL`.
+    #[must_use]
+    pub const fn is_external_market(self) -> bool {
+        matches!(
+            self,
+            Self::KeywordVolume | Self::SerpPosition | Self::Backlink | Self::SerpFeature
+        )
     }
 
     /// Parses a declared kind from an import file.
@@ -40,6 +55,11 @@ impl ObservationKind {
             "ai_prompt" | "prompt" | "ai_visibility" => Some(Self::AiPrompt),
             "ai_referral" | "ai_click" | "referral" => Some(Self::AiReferral),
             "serp_position" | "serp" => Some(Self::SerpPosition),
+            "keyword_volume" | "keyword" | "keywords" | "search_volume" => {
+                Some(Self::KeywordVolume)
+            }
+            "backlink" | "backlinks" => Some(Self::Backlink),
+            "serp_feature" | "paa" | "ai_overview" => Some(Self::SerpFeature),
             "analytics" => Some(Self::Analytics),
             _ => None,
         }
@@ -59,7 +79,12 @@ impl ObservationKind {
             "chatgpt" | "perplexity" | "gemini" | "copilot" | "ai-search" => Self::AiCitation,
             "semrush-ai" | "ai-visibility" | "prompt" => Self::AiPrompt,
             "chatgpt-user" | "claude-user" | "ai-referral" => Self::AiReferral,
-            "serp" => Self::SerpPosition,
+            "serp" | "serpapi" | "serpstat" => Self::SerpPosition,
+            "semrush" | "ahrefs" | "dataforseo" | "keywords" | "keyword" | "moz" => {
+                Self::KeywordVolume
+            }
+            "backlinks" | "backlink" | "majestic" => Self::Backlink,
+            "paa" | "serp-features" => Self::SerpFeature,
             _ => Self::Analytics,
         }
     }
