@@ -1,7 +1,7 @@
 //! Compact history and revision-bound `seo_diff`.
 
 use std::collections::BTreeMap;
-use weavatrix_seo::{AuditRequest, diff_paths, run_audit, save_history};
+use weavatrix_seo::{AuditRequest, diff_paths, run_audit, run_on_history, save_history};
 
 mod common;
 
@@ -59,6 +59,15 @@ fn history_roundtrip_diffs_added_url() {
         "{delta:?}"
     );
     assert_ne!(small.inventory.snapshot_id, full.inventory.snapshot_id);
+    let listed = run_on_history(
+        "FROM runs RETURN snapshot_id, measured_urls LIMIT 10",
+        dir.to_string_lossy().as_ref(),
+    )
+    .expect("history query");
+    assert!(
+        listed.rows.len() >= 2,
+        "sqlite history must list both snapshots: {listed:?}"
+    );
     let _ = std::fs::remove_dir_all(dir);
 }
 

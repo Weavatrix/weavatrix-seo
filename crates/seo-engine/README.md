@@ -29,7 +29,7 @@ let pages = retrieve(&report, "iphone screen repair", 10);
 | Function | Role |
 |---|---|
 | `run_audit` / `run_inventory` | Crawl + assemble the Search Evidence Graph |
-| `parse_query` / `run_on_report` | Bounded `FROM … WHERE … LIMIT` |
+| `parse_query` / `run_on_report` / `run_on_history` | Bounded `FROM … WHERE … LIMIT` over a report or SQLite history |
 | `retrieve` / `similar` / `chunks_for` | Lexical candidate pages and chunks |
 | `explain_chain` | Finding → URL → route → symbol |
 | `plan_from` | Search architecture plan + Refactor handoff |

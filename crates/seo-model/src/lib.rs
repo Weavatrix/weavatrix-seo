@@ -46,8 +46,8 @@ pub use identity::{POLICY_VERSION, config_digest, new_run_id, site_identity, sna
 pub use input::{InputState, InputStateKind};
 pub use intelligence::{
     CandidatePage, Chunk, ContentProfile, FamilyContent, FamilyMatrix, IntentCoverage,
-    NearDuplicateGroup, OutcomeMetric, SearchIntelligence, SignalLevel, SyntheticStyle, chunk_id,
-    intent_id,
+    NearDuplicateGroup, OutcomeMetric, SearchIntelligence, SignalLevel, SyntheticStyle, UrlMetric,
+    chunk_id, intent_id,
 };
 pub use inventory::{AiAgentPolicy, AiSurface, AnalysisMode, Inventory, InventoryCounts};
 pub use link::{LinkLocation, LinkRef};

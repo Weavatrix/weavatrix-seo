@@ -93,7 +93,11 @@ pub fn query() -> mcport::Value {
             "max_pages": { "type": "integer", "minimum": 1 },
             "gsc": { "type": "string" },
             "observations": { "type": "string" },
-            "render": { "type": "string" }
+            "render": { "type": "string" },
+            "history": {
+                "type": "string",
+                "description": "History directory with weavatrix-seo.sqlite. Query without crawling when site is omitted."
+            }
         },
         "required": ["query"],
         "additionalProperties": false

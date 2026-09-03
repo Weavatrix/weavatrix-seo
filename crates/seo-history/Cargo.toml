@@ -16,6 +16,7 @@ categories = ["development-tools"]
 weavatrix-seo-model = { workspace = true }
 serde = { workspace = true }
 blazingly-json = { workspace = true }
+rusqlite = { workspace = true }
 
 [lints]
 workspace = true

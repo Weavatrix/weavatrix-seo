@@ -22,6 +22,28 @@ pub fn save(dir: &str, report: &AuditReport) -> Result<String, String> {
     let body = blazingly_json::to_string(&snapshot).map_err(|error| error.to_string())?;
     fs::write(&path, body).map_err(|error| error.to_string())?;
     append_index(dir, report, &snapshot);
+    crate::sqlite::ingest(dir, report)?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+/// Writes JSON + `SQLite` with an explicit unix timestamp for historical windows.
+///
+/// # Errors
+///
+/// Returns IO or `SQLite` errors.
+pub fn save_at(dir: &str, report: &AuditReport, recorded_at: i64) -> Result<String, String> {
+    fs::create_dir_all(dir).map_err(|error| error.to_string())?;
+    let snapshot = StoredSnapshot::from_report(report);
+    let name = if snapshot.snapshot_id.is_empty() {
+        "snapshot".into()
+    } else {
+        snapshot.snapshot_id.clone()
+    };
+    let path = Path::new(dir).join(format!("{name}.json"));
+    let body = blazingly_json::to_string(&snapshot).map_err(|error| error.to_string())?;
+    fs::write(&path, body).map_err(|error| error.to_string())?;
+    append_index(dir, report, &snapshot);
+    crate::sqlite::ingest_at(dir, report, recorded_at)?;
     Ok(path.to_string_lossy().into_owned())
 }
 

@@ -39,6 +39,8 @@ pub enum Collection {
     Chunks,
     /// Opportunities.
     Opportunities,
+    /// Stored history runs.
+    Runs,
 }
 
 /// One comparison.
@@ -107,6 +109,7 @@ pub fn parse(input: &str) -> Result<Query, String> {
         "route_families" | "families" => Collection::RouteFamilies,
         "chunks" => Collection::Chunks,
         "opportunities" => Collection::Opportunities,
+        "runs" | "snapshots" => Collection::Runs,
         other => return Err(format!("unknown collection `{other}`")),
     };
     let mut cursor = after.trim();
@@ -290,14 +293,19 @@ fn find_word(hay: &str, word: &str) -> Option<usize> {
 #[must_use]
 pub fn evaluate(query: &Query, report: &AuditReport, architecture: &Architecture) -> QueryResult {
     let intelligence = report.intelligence.as_ref();
-    let mut rows = match query.collection {
+    let rows = match query.collection {
         Collection::Urls => url_rows(report, architecture, intelligence),
         Collection::Findings => finding_rows(report),
         Collection::Claims => claim_rows(report),
         Collection::RouteFamilies => family_rows(intelligence),
         Collection::Chunks => chunk_rows(intelligence),
         Collection::Opportunities => opportunity_rows(report),
+        Collection::Runs => run_rows(report),
     };
+    finish(query, rows, "DETERMINISTIC")
+}
+
+fn finish(query: &Query, mut rows: Vec<BTreeMap<String, String>>, evidence: &str) -> QueryResult {
     rows.retain(|row| {
         query
             .filters
@@ -312,18 +320,22 @@ pub fn evaluate(query: &Query, report: &AuditReport, architecture: &Architecture
         }
     }
     QueryResult {
-        collection: match query.collection {
-            Collection::Urls => "urls",
-            Collection::Findings => "findings",
-            Collection::Claims => "claims",
-            Collection::RouteFamilies => "route_families",
-            Collection::Chunks => "chunks",
-            Collection::Opportunities => "opportunities",
-        }
-        .into(),
+        collection: collection_name(query.collection).into(),
         rows,
         truncated,
-        evidence: "DETERMINISTIC".into(),
+        evidence: evidence.into(),
+    }
+}
+
+fn collection_name(collection: Collection) -> &'static str {
+    match collection {
+        Collection::Urls => "urls",
+        Collection::Findings => "findings",
+        Collection::Claims => "claims",
+        Collection::RouteFamilies => "route_families",
+        Collection::Chunks => "chunks",
+        Collection::Opportunities => "opportunities",
+        Collection::Runs => "runs",
     }
 }
 
@@ -349,6 +361,19 @@ pub fn run(
 pub fn run_on_report(input: &str, report: &AuditReport) -> Result<QueryResult, String> {
     let (architecture, _) = weavatrix_seo_architecture::analyze(&report.inventory);
     run(input, report, &architecture)
+}
+
+/// Evaluates a bounded DSL query against the `SQLite` history in `dir`.
+///
+/// JSON snapshots stay on disk; this reads `{dir}/weavatrix-seo.sqlite`.
+///
+/// # Errors
+///
+/// Propagates parse errors and `SQLite` errors.
+pub fn run_on_history(input: &str, dir: &str) -> Result<QueryResult, String> {
+    let query = parse(input)?;
+    let rows = weavatrix_seo_history::query_maps(dir, collection_name(query.collection))?;
+    Ok(finish(&query, rows, "DETERMINISTIC"))
 }
 
 fn matches_filter(row: &BTreeMap<String, String>, filter: &Filter) -> bool {
@@ -437,10 +462,39 @@ fn url_rows(
                         row.insert("boilerplate_ratio".into(), value.to_string());
                     }
                 }
+                if let Some(metric) = intel.url_metrics.iter().find(|item| item.url == url) {
+                    if let Some(value) = metric.gsc_clicks {
+                        row.insert("gsc_clicks".into(), value.to_string());
+                    }
+                    if let Some(value) = metric.gsc_impressions {
+                        row.insert("gsc_impressions".into(), value.to_string());
+                    }
+                    if let Some(value) = metric.citations {
+                        row.insert("citations".into(), value.to_string());
+                    }
+                }
             }
             row
         })
         .collect()
+}
+
+fn run_rows(report: &AuditReport) -> Vec<BTreeMap<String, String>> {
+    let mut row = BTreeMap::new();
+    row.insert("snapshot_id".into(), report.inventory.snapshot_id.clone());
+    if let Some(site) = &report.inventory.site {
+        row.insert("site".into(), site.clone());
+    }
+    row.insert(
+        "mode".into(),
+        format!("{:?}", report.inventory.mode).to_ascii_lowercase(),
+    );
+    row.insert(
+        "measured_urls".into(),
+        report.inventory.pages.len().to_string(),
+    );
+    row.insert("findings".into(), report.findings.len().to_string());
+    vec![row]
 }
 
 fn finding_rows(report: &AuditReport) -> Vec<BTreeMap<String, String>> {
@@ -473,6 +527,7 @@ fn claim_rows(report: &AuditReport) -> Vec<BTreeMap<String, String>> {
             let mut row = BTreeMap::new();
             row.insert("claim".into(), node.label.clone());
             row.insert("id".into(), node.id.clone());
+            row.insert("support_state".into(), "unmeasured".into());
             row
         })
         .collect()
@@ -583,5 +638,11 @@ mod tests {
     #[test]
     fn rejects_unknown_collection() {
         assert!(parse("FROM bananas RETURN url").is_err());
+    }
+
+    #[test]
+    fn parses_historical_runs() {
+        let query = parse("FROM runs WHERE measured_urls > 0 LIMIT 5").expect("parse");
+        assert_eq!(query.collection, Collection::Runs);
     }
 }

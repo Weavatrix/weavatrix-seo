@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win historical `seo_query`. Nothing existing is removed.
+
+- `--history DIR` still writes compact JSON + `index.jsonl`, and now also
+  `{dir}/weavatrix-seo.sqlite`. Live `FROM …` over the current crawl is
+  unchanged. `weavatrix-seo query --history DIR` and MCP `seo_query` with
+  `history` (no site) query the latest snapshot plus deltas: `clicks_delta_28d`,
+  `producer_changed`, `errors_delta`, `citation_hits`,
+  `source_revision_changed`. `FROM runs` lists stored snapshots.
+
 Finish-to-win Tier B. Nothing existing is removed.
 
 - GSC intelligence: content decay (`WVX-SEO-OBS-006`) when a `previous`

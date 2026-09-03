@@ -48,6 +48,22 @@ pub struct OutcomeMetric {
     pub confidence: String,
 }
 
+/// Per-URL imported demand and citations. Missing counters stay unmeasured.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UrlMetric {
+    /// URL.
+    pub url: String,
+    /// GSC clicks when a search-performance row existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gsc_clicks: Option<u32>,
+    /// GSC impressions when a search-performance row existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gsc_impressions: Option<u32>,
+    /// Count of imported AI-search citations for this URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citations: Option<u32>,
+}
+
 impl OutcomeMetric {
     /// Explicitly unmeasured outcome.
     #[must_use]
@@ -354,6 +370,9 @@ pub struct SearchIntelligence {
     /// Near-duplicate groups.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub near_duplicates: Vec<NearDuplicateGroup>,
+    /// Per-URL GSC/citation rollups. Empty when no provider was imported.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub url_metrics: Vec<UrlMetric>,
 }
 
 /// Chunk node id.

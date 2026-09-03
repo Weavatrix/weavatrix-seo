@@ -44,7 +44,7 @@ args = ["-y", "weavatrix-seo", "mcp", "--allow-root", "."]
 | `seo_gate` | CI verdict |
 | `seo_explain` | Evidence chain |
 | `seo_observations` | GSC / logs / citations |
-| `seo_query` | Bounded DSL |
+| `seo_query` | Bounded DSL (live audit or `history` SQLite) |
 | `seo_retrieve` | Candidate pages |
 | `seo_similar` | Pages like a URL |
 | `seo_chunks` | Answering chunks |

@@ -12,7 +12,7 @@ use serde::Deserialize;
 use std::time::Duration;
 use weavatrix_seo::{
     AnalysisMode, AuditRequest, chunks_for, diff_paths, evaluate_gate, explain_chain, link_inputs,
-    load_baseline, plan_from, retrieve, run_audit, run_on_report, similar,
+    load_baseline, plan_from, retrieve, run_audit, run_on_history, run_on_report, similar,
 };
 use weavatrix_seo_observation::{
     load as load_gsc, load_any, unmeasured as observations_unmeasured,
@@ -155,6 +155,8 @@ struct QueryInput {
     observations: Option<String>,
     #[serde(default)]
     render: Option<String>,
+    #[serde(default)]
+    history: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -306,7 +308,7 @@ pub fn seo_server(max_pages: usize, roots: &Roots) -> ConcurrentMcpServer {
         )
         .typed_tool(
             "seo_query",
-            "Bounded read-only query over the last audit: FROM urls|findings|claims|route_families|chunks|opportunities WHERE ... RETURN ... LIMIT n.",
+            "Bounded read-only query over the last audit or --history SQLite: FROM urls|findings|claims|route_families|chunks|opportunities|runs WHERE ... RETURN ... LIMIT n.",
             schema::query(),
             {
                 let roots = roots.clone();
@@ -563,6 +565,19 @@ fn observation_paths(
 }
 
 fn tool_query(default_pages: usize, roots: &Roots, input: &QueryInput) -> ToolReply {
+    if input.site.is_none() && input.repo.is_none() {
+        let Some(history) = input.history.as_ref() else {
+            return ToolReply::error("seo_query requires site, repo, or history");
+        };
+        let dir = match roots.resolve("history", history) {
+            Ok(dir) => dir,
+            Err(error) => return ToolReply::error(error),
+        };
+        return match run_on_history(&input.query, &dir) {
+            Ok(result) => ToolReply::structured(result),
+            Err(error) => ToolReply::error(error),
+        };
+    }
     let site = SiteInput {
         mode: input.mode.clone(),
         site: input.site.clone(),
@@ -574,7 +589,7 @@ fn tool_query(default_pages: usize, roots: &Roots, input: &QueryInput) -> ToolRe
         render: input.render.clone(),
         gsc: input.gsc.clone(),
         observations: input.observations.clone(),
-        history: None,
+        history: input.history.clone(),
     };
     let request = match audit_request(default_pages, roots, &site) {
         Ok(request) => request,

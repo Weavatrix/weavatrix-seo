@@ -9,7 +9,8 @@ mod outcome;
 mod provider;
 
 use serde::{Deserialize, Serialize};
-use weavatrix_seo_model::{Evidence, EvidenceSource, InputState};
+use std::collections::BTreeMap;
+use weavatrix_seo_model::{Evidence, EvidenceSource, InputState, UrlMetric};
 
 pub use gsc::{disconnected, from_json, load};
 pub use intel::{ObservationIntel, analyze as analyze_gsc, expected_ctr};
@@ -160,9 +161,42 @@ fn urls_match(left: &str, right: &str) -> bool {
     left.trim_end_matches('/') == right.trim_end_matches('/')
 }
 
+/// Rolls imported GSC and AI-citation rows up per URL.
+#[must_use]
+pub fn url_metrics(snapshot: &ObservationSnapshot) -> Vec<UrlMetric> {
+    if !snapshot.connected {
+        return Vec::new();
+    }
+    let mut by_url: BTreeMap<String, UrlMetric> = BTreeMap::new();
+    for row in &snapshot.rows {
+        let entry = by_url.entry(row.url.clone()).or_insert_with(|| UrlMetric {
+            url: row.url.clone(),
+            gsc_clicks: None,
+            gsc_impressions: None,
+            citations: None,
+        });
+        match row.kind {
+            ObservationKind::SearchPerformance => {
+                entry.gsc_clicks = Some(entry.gsc_clicks.unwrap_or(0).saturating_add(row.clicks));
+                entry.gsc_impressions = Some(
+                    entry
+                        .gsc_impressions
+                        .unwrap_or(0)
+                        .saturating_add(row.impressions),
+                );
+            }
+            ObservationKind::AiCitation => {
+                entry.citations = Some(entry.citations.unwrap_or(0).saturating_add(1));
+            }
+            _ => {}
+        }
+    }
+    by_url.into_values().collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ObservationKind, ObservationSnapshot, axes_for, from_any};
+    use super::{ObservationKind, ObservationSnapshot, axes_for, from_any, url_metrics};
 
     fn snapshot(raw: &str) -> ObservationSnapshot {
         from_any(raw).expect("parse")
@@ -223,5 +257,20 @@ mod tests {
         );
         assert_eq!(declared.rows[0].kind, ObservationKind::SearchPerformance);
         assert_eq!(axes_for(&declared, "https://x.test/a").0, Some(90));
+    }
+
+    #[test]
+    fn url_metrics_roll_up_gsc_and_citations() {
+        let snap = snapshot(
+            r#"{"rows":[
+                {"url":"https://x.test/a","kind":"search_performance","clicks":4,"impressions":80},
+                {"url":"https://x.test/a","kind":"ai_citation","query":"best electrician"}
+            ]}"#,
+        );
+        let metrics = url_metrics(&snap);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].gsc_clicks, Some(4));
+        assert_eq!(metrics[0].gsc_impressions, Some(80));
+        assert_eq!(metrics[0].citations, Some(1));
     }
 }

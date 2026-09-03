@@ -16,6 +16,7 @@ weavatrix-seo audit --site https://example.com --json
 weavatrix-seo audit --site https://example.com --repo . --html report.html
 weavatrix-seo compare --site https://example.com --competitor https://them.example --json
 weavatrix-seo query --site https://example.com --q "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20" --json
+weavatrix-seo query --history ./seo-history --q "FROM urls WHERE clicks_delta_28d < -30 AND producer_changed = true LIMIT 20" --json
 weavatrix-seo retrieve --site https://example.com --q "licensed electrician vancouver" --json
 weavatrix-seo plan --site https://example.com --json
 weavatrix-seo mcp --allow-root .

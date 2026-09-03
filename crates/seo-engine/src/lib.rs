@@ -22,7 +22,9 @@ pub use diff::diff_paths;
 pub use explain::{ExplainHop, Explanation, explain_chain};
 pub use html::render_html;
 pub use plan::{HandoffTarget, PlanAction, PlanKind, RefactorHandoff, SearchPlan, plan_from};
-pub use query::{Query, QueryResult, parse as parse_query, run as run_query, run_on_report};
+pub use query::{
+    Query, QueryResult, parse as parse_query, run as run_query, run_on_history, run_on_report,
+};
 pub use request::{AuditRequest, EngineError};
 pub use retrieve::{chunks_for, retrieve, similar};
 pub use run::{explain, run_audit, run_inventory};

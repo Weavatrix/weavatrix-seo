@@ -14,9 +14,9 @@ save("./seo-history", &snap)?;
 let delta = diff(&base, &head);
 ```
 
-Producer diff prefers `symbol_hash` when both sides have it, else file hash. Missing `EvidenceSemantics` is `legacy_semantics`, not full equivalence. `index.jsonl` lists runs without re-reading every snapshot.
+Producer diff prefers `symbol_hash` when both sides have it, else file hash. Missing `EvidenceSemantics` is `legacy_semantics`, not full equivalence. `index.jsonl` lists runs without re-reading every snapshot. `{dir}/weavatrix-seo.sqlite` is an additive query index for historical `seo_query`.
 
-CLI: `weavatrix-seo audit --history DIR` and `weavatrix-seo diff --base/--head`. MCP: `seo_diff`.
+CLI: `weavatrix-seo audit --history DIR`, `weavatrix-seo query --history DIR --q 'FROM urls WHERE clicks_delta_28d < -30'`, and `weavatrix-seo diff --base/--head`. MCP: `seo_diff`, `seo_query` with `history`.
 
 ```toml
 [dependencies]

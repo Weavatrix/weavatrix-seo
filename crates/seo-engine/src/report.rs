@@ -85,6 +85,7 @@ pub fn assemble(
         }
     }
     let outcomes = weavatrix_seo_observation::outcome_metrics(&observations);
+    let url_metrics = weavatrix_seo_observation::url_metrics(&observations);
     let items = rank(items);
     let render = request
         .render
@@ -145,6 +146,7 @@ pub fn assemble(
         intents: content.intents,
         outcomes,
         near_duplicates: content.near_duplicates,
+        url_metrics,
     };
     AuditReport {
         inventory,

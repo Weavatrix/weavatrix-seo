@@ -178,7 +178,7 @@ CLI command on the left, MCP tool on the right. Same engine.
 | `seo_gate` | `audit --ci` | Gate verdict instead of an exit code |
 | `seo_explain` | `explain` | Evidence chain for one fingerprint |
 | `seo_observations` | `--gsc` / `--observations` | Imported GSC / logs / citations |
-| `seo_query` | `query` | Bounded `FROM … WHERE … LIMIT` |
+| `seo_query` | `query` | Bounded `FROM … WHERE … LIMIT` (live crawl or `--history` SQLite) |
 | `seo_retrieve` | `retrieve` | Ranked candidate pages |
 | `seo_similar` | *(retrieve)* | Pages similar to a URL |
 | `seo_chunks` | *(retrieve)* | Chunks that best answer a query |
@@ -192,7 +192,7 @@ Example calls:
 ```
 
 ```json
-{ "name": "seo_query", "arguments": { "site": "https://example.com", "q": "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20" } }
+{ "name": "seo_query", "arguments": { "site": "https://example.com", "query": "FROM urls WHERE inbound_links = 0 AND indexable = true LIMIT 20" } }
 ```
 
 ```json

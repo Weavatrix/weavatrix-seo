@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use weavatrix_seo::{
     diff_paths, evaluate_gate, explain_chain, load_baseline, plan_from, render_html, render_text,
-    retrieve, run_audit, run_on_report,
+    retrieve, run_audit, run_on_history, run_on_report,
 };
 
 /// CLI stdout/stderr + process code.
@@ -36,6 +36,7 @@ Usage:
   weavatrix-seo diff --base PATH --head PATH [--json]
   weavatrix-seo explain ID --site URL [--json]
   weavatrix-seo query --site URL --q 'FROM urls WHERE indexable = true LIMIT 20' [--json]
+  weavatrix-seo query --history DIR --q 'FROM urls WHERE clicks_delta_28d < -30 LIMIT 20' [--json]
   weavatrix-seo retrieve --site URL --q QUERY [--json]
   weavatrix-seo mcp
   weavatrix-seo --version
@@ -75,6 +76,9 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
     let json = flags.contains_key("json") || args.iter().any(|item| item == "--json");
     if command == "diff" {
         return diff_command(&flags, json);
+    }
+    if command == "query" && !flags.contains_key("site") && !flags.contains_key("repo") {
+        return history_query(&flags, json);
     }
     let request = args::request(&command, &flags, &positionals)?;
     if command == "compare" && request.competitors.is_empty() {
@@ -206,6 +210,42 @@ fn dispatch(args: &[String]) -> Result<CliOutput, String> {
     Ok(CliOutput {
         code,
         stdout: body,
+        stderr: String::new(),
+    })
+}
+
+fn history_query(flags: &BTreeMap<String, String>, json: bool) -> Result<CliOutput, String> {
+    let dir = flags.get("history").ok_or_else(|| {
+        "query requires --site URL and/or --repo PATH, or --history DIR".to_owned()
+    })?;
+    let q = flags
+        .get("q")
+        .or_else(|| flags.get("query"))
+        .ok_or_else(|| "query requires --q DSL".to_owned())?;
+    let result = run_on_history(q, dir)?;
+    let stdout = if json {
+        encode(&result)?
+    } else {
+        let mut text = format!(
+            "collection {} rows {}\n",
+            result.collection,
+            result.rows.len()
+        );
+        for row in result.rows {
+            let _ = writeln!(
+                text,
+                "  {}",
+                row.into_iter()
+                    .map(|(k, v)| format!("{k}={v}"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+        }
+        text
+    };
+    Ok(CliOutput {
+        code: 0,
+        stdout,
         stderr: String::new(),
     })
 }

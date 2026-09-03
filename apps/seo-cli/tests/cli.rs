@@ -27,6 +27,7 @@ fn usage_lists_html_and_workers() {
     assert!(help.stdout.contains("--render PATH"));
     assert!(help.stdout.contains("diff --base"));
     assert!(help.stdout.contains("--history DIR"));
+    assert!(help.stdout.contains("query --history"));
 }
 
 #[test]
