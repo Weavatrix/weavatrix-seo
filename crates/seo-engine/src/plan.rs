@@ -115,11 +115,48 @@ pub struct RefactorHandoff {
     pub targets: Vec<HandoffTarget>,
 }
 
+/// One executable step in the plan DAG. Additive to [`PlanAction`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlanStep {
+    /// Stable step id `plan:{verb}:{subject-hash}:{stage}`.
+    pub id: String,
+    /// Stage verb: `ADD_FACT`, `CRAWL`, `OBSERVE_GSC`, …
+    pub kind: String,
+    /// URL or family this step is for.
+    pub subject: String,
+    /// What must already be true.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preconditions: Vec<String>,
+    /// What becomes true if the step succeeds.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub postconditions: Vec<String>,
+    /// Finding fingerprints or opportunity ids.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<String>,
+}
+
+/// Directed relation between plan steps.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlanEdge {
+    /// Source step id.
+    pub from: String,
+    /// Target step id.
+    pub to: String,
+    /// `REQUIRES`, `BLOCKS`, `VERIFY_AFTER`, or `OPTIONAL`.
+    pub relation: String,
+}
+
 /// Machine-checkable search architecture plan.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SearchPlan {
     /// Ordered actions.
     pub actions: Vec<PlanAction>,
+    /// Executable DAG nodes derived from actions. Empty when there is nothing to do.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<PlanStep>,
+    /// DAG edges. `actions` stay the human-facing list.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edges: Vec<PlanEdge>,
     /// Guarded mutation handoff. Empty when no source span is known.
     pub handoff: RefactorHandoff,
 }
@@ -132,8 +169,14 @@ pub fn plan_from(report: &AuditReport) -> SearchPlan {
         .iter()
         .map(|item| from_opportunity(item, report))
         .collect();
+    let (steps, edges) = dag(&actions);
     let handoff = handoff_from(&actions, report);
-    SearchPlan { actions, handoff }
+    SearchPlan {
+        actions,
+        steps,
+        edges,
+        handoff,
+    }
 }
 
 fn from_opportunity(item: &Opportunity, report: &AuditReport) -> PlanAction {
@@ -313,5 +356,136 @@ fn extras(kind: PlanKind, item: &Opportunity) -> (Vec<String>, Vec<String>, Vec<
             Vec::new(),
         ),
         _ => (Vec::new(), Vec::new(), Vec::new()),
+    }
+}
+
+fn dag(actions: &[PlanAction]) -> (Vec<PlanStep>, Vec<PlanEdge>) {
+    let mut steps = Vec::new();
+    let mut edges = Vec::new();
+    let mut last_by_subject: Vec<(String, PlanKind, String)> = Vec::new();
+    for action in actions {
+        let prefix = format!(
+            "plan:{}:{}",
+            action.kind,
+            weavatrix_seo_model::ContentHash::of_str(&action.subject).short()
+        );
+        let stages = stages(action.kind);
+        let mut previous: Option<String> = None;
+        for (index, stage) in stages.iter().enumerate() {
+            let id = format!("{prefix}:{stage}");
+            let verify = *stage == "CRAWL" || *stage == "OBSERVE_GSC" || *stage == "DIFF";
+            steps.push(PlanStep {
+                id: id.clone(),
+                kind: (*stage).to_owned(),
+                subject: action.subject.clone(),
+                preconditions: action.dependencies.clone(),
+                postconditions: vec![action.acceptance.clone()],
+                evidence: action.evidence.clone(),
+            });
+            if let Some(from) = &previous {
+                edges.push(PlanEdge {
+                    from: from.clone(),
+                    to: id.clone(),
+                    relation: if verify {
+                        "VERIFY_AFTER".into()
+                    } else {
+                        "REQUIRES".into()
+                    },
+                });
+            }
+            if index + 1 == stages.len() {
+                last_by_subject.push((action.subject.clone(), action.kind, id.clone()));
+            }
+            previous = Some(id);
+        }
+    }
+    for action in actions.iter().filter(|item| item.kind == PlanKind::Link) {
+        let prefix = format!(
+            "plan:{}:{}",
+            action.kind,
+            weavatrix_seo_model::ContentHash::of_str(&action.subject).short()
+        );
+        let link_start = format!("{prefix}:ADD_INTERNAL_LINKS");
+        if let Some((_, _, create_end)) = last_by_subject
+            .iter()
+            .find(|(subject, kind, _)| *kind == PlanKind::Create && subject == &action.subject)
+        {
+            edges.push(PlanEdge {
+                from: create_end.clone(),
+                to: link_start,
+                relation: "REQUIRES".into(),
+            });
+        }
+    }
+    (steps, edges)
+}
+
+fn stages(kind: PlanKind) -> &'static [&'static str] {
+    match kind {
+        PlanKind::Create => &[
+            "ADD_FACT",
+            "BIND_ENTITY",
+            "ADD_SCHEMA",
+            "CRAWL",
+            "OBSERVE_GSC",
+        ],
+        PlanKind::Improve => &["UPDATE_CONTENT", "CRAWL", "DIFF", "OBSERVE_GSC"],
+        PlanKind::Link => &["ADD_INTERNAL_LINKS", "CRAWL"],
+        PlanKind::Consolidate => &["PICK_CANONICAL", "CRAWL", "DIFF"],
+        PlanKind::Noindex | PlanKind::Delete => &["SET_NOINDEX", "CRAWL"],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PlanKind, dag};
+    use crate::plan::PlanAction;
+    use weavatrix_seo_model::OpportunityAxes;
+
+    fn action(kind: PlanKind, subject: &str) -> PlanAction {
+        PlanAction {
+            kind,
+            subject: subject.into(),
+            why: "test".into(),
+            evidence: Vec::new(),
+            dependencies: Vec::new(),
+            source_location: None,
+            required_facts: Vec::new(),
+            link_placements: Vec::new(),
+            schema_requirements: Vec::new(),
+            programmatic_verdict: None,
+            acceptance: "done".into(),
+            verification: "later".into(),
+            axes: OpportunityAxes::default(),
+        }
+    }
+
+    #[test]
+    fn create_pipeline_requires_facts_before_schema() {
+        let (steps, edges) = dag(&[action(PlanKind::Create, "category/electrician")]);
+        assert!(steps.iter().any(|step| step.kind == "ADD_FACT"));
+        assert!(edges.iter().any(|edge| {
+            edge.relation == "REQUIRES"
+                && edge.from.contains("ADD_FACT")
+                && edge.to.contains("BIND_ENTITY")
+        }));
+        assert!(
+            edges
+                .iter()
+                .any(|edge| edge.relation == "VERIFY_AFTER" && edge.to.contains("CRAWL"))
+        );
+    }
+
+    #[test]
+    fn link_requires_create_on_the_same_subject() {
+        let (_steps, edges) = dag(&[
+            action(PlanKind::Create, "https://x.test/a"),
+            action(PlanKind::Link, "https://x.test/a"),
+        ]);
+        assert!(
+            edges.iter().any(|edge| {
+                edge.relation == "REQUIRES" && edge.to.contains("ADD_INTERNAL_LINKS")
+            })
+        );
     }
 }

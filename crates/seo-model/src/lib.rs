@@ -45,7 +45,7 @@ pub use hash::ContentHash;
 pub use identity::{POLICY_VERSION, config_digest, new_run_id, site_identity, snapshot_digest};
 pub use input::{InputState, InputStateKind};
 pub use intelligence::{
-    CandidatePage, Chunk, ContentProfile, FamilyContent, FamilyMatrix, IntentCoverage,
+    AiFunnel, CandidatePage, Chunk, ContentProfile, FamilyContent, FamilyMatrix, IntentCoverage,
     NearDuplicateGroup, OutcomeMetric, SearchIntelligence, SignalLevel, SyntheticStyle, UrlMetric,
     chunk_id, intent_id,
 };

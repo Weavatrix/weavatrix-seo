@@ -11,6 +11,16 @@ struct File {
     /// Default kind for every row in the file.
     #[serde(default)]
     kind: Option<String>,
+    /// Site origin used to absolutize combined-log paths.
+    #[serde(default)]
+    origin: Option<String>,
+    /// `combined` for nginx/Apache lines in `lines` / `log`.
+    #[serde(default)]
+    format: Option<String>,
+    #[serde(default)]
+    log: Option<String>,
+    #[serde(default)]
+    lines: Vec<String>,
     #[serde(default)]
     rows: Vec<Row>,
 }
@@ -35,6 +45,12 @@ struct Row {
     kind: Option<String>,
     #[serde(default)]
     period: Option<String>,
+    #[serde(default)]
+    user_agent: Option<String>,
+    #[serde(default)]
+    status: Option<u16>,
+    #[serde(default)]
+    referer: Option<String>,
 }
 
 /// Loads GSC, Bing, bot-log, analytics, or AI-citation JSON.
@@ -63,7 +79,7 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
         .unwrap_or("gsc")
         .to_ascii_lowercase();
     let file_kind = file.kind.as_deref().and_then(ObservationKind::parse);
-    let rows = file
+    let mut rows: Vec<Observation> = file
         .rows
         .into_iter()
         .map(|row| {
@@ -72,12 +88,19 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
                 .clone()
                 .unwrap_or_else(|| default_provider.clone())
                 .to_ascii_lowercase();
-            let kind = row
+            let classified = row
+                .user_agent
+                .as_deref()
+                .and_then(crate::logs::classify_agent);
+            let mut kind = row
                 .kind
                 .as_deref()
                 .and_then(ObservationKind::parse)
                 .or(file_kind)
                 .unwrap_or_else(|| ObservationKind::from_provider(&provider));
+            if classified.is_some() && kind == ObservationKind::Analytics {
+                kind = ObservationKind::BotCrawl;
+            }
             let source = kind.source(&provider);
             Observation {
                 kind,
@@ -105,9 +128,30 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
                 },
                 position: row.position,
                 period: row.period,
+                user_agent: row.user_agent,
+                status: row.status,
+                bot_role: classified.map(|bot| bot.role.to_owned()),
+                verified_bot: classified.map(|bot| bot.verified),
+                referer: row.referer,
             }
         })
-        .collect::<Vec<_>>();
+        .collect();
+    let combined_format = file
+        .format
+        .as_deref()
+        .is_some_and(|format| format.eq_ignore_ascii_case("combined"));
+    if combined_format || !file.lines.is_empty() || file.log.is_some() {
+        let origin = file.origin.as_deref().unwrap_or("");
+        let mut lines = file.lines;
+        if let Some(log) = file.log {
+            lines.extend(log.lines().map(str::to_owned));
+        }
+        rows.extend(crate::logs::from_combined(
+            origin,
+            &lines,
+            &default_provider,
+        ));
+    }
     let input = if rows.is_empty() {
         InputState::empty("GSC")
     } else {
@@ -157,5 +201,16 @@ mod tests {
                 .expect("logs");
         assert_eq!(logs.rows[0].hits, 40);
         assert_eq!(logs.rows[0].impressions, 0);
+    }
+
+    #[test]
+    fn combined_nginx_lines_become_bot_crawl() {
+        let snap = from_any(
+            r#"{"provider":"nginx","origin":"https://x.test","format":"combined","lines":["1.1.1.1 - - [03/Sep/2026:10:00:00 +0000] \"GET /a HTTP/1.1\" 200 10 \"-\" \"ChatGPT-User/1.0\""]}"#,
+        )
+        .expect("nginx");
+        assert_eq!(snap.rows[0].kind, ObservationKind::BotCrawl);
+        assert_eq!(snap.rows[0].bot_role.as_deref(), Some("citation_fetch"));
+        assert_eq!(snap.rows[0].url, "https://x.test/a");
     }
 }

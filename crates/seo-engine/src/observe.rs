@@ -6,7 +6,7 @@ use weavatrix_seo_model::{
     Severity,
 };
 use weavatrix_seo_observation::{
-    ObservationKind, ObservationSnapshot, analyze_gsc, axes_for, expected_ctr,
+    ObservationKind, ObservationSnapshot, analyze_gsc, analyze_logs, axes_for, expected_ctr,
 };
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
@@ -128,6 +128,7 @@ pub fn decorate(
         );
     }
     findings.extend(crawl_budget_waste(snapshot, inventory));
+    findings.extend(analyze_logs(snapshot, inventory));
     let intel = analyze_gsc(snapshot, inventory);
     findings.extend(intel.findings);
     items.extend(intel.opportunities);

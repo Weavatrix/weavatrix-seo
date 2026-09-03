@@ -2,9 +2,11 @@
 
 #![forbid(unsafe_code)]
 
+mod funnel;
 mod gsc;
 mod intel;
 mod kind;
+mod logs;
 mod outcome;
 mod provider;
 
@@ -12,9 +14,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use weavatrix_seo_model::{Evidence, EvidenceSource, InputState, UrlMetric};
 
+pub use funnel::analyze as analyze_funnel;
 pub use gsc::{disconnected, from_json, load};
 pub use intel::{ObservationIntel, analyze as analyze_gsc, expected_ctr};
 pub use kind::ObservationKind;
+pub use logs::{analyze as analyze_logs, classify_agent, from_combined};
 pub use outcome::metrics as outcome_metrics;
 pub use provider::{from_any, load_any};
 
@@ -50,6 +54,21 @@ pub struct Observation {
     /// Window tag: `current`, `previous`, or a provider label.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub period: Option<String>,
+    /// User-Agent when a log row supplied it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_agent: Option<String>,
+    /// HTTP status from a log row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<u16>,
+    /// Classified bot role: `search_discovery`, `citation_fetch`, `training`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bot_role: Option<String>,
+    /// True when the UA matched a documented crawler token.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified_bot: Option<bool>,
+    /// Referer when a log row supplied it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub referer: Option<String>,
 }
 
 /// Snapshot of imported observations.

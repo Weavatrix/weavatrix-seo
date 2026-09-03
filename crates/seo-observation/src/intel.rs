@@ -417,6 +417,11 @@ mod tests {
             hits: 0,
             position: Some(position),
             period: period.map(str::to_owned),
+            user_agent: None,
+            status: None,
+            bot_role: None,
+            verified_bot: None,
+            referer: None,
         }
     }
 

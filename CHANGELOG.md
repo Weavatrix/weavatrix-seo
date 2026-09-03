@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win logs, AI funnel, and plan DAG. Nothing existing is removed.
+
+- Server-log intelligence: nginx/Apache combined lines and JSON rows classify
+  Googlebot / AI crawlers. `WVX-SEO-OBS-007` bot 404s, `008` noindex still
+  crawled, `009` bot hits without demand, `010` orphan still crawled.
+- AI search funnel per URL: discovery → citation → referral. Discovery
+  without citation is `WVX-SEO-OBS-011`. `chatgpt-user` / `claude-user` are
+  referrals, not search demand.
+- `seo_plan` grows a real DAG (`steps` + `edges` with `REQUIRES` /
+  `VERIFY_AFTER`). Existing `actions` stay. Link waits on Create of the same
+  subject.
+
 Finish-to-win historical `seo_query`. Nothing existing is removed.
 
 - `--history DIR` still writes compact JSON + `index.jsonl`, and now also

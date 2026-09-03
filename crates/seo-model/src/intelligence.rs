@@ -64,6 +64,34 @@ pub struct UrlMetric {
     pub citations: Option<u32>,
 }
 
+/// AI search funnel for one URL: discovery → citation → referral.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct AiFunnel {
+    /// URL.
+    pub url: String,
+    /// Search-discovery bot hits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub discovery_hits: Option<u32>,
+    /// Citation fetches plus imported generative citations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citation_hits: Option<u32>,
+    /// Referrals / user clicks from an AI answer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub referrals: Option<u32>,
+    /// Citations per discovery, 0–100. Unmeasured when discovery is 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citation_rate: Option<u16>,
+    /// Referrals per citation, 0–100. Unmeasured when citations are 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub click_through: Option<u16>,
+    /// Route family when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub family: Option<String>,
+    /// Producer key when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub producer: Option<String>,
+}
+
 impl OutcomeMetric {
     /// Explicitly unmeasured outcome.
     #[must_use]
@@ -373,6 +401,9 @@ pub struct SearchIntelligence {
     /// Per-URL GSC/citation rollups. Empty when no provider was imported.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub url_metrics: Vec<UrlMetric>,
+    /// AI search funnels. Empty when no discovery/citation/referral was imported.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ai_funnels: Vec<AiFunnel>,
 }
 
 /// Chunk node id.

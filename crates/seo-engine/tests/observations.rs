@@ -318,3 +318,76 @@ fn gsc_query_without_an_answering_chunk_is_a_passage_gap() {
     );
     let _ = std::fs::remove_file(import);
 }
+
+#[test]
+fn nginx_googlebot_404_is_logged() {
+    let site = spawn(one_page_site());
+    let origin = format!("{}/", site.base);
+    let import = write_import(
+        "nginx-404",
+        &format!(
+            r#"{{"provider":"nginx","origin":"{origin}","format":"combined","lines":["66.249.66.1 - - [03/Sep/2026:10:00:00 +0000] \"GET /missing HTTP/1.1\" 404 12 \"-\" \"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)\""]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin),
+        max_pages: Some(4),
+        observations: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "WVX-SEO-OBS-007"),
+        "{:?}",
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect::<Vec<_>>()
+    );
+    let _ = std::fs::remove_file(import);
+}
+
+#[test]
+fn ai_discovery_without_citation_fills_the_funnel() {
+    let site = spawn(one_page_site());
+    let origin = format!("{}/", site.base);
+    let import = write_import(
+        "ai-funnel",
+        &format!(
+            r#"{{"provider":"nginx","rows":[{{"url":"{origin}","hits":12,"user_agent":"OAI-SearchBot/1.0"}}]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin),
+        max_pages: Some(4),
+        observations: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "WVX-SEO-OBS-011"),
+        "{:?}",
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect::<Vec<_>>()
+    );
+    let funnels = &report
+        .intelligence
+        .as_ref()
+        .expect("intelligence")
+        .ai_funnels;
+    assert!(
+        funnels.iter().any(|row| row.discovery_hits == Some(12)),
+        "{funnels:?}"
+    );
+    let _ = std::fs::remove_file(import);
+}

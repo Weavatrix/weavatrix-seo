@@ -66,6 +66,11 @@ pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
             hits: 0,
             position: row.position,
             period: row.period,
+            user_agent: None,
+            status: None,
+            bot_role: None,
+            verified_bot: None,
+            referer: None,
         })
         .collect::<Vec<_>>();
     let input = if rows.is_empty() {

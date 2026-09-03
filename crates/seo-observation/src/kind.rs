@@ -13,6 +13,8 @@ pub enum ObservationKind {
     BotCrawl,
     /// A generative-search answer that cited the URL.
     AiCitation,
+    /// A click or session referred from an AI answer.
+    AiReferral,
     /// A measured SERP position for one query.
     SerpPosition,
     /// Site analytics sessions or pageviews.
@@ -33,6 +35,7 @@ impl ObservationKind {
             "search_performance" | "search" => Some(Self::SearchPerformance),
             "bot_crawl" | "bot" | "crawl" => Some(Self::BotCrawl),
             "ai_citation" | "ai" => Some(Self::AiCitation),
+            "ai_referral" | "ai_click" | "referral" => Some(Self::AiReferral),
             "serp_position" | "serp" => Some(Self::SerpPosition),
             "analytics" => Some(Self::Analytics),
             _ => None,
@@ -48,8 +51,10 @@ impl ObservationKind {
     pub fn from_provider(provider: &str) -> Self {
         match provider {
             "gsc" | "search-console" | "bing" | "yandex" => Self::SearchPerformance,
-            "logs" | "cdn" | "bot-logs" => Self::BotCrawl,
+            "logs" | "cdn" | "bot-logs" | "nginx" | "apache" | "cloudflare" | "fastly"
+            | "vercel" => Self::BotCrawl,
             "chatgpt" | "perplexity" | "gemini" | "copilot" | "ai-search" => Self::AiCitation,
+            "chatgpt-user" | "claude-user" | "ai-referral" => Self::AiReferral,
             "serp" => Self::SerpPosition,
             _ => Self::Analytics,
         }

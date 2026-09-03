@@ -86,6 +86,19 @@ pub fn assemble(
     }
     let outcomes = weavatrix_seo_observation::outcome_metrics(&observations);
     let url_metrics = weavatrix_seo_observation::url_metrics(&observations);
+    let (mut ai_funnels, funnel_findings) =
+        weavatrix_seo_observation::analyze_funnel(&observations);
+    findings.extend(funnel_findings);
+    for funnel in &mut ai_funnels {
+        if let Some(producer) = inventory.producers.iter().find(|item| {
+            item.families
+                .iter()
+                .any(|family| funnel.url.contains(family))
+        }) {
+            funnel.producer = Some(producer.key());
+            funnel.family = producer.families.first().cloned();
+        }
+    }
     let items = rank(items);
     let render = request
         .render
@@ -147,6 +160,7 @@ pub fn assemble(
         outcomes,
         near_duplicates: content.near_duplicates,
         url_metrics,
+        ai_funnels,
     };
     AuditReport {
         inventory,

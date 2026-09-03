@@ -16,7 +16,9 @@ pub fn directed_seeds(request: &AuditRequest, host: &str) -> Vec<(AbsoluteUrl, D
                 let source = match row.kind {
                     ObservationKind::SearchPerformance => DiscoverySource::Gsc,
                     ObservationKind::BotCrawl => DiscoverySource::Log,
-                    ObservationKind::AiCitation => DiscoverySource::AiCitation,
+                    ObservationKind::AiCitation | ObservationKind::AiReferral => {
+                        DiscoverySource::AiCitation
+                    }
                     _ => continue,
                 };
                 push_host(&mut out, &row.url, host, source);
