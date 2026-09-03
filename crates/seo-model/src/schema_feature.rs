@@ -423,13 +423,13 @@ mod tests {
         now - then
     }
 
-    fn civil_days(year: i32, month: u32, day: u32) -> i64 {
-        let y = i64::from(if month <= 2 { year - 1 } else { year });
-        let era = y.div_euclid(400);
-        let yoe = y.rem_euclid(400);
-        let mp = i64::from(if month > 2 { month - 3 } else { month + 9 });
-        let doy = (153 * mp + 2) / 5 + i64::from(day) - 1;
-        let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-        era * 146_097 + doe - 719_468 + 719_163
+    fn civil_days(year: i32, month: u32, day_of_month: u32) -> i64 {
+        let shifted_year = i64::from(if month <= 2 { year - 1 } else { year });
+        let era = shifted_year.div_euclid(400);
+        let year_of_era = shifted_year.rem_euclid(400);
+        let month_prime = i64::from(if month > 2 { month - 3 } else { month + 9 });
+        let year_day = (153 * month_prime + 2) / 5 + i64::from(day_of_month) - 1;
+        let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + year_day;
+        era * 146_097 + day_of_era - 719_468 + 719_163
     }
 }
