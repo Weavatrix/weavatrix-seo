@@ -33,6 +33,8 @@ struct Row {
     /// Row-level kind. Wins over the file and the provider name.
     #[serde(default)]
     kind: Option<String>,
+    #[serde(default)]
+    period: Option<String>,
 }
 
 /// Loads GSC, Bing, bot-log, analytics, or AI-citation JSON.
@@ -102,6 +104,7 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
                     row.hits.max(row.impressions)
                 },
                 position: row.position,
+                period: row.period,
             }
         })
         .collect::<Vec<_>>();

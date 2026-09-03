@@ -108,6 +108,9 @@ fn build_chunk(url: &str, index: usize, heading: &str, text: &str) -> Chunk {
         specificity,
         citation_suitability: citation,
         witness: toks.iter().find(|token| token.len() > 5).cloned(),
+        relevance: None,
+        retrieval_model: None,
+        why: None,
     }
 }
 

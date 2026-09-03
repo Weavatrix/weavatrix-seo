@@ -117,6 +117,9 @@ fn decompose_family(
         local_fact_coverage: share(local_facts, pages.len()),
         schema_fact_coverage: share(with_schema, pages.len()),
         primary_producer: producer,
+        gsc_clicks: None,
+        gsc_impressions: None,
+        error_findings: None,
     }
 }
 

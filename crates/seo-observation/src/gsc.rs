@@ -22,6 +22,8 @@ struct GscRow {
     /// Search Console reports a fractional average position.
     #[serde(default)]
     position: Option<f32>,
+    #[serde(default)]
+    period: Option<String>,
 }
 
 /// Loads a compact GSC export. Absence of a file is unmeasured, not a pass.
@@ -63,6 +65,7 @@ pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
             impressions: row.impressions,
             hits: 0,
             position: row.position,
+            period: row.period,
         })
         .collect::<Vec<_>>();
     let input = if rows.is_empty() {

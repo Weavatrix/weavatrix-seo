@@ -63,6 +63,9 @@ pub struct OpportunityAxes {
     /// Difficulty of building the page truthfully from owned facts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub difficulty_to_build: Option<u16>,
+    /// Expected CTR percent inferred from average position. Never exact truth.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_ctr: Option<u16>,
 }
 
 impl OpportunityAxes {

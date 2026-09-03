@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win Tier B. Nothing existing is removed.
+
+- GSC intelligence: content decay (`WVX-SEO-OBS-006`) when a `previous`
+  window is tagged, inferred CTR gap (`WVX-SEO-OBS-004`), striking-distance
+  queries (`WVX-SEO-OBS-005`), and query cannibalization (`WVX-SEO-CANN-001`)
+  with `CONSOLIDATE` vs `DIFFERENTIATE`. Expected CTR is `INFERRED`.
+- Weighted internal PageRank: body 1.0, nav 0.3, footer 0.15, repeated
+  chrome ×0.25. Nav/footer links to errors or noindex emit
+  `WVX-SEO-LINK-005`. High internal authority without GSC demand emits
+  `WVX-SEO-LINK-004`.
+- Chunk retrieve fills `relevance` / `retrieval_model` / `why`. Passage
+  gaps emit `WVX-SEO-CONTENT-004`. Intent fanout is per URL and per
+  route family. Family rollups carry GSC clicks/impressions and error
+  counts. Query DSL exposes `authority`, `expected_ctr`,
+  `recoverable_clicks`, `gsc_clicks`.
+
 Finish-to-win Tier A. Nothing existing is removed.
 
 - Search-feature knowledge base (`crates/seo-model/knowledge/`) with lifecycle

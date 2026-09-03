@@ -242,3 +242,79 @@ fn invalid_gsc_is_not_absence() {
     assert_eq!(finding.severity, weavatrix_seo_model::Severity::Error);
     let _ = std::fs::remove_file(import);
 }
+
+#[test]
+fn gsc_windows_emit_decay_ctr_and_striking_distance() {
+    let site = spawn(one_page_site());
+    let origin = format!("{}/", site.base);
+    let page_a = format!("{origin}a");
+    let import = write_import(
+        "gsc-intel",
+        &format!(
+            r#"{{"provider":"gsc","rows":[
+                {{"query":"home service","url":"{page_a}","clicks":40,"impressions":800,"position":3,"period":"previous"}},
+                {{"query":"home service","url":"{page_a}","clicks":8,"impressions":700,"position":8.0,"period":"current"}}
+            ]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin),
+        max_pages: Some(4),
+        observations: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    let codes: Vec<&str> = report
+        .findings
+        .iter()
+        .map(|item| item.code.as_str())
+        .collect();
+    assert!(codes.contains(&"WVX-SEO-OBS-006"), "{codes:?}");
+    assert!(codes.contains(&"WVX-SEO-OBS-004"), "{codes:?}");
+    assert!(codes.contains(&"WVX-SEO-OBS-005"), "{codes:?}");
+    assert!(
+        report
+            .opportunities
+            .iter()
+            .any(|item| item.kind == "ctr_gap" && item.axes.expected_ctr.is_some()),
+        "{:?}",
+        report
+            .opportunities
+            .iter()
+            .map(|item| item.kind.as_str())
+            .collect::<Vec<_>>()
+    );
+    let _ = std::fs::remove_file(import);
+}
+
+#[test]
+fn gsc_query_without_an_answering_chunk_is_a_passage_gap() {
+    let site = spawn(one_page_site());
+    let origin = format!("{}/", site.base);
+    let import = write_import(
+        "gsc-passage",
+        &format!(
+            r#"{{"provider":"gsc","rows":[{{"query":"licensed electrician permit warranty","url":"{origin}","impressions":90,"clicks":1,"position":11}}]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin),
+        max_pages: Some(4),
+        observations: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "WVX-SEO-CONTENT-004"),
+        "{:?}",
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect::<Vec<_>>()
+    );
+    let _ = std::fs::remove_file(import);
+}

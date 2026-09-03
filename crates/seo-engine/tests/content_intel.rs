@@ -1,7 +1,7 @@
 //! Content intelligence, query DSL, and evidence semantics.
 
 use std::collections::BTreeMap;
-use weavatrix_seo::{AuditRequest, retrieve, run_audit, run_on_report};
+use weavatrix_seo::{AuditRequest, chunks_for, retrieve, run_audit, run_on_report};
 use weavatrix_seo_model::{RuleAuthority, SearchNodeKind};
 
 mod common;
@@ -91,6 +91,17 @@ fn content_intelligence_and_query_are_additive() {
     assert!(
         hits.iter().any(|hit| hit.url.contains("electrician")),
         "{hits:?}"
+    );
+    let chunks = chunks_for(&report, "licensed electrician vancouver", 5);
+    assert!(
+        chunks.iter().any(|chunk| chunk.relevance.is_some()
+            && chunk.retrieval_model.as_deref() == Some("wvx-seo-lexhash-v1")),
+        "{chunks:?}"
+    );
+    let urls = run_on_report("FROM urls RETURN url, authority LIMIT 10", &report).expect("query");
+    assert!(
+        urls.rows.iter().any(|row| row.contains_key("authority")),
+        "{urls:?}"
     );
 }
 

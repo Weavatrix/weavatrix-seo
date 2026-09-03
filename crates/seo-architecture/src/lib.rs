@@ -2,15 +2,13 @@
 
 #![forbid(unsafe_code)]
 
+mod rank;
 mod template;
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use weavatrix_graph::{
-    Confidence, Edge, EdgeKind, EvidenceKind, GraphBuilder, Node, NodeKind, Provenance, page_rank,
-};
+use std::collections::{BTreeMap, VecDeque};
 use weavatrix_seo_model::{
-    AbsoluteUrl, Evidence, Finding, FindingFamily, Indexability, Inventory, Locator, Relation,
-    Severity,
+    AbsoluteUrl, Evidence, Finding, FindingFamily, Indexability, Inventory, LinkLocation, Locator,
+    Relation,
 };
 
 /// Architecture metrics for one URL.
@@ -24,7 +22,7 @@ pub struct PageArchitecture {
     pub inbound: usize,
     /// Outbound internal links.
     pub outbound: usize,
-    /// PageRank-like internal authority.
+    /// Weighted internal `PageRank`. Body links count more than chrome.
     pub authority: f64,
     /// Indexable and not internally reachable from the seed.
     pub orphan: bool,
@@ -47,7 +45,7 @@ pub fn analyze(inventory: &Inventory) -> (Architecture, Vec<Finding>) {
     let depths = depths(inventory, seed.as_ref());
     let inbound = counts(inventory, true);
     let outbound = counts(inventory, false);
-    let authority = authority(inventory);
+    let authority = rank::weighted(inventory);
     let mut pages = Vec::new();
     let mut findings = Vec::new();
     for page in &inventory.pages {
@@ -67,10 +65,9 @@ pub fn analyze(inventory: &Inventory) -> (Architecture, Vec<Finding>) {
         };
         if orphan {
             findings.push(
-                Finding::new(
+                Finding::from_rule(
                     FindingFamily::Link,
                     2,
-                    Severity::Warn,
                     &page.url.to_string(),
                     format!("{} is an orphan indexable URL", page.url),
                     Locator::url(&page.url),
@@ -88,10 +85,9 @@ pub fn analyze(inventory: &Inventory) -> (Architecture, Vec<Finding>) {
             && page.indexability == Indexability::Indexable
         {
             findings.push(
-                Finding::new(
+                Finding::from_rule(
                     FindingFamily::Link,
                     3,
-                    Severity::Info,
                     &page.url.to_string(),
                     format!("{} is {depth} hops from the seed", page.url),
                     Locator::url(&page.url),
@@ -106,7 +102,55 @@ pub fn analyze(inventory: &Inventory) -> (Architecture, Vec<Finding>) {
         }
         pages.push(metrics);
     }
+    findings.extend(equity_leaks(inventory));
     (Architecture { pages }, findings)
+}
+
+fn equity_leaks(inventory: &Inventory) -> Vec<Finding> {
+    let pages: BTreeMap<&AbsoluteUrl, &weavatrix_seo_model::ExtractedPage> = inventory
+        .pages
+        .iter()
+        .map(|page| (&page.url, page))
+        .collect();
+    let mut findings = Vec::new();
+    for edge in inventory
+        .edges
+        .iter()
+        .filter(|edge| edge.relation == Relation::LinksTo)
+    {
+        let location = edge.location.unwrap_or(LinkLocation::Contextual);
+        if !matches!(location, LinkLocation::Nav | LinkLocation::Footer) {
+            continue;
+        }
+        let Some(target) = pages.get(&edge.target) else {
+            continue;
+        };
+        let leak = target.status >= 400 || target.indexability != Indexability::Indexable;
+        if !leak {
+            continue;
+        }
+        findings.push(
+            Finding::from_rule(
+                FindingFamily::Link,
+                5,
+                &edge.source.to_string(),
+                format!(
+                    "{} {} link to {} leaks internal equity",
+                    edge.source,
+                    location.as_str(),
+                    edge.target
+                ),
+                Locator::url(&edge.source),
+                Evidence::http(),
+            )
+            .explained(
+                "Navigation and footer links pass residual authority. Pointing them at errors or noindex pages wastes that equity.",
+                "Point chrome links at live indexable URLs, or drop the link.",
+                "The target is 200 and indexable.",
+            ),
+        );
+    }
+    findings
 }
 
 /// Marks repeated template links on the crawl graph.
@@ -160,64 +204,113 @@ fn counts(inventory: &Inventory, inbound: bool) -> BTreeMap<AbsoluteUrl, usize> 
     counts
 }
 
-fn authority(inventory: &Inventory) -> BTreeMap<AbsoluteUrl, f64> {
-    let mut builder = GraphBuilder::new();
-    let mut ids = BTreeSet::new();
-    for page in &inventory.pages {
-        ids.insert(page.url.to_string());
-    }
-    for edge in inventory
-        .edges
-        .iter()
-        .filter(|edge| edge.relation == Relation::LinksTo)
-    {
-        ids.insert(edge.source.to_string());
-        ids.insert(edge.target.to_string());
-    }
-    for id in &ids {
-        let Ok(node) = Node::new(id.clone(), id.clone(), NodeKind::Endpoint) else {
-            continue;
-        };
-        let _ = builder.add_node(node);
-    }
-    let Ok(provenance) = Provenance::new(
-        "weavatrix-seo-architecture",
-        EvidenceKind::Extracted,
-        Confidence::Exact,
-    ) else {
-        return BTreeMap::new();
+#[cfg(test)]
+mod tests {
+    use super::analyze;
+    use weavatrix_seo_model::{
+        AbsoluteUrl, AnalysisMode, ContentHash, Evidence, ExtractedPage, GraphEdge, Heading,
+        Inventory, LinkLocation, MediaKind, Relation,
     };
-    for edge in inventory
-        .edges
-        .iter()
-        .filter(|edge| edge.relation == Relation::LinksTo)
-    {
-        let Ok(source) = weavatrix_graph::NodeId::new(edge.source.to_string()) else {
-            continue;
-        };
-        let Ok(target) = weavatrix_graph::NodeId::new(edge.target.to_string()) else {
-            continue;
-        };
-        let _ = builder.add_edge(Edge::new(
-            source,
-            target,
-            EdgeKind::References,
-            provenance.clone(),
-        ));
+
+    fn url(path: &str) -> AbsoluteUrl {
+        AbsoluteUrl::parse(&format!("https://x.test{path}")).expect("url")
     }
-    let Ok(graph) = builder.build() else {
-        return BTreeMap::new();
-    };
-    let Ok(ranks) = page_rank(&graph, 0.85, 20) else {
-        return BTreeMap::new();
-    };
-    let mut out = BTreeMap::new();
-    for (index, score) in ranks {
-        if let Some(node) = graph.node_at(index)
-            && let Ok(url) = AbsoluteUrl::parse(node.id.as_str())
-        {
-            out.insert(url, score);
+
+    fn page(path: &str, status: u16) -> ExtractedPage {
+        let parsed = url(path);
+        ExtractedPage {
+            url: parsed.clone(),
+            requested: parsed,
+            status,
+            redirects: Vec::new(),
+            content_type: Some("text/html".into()),
+            media: MediaKind::Html,
+            canonical: None,
+            robots: Vec::new(),
+            title: Some(path.into()),
+            description: None,
+            html_lang: Some("en".into()),
+            alternates: Vec::new(),
+            headings: vec![Heading {
+                level: 1,
+                text: path.into(),
+            }],
+            links: Vec::new(),
+            link_refs: Vec::new(),
+            images: Vec::new(),
+            json_ld: Vec::new(),
+            text: path.into(),
+            heading_text: path.into(),
+            main_text: String::new(),
+            payload: String::new(),
+            arbitrary_script: String::new(),
+            og_title: None,
+            og_description: None,
+            og_image: None,
+            headers: Vec::new(),
+            csp_meta: None,
+            body_bytes: 1,
+            fetch_ms: 1,
+            has_main: true,
+            unlabeled_controls: 0,
+            content_hash: ContentHash::of_str(path),
+            indexability: weavatrix_seo_model::Indexability::Indexable,
+            in_sitemap: true,
+            linked_from_page: true,
+            evidence: Evidence::http(),
         }
+        .finalize()
     }
-    out
+
+    fn edge(from: &str, to: &str, location: LinkLocation) -> GraphEdge {
+        GraphEdge::new(url(from), url(to), Relation::LinksTo, Evidence::http()).with_link(
+            None,
+            None,
+            Some(location),
+            None,
+        )
+    }
+
+    #[test]
+    fn nav_to_error_leaks_equity() {
+        let mut inventory = Inventory::blank(AnalysisMode::Site);
+        inventory.site = Some("https://x.test/".into());
+        inventory.pages = vec![page("/", 200), page("/gone", 404)];
+        inventory.edges = vec![edge("/", "/gone", LinkLocation::Nav)];
+        let (_architecture, findings) = analyze(&inventory);
+        let leak = findings
+            .iter()
+            .find(|finding| finding.code == "WVX-SEO-LINK-005")
+            .expect("equity leak");
+        assert!(leak.summary.contains("nav"), "{}", leak.summary);
+        assert!(!leak.summary.contains("Nav"), "{}", leak.summary);
+    }
+
+    #[test]
+    fn contextual_links_outrank_footer_chrome() {
+        let mut inventory = Inventory::blank(AnalysisMode::Site);
+        inventory.site = Some("https://x.test/".into());
+        inventory.pages = vec![page("/", 200), page("/body", 200), page("/chrome", 200)];
+        inventory.edges = vec![
+            edge("/", "/body", LinkLocation::Contextual),
+            edge("/", "/chrome", LinkLocation::Footer),
+        ];
+        let (architecture, _) = analyze(&inventory);
+        let body = architecture
+            .pages
+            .iter()
+            .find(|item| item.url.path() == "/body")
+            .expect("body");
+        let chrome = architecture
+            .pages
+            .iter()
+            .find(|item| item.url.path() == "/chrome")
+            .expect("chrome");
+        assert!(
+            body.authority > chrome.authority,
+            "body {} vs chrome {}",
+            body.authority,
+            chrome.authority
+        );
+    }
 }

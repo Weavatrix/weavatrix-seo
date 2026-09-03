@@ -185,6 +185,15 @@ pub struct FamilyContent {
     /// Primary producer when known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub primary_producer: Option<String>,
+    /// Imported GSC clicks across measured URLs in this family.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gsc_clicks: Option<u32>,
+    /// Imported GSC impressions across measured URLs in this family.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gsc_impressions: Option<u32>,
+    /// Error-severity findings on URLs in this family.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_findings: Option<u32>,
 }
 
 /// Enriched programmatic matrix row. Verdict labels stay the existing enum.
@@ -248,6 +257,15 @@ pub struct Chunk {
     /// Witness span.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub witness: Option<String>,
+    /// Retrieval score for the last query, 0–100. Absent when not retrieved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub relevance: Option<u16>,
+    /// Retrieval model id, for example `wvx-seo-lexhash-v1`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retrieval_model: Option<String>,
+    /// Why this chunk was selected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub why: Option<String>,
 }
 
 /// Intent / question fanout coverage for one topic.
@@ -263,6 +281,12 @@ pub struct IntentCoverage {
     pub missing: Vec<String>,
     /// Answered/total as `3/8`. Unmeasured when total is 0.
     pub coverage: String,
+    /// URL or route family this coverage applies to. `None` is site-wide.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+    /// `url` or `route_family`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject_kind: Option<String>,
 }
 
 /// Near-duplicate cluster that is not byte-identical.

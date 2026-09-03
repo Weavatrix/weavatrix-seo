@@ -4,7 +4,7 @@
 [![docs.rs](https://docs.rs/weavatrix-seo-architecture/badge.svg)](https://docs.rs/weavatrix-seo-architecture)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Weavatrix/weavatrix-seo/blob/main/LICENSE)
 
-Internal-link **architecture** over the Search Evidence Graph: depth, orphans, in-link authority, template annotation.
+Internal-link **architecture** over the Search Evidence Graph: depth, orphans, weighted PageRank (body over chrome), equity leaks, template annotation.
 
 ```rust
 use weavatrix_seo_architecture::{analyze, annotate_templates};

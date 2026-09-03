@@ -4,7 +4,7 @@
 [![docs.rs](https://docs.rs/weavatrix-seo-content/badge.svg)](https://docs.rs/weavatrix-seo-content)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Weavatrix/weavatrix-seo/blob/main/LICENSE)
 
-Duplicate and **content-identity** analysis: exact duplicates, MinHash near-duplicates, per-page profiles, family template decomposition, heading chunks, intent fanout.
+Duplicate and **content-identity** analysis: exact duplicates, MinHash near-duplicates, per-page profiles, family template decomposition, heading chunks, intent fanout per URL and route family.
 
 ```rust
 use weavatrix_seo_content::{audit, exact_duplicates, near_duplicates};

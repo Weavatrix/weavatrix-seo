@@ -19,7 +19,7 @@ use weavatrix_seo_model::{
 
 pub use chunk::chunks;
 pub use family::decompose;
-pub use intent::fanout;
+pub use intent::{fanout, fanout_subject};
 pub use near::near_duplicates;
 pub use profile::profiles;
 
@@ -78,7 +78,28 @@ pub fn audit(inventory: &Inventory) -> ContentPass {
     let profiles = profile::profiles(inventory);
     let (families, family_findings) = family::decompose(inventory);
     let chunks = chunk::chunks(inventory);
-    let intents = intent::fanout(inventory);
+    let mut intents = intent::fanout(inventory);
+    for page in inventory.pages.iter().filter(|page| {
+        page.status == 200
+            && page.indexability == Indexability::Indexable
+            && !page.visible_text().trim().is_empty()
+    }) {
+        intents.extend(intent::fanout_subject(
+            &page.url.to_string(),
+            "url",
+            &page.visible_text(),
+        ));
+    }
+    for family in &families {
+        let hay = inventory
+            .pages
+            .iter()
+            .filter(|page| page.url.path().contains(&family.family))
+            .map(weavatrix_seo_model::ExtractedPage::visible_text)
+            .collect::<Vec<_>>()
+            .join("\n");
+        intents.extend(intent::fanout_subject(&family.family, "route_family", &hay));
+    }
     let mut findings = exact;
     findings.extend(near_findings);
     findings.extend(family_findings);

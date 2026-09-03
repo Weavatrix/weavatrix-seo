@@ -379,7 +379,6 @@ dependencies = [
 name = "weavatrix-seo-architecture"
 version = "0.6.2"
 dependencies = [
- "weavatrix-graph",
  "weavatrix-seo-model",
 ]
 

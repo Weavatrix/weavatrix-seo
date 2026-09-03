@@ -38,7 +38,7 @@ pub fn assemble(
     let (architecture, architecture_findings) = analyze_architecture(&inventory);
     findings.extend(architecture_findings);
     findings.extend(quality_audit(&inventory));
-    let content = content_audit(&inventory);
+    let mut content = content_audit(&inventory);
     findings.extend(content.findings.clone());
     findings.extend(thin_city_variants(&inventory));
     let (integrity_findings, domain) = integrity_audit(&inventory, request.repo.as_deref());
@@ -66,7 +66,24 @@ pub fn assemble(
     } else {
         load_state(request.gsc.as_deref(), "GSC")
     };
-    findings.extend(observe::decorate(&observations, &inventory, &mut items));
+    findings.extend(observe::decorate(
+        &observations,
+        &inventory,
+        &architecture,
+        &content.chunks,
+        &mut content.families,
+        &mut items,
+    ));
+    for family in &mut content.families {
+        let errors = findings
+            .iter()
+            .filter(|finding| finding.severity == Severity::Error)
+            .filter(|finding| finding.locator.subject_url().contains(&family.family))
+            .count();
+        if errors > 0 {
+            family.error_findings = Some(u32::try_from(errors).unwrap_or(u32::MAX));
+        }
+    }
     let outcomes = weavatrix_seo_observation::outcome_metrics(&observations);
     let items = rank(items);
     let render = request

@@ -19,6 +19,18 @@ pub enum LinkLocation {
 }
 
 impl LinkLocation {
+    /// Stable label for findings and reports.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Nav => "nav",
+            Self::Footer => "footer",
+            Self::Header => "header",
+            Self::Breadcrumb => "breadcrumb",
+            Self::Contextual => "contextual",
+        }
+    }
+
     /// Infers placement from the open-element stack.
     #[must_use]
     pub fn from_stack(stack: &[String]) -> Self {

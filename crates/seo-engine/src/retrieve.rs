@@ -99,7 +99,15 @@ pub fn chunks_for(report: &AuditReport, query: &str, limit: usize) -> Vec<Chunk>
         .collect();
     scored.sort_by(|left, right| right.0.cmp(&left.0));
     scored.truncate(limit.clamp(1, 50));
-    scored.into_iter().map(|(_, chunk)| chunk).collect()
+    scored
+        .into_iter()
+        .map(|(score, mut chunk)| {
+            chunk.relevance = Some(score);
+            chunk.retrieval_model = Some("wvx-seo-lexhash-v1".into());
+            chunk.why = Some(format!("lexical {score}"));
+            chunk
+        })
+        .collect()
 }
 
 fn cosine_pct(left: &[f32], right: &[f32]) -> u16 {

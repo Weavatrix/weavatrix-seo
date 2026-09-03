@@ -389,6 +389,11 @@ fn url_rows(
         .iter()
         .map(|page| (page.url.to_string(), page.inbound))
         .collect();
+    let authority: BTreeMap<String, f64> = architecture
+        .pages
+        .iter()
+        .map(|page| (page.url.to_string(), page.authority))
+        .collect();
     report
         .inventory
         .pages
@@ -406,6 +411,9 @@ fn url_rows(
                 "inbound_links".into(),
                 inbound.get(&url).copied().unwrap_or(0).to_string(),
             );
+            if let Some(score) = authority.get(&url) {
+                row.insert("authority".into(), format!("{score:.6}"));
+            }
             row.insert("in_sitemap".into(), page.in_sitemap.to_string());
             if let Some(title) = &page.title {
                 row.insert("title".into(), title.clone());
@@ -488,6 +496,21 @@ fn family_rows(intelligence: Option<&SearchIntelligence>) -> Vec<BTreeMap<String
             if let Some(value) = matrix.unique_fact_ratio {
                 row.insert("unique_fact_ratio".into(), value.to_string());
             }
+            if let Some(family) = intelligence
+                .families
+                .iter()
+                .find(|item| item.family == matrix.family)
+            {
+                if let Some(value) = family.gsc_clicks {
+                    row.insert("gsc_clicks".into(), value.to_string());
+                }
+                if let Some(value) = family.gsc_impressions {
+                    row.insert("gsc_impressions".into(), value.to_string());
+                }
+                if let Some(value) = family.error_findings {
+                    row.insert("error_findings".into(), value.to_string());
+                }
+            }
             row
         })
         .collect()
@@ -508,6 +531,9 @@ fn chunk_rows(intelligence: Option<&SearchIntelligence>) -> Vec<BTreeMap<String,
             if let Some(value) = chunk.citation_suitability {
                 row.insert("citation_suitability".into(), value.to_string());
             }
+            if let Some(value) = chunk.relevance {
+                row.insert("relevance".into(), value.to_string());
+            }
             row
         })
         .collect()
@@ -525,6 +551,12 @@ fn opportunity_rows(report: &AuditReport) -> Vec<BTreeMap<String, String>> {
             row.insert("summary".into(), item.summary.clone());
             if let Some(demand) = item.axes.demand {
                 row.insert("demand".into(), demand.to_string());
+            }
+            if let Some(value) = item.axes.expected_ctr {
+                row.insert("expected_ctr".into(), value.to_string());
+            }
+            if let Some(value) = item.axes.recoverable_clicks {
+                row.insert("recoverable_clicks".into(), value.to_string());
             }
             row
         })

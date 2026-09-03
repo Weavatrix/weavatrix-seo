@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod gsc;
+mod intel;
 mod kind;
 mod outcome;
 mod provider;
@@ -11,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use weavatrix_seo_model::{Evidence, EvidenceSource, InputState};
 
 pub use gsc::{disconnected, from_json, load};
+pub use intel::{ObservationIntel, analyze as analyze_gsc, expected_ctr};
 pub use kind::ObservationKind;
 pub use outcome::metrics as outcome_metrics;
 pub use provider::{from_any, load_any};
@@ -44,6 +46,9 @@ pub struct Observation {
     /// Average position when known. Search Console reports fractions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<f32>,
+    /// Window tag: `current`, `previous`, or a provider label.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period: Option<String>,
 }
 
 /// Snapshot of imported observations.
