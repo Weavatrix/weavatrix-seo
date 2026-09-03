@@ -50,6 +50,7 @@ impl Crawl {
         let ai_surface = AiSurface {
             llms_txt_status: fetch_llms_txt(&fetcher, seed),
             robots_disallow_all: robots.ai_disallow_all.clone(),
+            agent_matrix: robots.agent_matrix(seed),
         };
         let sitemap_urls = fetch_sitemaps(&fetcher, seed, &robots);
         let sitemap_set: BTreeSet<AbsoluteUrl> = sitemap_urls.iter().cloned().collect();

@@ -275,6 +275,9 @@ pub struct NearDuplicateGroup {
     /// Matching witness shingle.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub witness: Option<String>,
+    /// Shared overlapping shingles that explain the cluster.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub witnesses: Vec<String>,
 }
 
 /// Candidate page for retrieval.

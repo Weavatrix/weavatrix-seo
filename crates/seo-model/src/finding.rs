@@ -153,15 +153,65 @@ pub struct Finding {
     /// Why the rule is legitimate. Distinct from evidence kind.
     #[serde(default)]
     pub authority: RuleAuthority,
+    /// Present only when the emitter overrode the registry default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub severity_override: Option<Severity>,
 }
 
 impl Finding {
+    /// Builds a finding from the registry. Severity and authority come from the catalogue.
+    #[must_use]
+    pub fn from_rule(
+        family: FindingFamily,
+        number: u16,
+        subject: &str,
+        summary: impl Into<String>,
+        locator: Locator,
+        evidence: Evidence,
+    ) -> Self {
+        let severity = crate::registry::lookup(family, number).map_or_else(
+            || family_fallback_severity(family),
+            |rule| rule.default_severity,
+        );
+        Self::build(
+            family, number, severity, None, subject, summary, locator, evidence,
+        )
+    }
+
     /// Builds a finding and fingerprints it from code + subject key.
+    ///
+    /// When `severity` disagrees with the registry, it is recorded as
+    /// [`Self::severity_override`].
     #[must_use]
     pub fn new(
         family: FindingFamily,
         number: u16,
         severity: Severity,
+        subject: &str,
+        summary: impl Into<String>,
+        locator: Locator,
+        evidence: Evidence,
+    ) -> Self {
+        let registered = crate::registry::lookup(family, number).map(|rule| rule.default_severity);
+        let override_sev = registered.filter(|default| *default != severity);
+        Self::build(
+            family,
+            number,
+            severity,
+            override_sev,
+            subject,
+            summary,
+            locator,
+            evidence,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn build(
+        family: FindingFamily,
+        number: u16,
+        severity: Severity,
+        severity_override: Option<Severity>,
         subject: &str,
         summary: impl Into<String>,
         locator: Locator,
@@ -182,7 +232,16 @@ impl Finding {
             affected_urls: Vec::new(),
             evidence,
             authority: crate::registry::authority(family, number),
+            severity_override,
         }
+    }
+
+    /// Explicit severity that is not the registry default. Serialized on the finding.
+    #[must_use]
+    pub fn with_severity_override(mut self, severity: Severity) -> Self {
+        self.severity_override = Some(severity);
+        self.severity = severity;
+        self
     }
 
     /// Overrides catalogue authority for a project-specific contract.
@@ -213,5 +272,13 @@ impl Finding {
         self.affected_urls.sort();
         self.affected_urls.dedup();
         self
+    }
+}
+
+const fn family_fallback_severity(family: FindingFamily) -> Severity {
+    match family {
+        FindingFamily::Claim | FindingFamily::Idx | FindingFamily::Crawl => Severity::Error,
+        FindingFamily::Ai | FindingFamily::Obs | FindingFamily::Comp => Severity::Info,
+        _ => Severity::Warn,
     }
 }

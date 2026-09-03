@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win Tier A. Nothing existing is removed.
+
+- Search-feature knowledge base (`crates/seo-model/knowledge/`) with lifecycle
+  (`ACTIVE` / `DEPRECATED` / `REMOVED`). Google FAQ rich results (retired May
+  2026) and HowTo (retired 2023) no longer emit current eligibility Warns;
+  they emit `WVX-SEO-SCHEMA-004` as historical INFO. Product snippets require
+  `name` plus one of `review` / `aggregateRating` / `offers`. Requirement trees
+  participate in `rule_semantics_digest`. CI fails when Google knowledge is
+  older than 90 days.
+- `Finding::from_rule` takes severity and authority from the registry.
+  `severity_override` is serialized when an emitter disagrees. Registry
+  invariant tests cover unique codes and default severity.
+- robots.txt uses user-agent specificity: a specific group no longer inherits
+  `User-agent: *`. Role-aware AI findings: training/citation blocks are INFO;
+  search-discovery blocks stay WARN. Inventory carries an agent matrix
+  (`ALLOW` / `BLOCK` / `UNDECLARED`).
+- Invalid GSC/observation files emit `WVX-SEO-OBS-003` (`GSC_INVALID`) instead
+  of looking like no file was supplied.
+- Near-duplicates cluster with Union-Find and return shared shingle witnesses.
+
 ## 0.6.2 - 2026-09-02
 
 Product README, npm README, and a unique crates.io README for every published crate. CLI commands and 15 MCP tools are documented with agent configs and examples. MCP is the same binary as the CLI.

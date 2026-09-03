@@ -4,7 +4,6 @@
 //! still disagree on rule meaning. [`EvidenceSemantics`] hashes the catalogue,
 //! authorities, and thresholds so history/diff can refuse a false comparison.
 
-use crate::schema_feature::FeatureStatus;
 use crate::{ContentHash, FindingFamily, RuleAuthority, Severity, registry, schema_feature};
 use std::fmt::Write as _;
 
@@ -82,16 +81,15 @@ pub fn rule_semantics_digest() -> String {
     for profile in schema_feature::profiles() {
         let _ = writeln!(
             material,
-            "feature:{}:{}:{}:{}:{}",
+            "feature:{}:{}:{}:{}:{}:{}:{}:{}",
             profile.feature,
             profile.applies_to,
             profile.docs_revision,
-            match profile.status {
-                FeatureStatus::Active => "active",
-                FeatureStatus::Deprecated => "deprecated",
-                FeatureStatus::Experimental => "experimental",
-            },
-            profile.recommended.join(",")
+            profile.status.as_str(),
+            profile.required.canonical(),
+            profile.recommended.join(","),
+            profile.effective_until.unwrap_or("-"),
+            profile.docs_checked_at
         );
     }
     let _ = write!(

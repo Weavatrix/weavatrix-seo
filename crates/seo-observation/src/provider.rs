@@ -2,7 +2,7 @@
 
 use crate::{Observation, ObservationKind, ObservationSnapshot};
 use serde::Deserialize;
-use weavatrix_seo_model::{Evidence, EvidenceKind};
+use weavatrix_seo_model::{Evidence, EvidenceKind, InputState};
 
 #[derive(Debug, Deserialize)]
 struct File {
@@ -104,10 +104,16 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
                 position: row.position,
             }
         })
-        .collect();
+        .collect::<Vec<_>>();
+    let input = if rows.is_empty() {
+        InputState::empty("GSC")
+    } else {
+        InputState::connected("GSC")
+    };
     Ok(ObservationSnapshot {
         rows,
         connected: true,
+        input,
     })
 }
 

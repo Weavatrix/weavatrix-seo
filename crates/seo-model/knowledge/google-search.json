@@ -1,0 +1,66 @@
+{
+  "checked_at": "2026-09-03",
+  "reviewer": "weavatrix-seo",
+  "source_revision": "google-search-gallery-2026-06-15",
+  "max_age_days": 90,
+  "features": [
+    {
+      "feature": "FAQ",
+      "applies_to": "FAQPage",
+      "status": "removed",
+      "effective_until": "2026-05-07",
+      "required": "mainEntity",
+      "docs_revision": "google-search/faq-retired-2026-05"
+    },
+    {
+      "feature": "QAndA",
+      "applies_to": "QAPage",
+      "status": "active",
+      "required": "mainEntity",
+      "docs_revision": "google-search/qapage-2026-06"
+    },
+    {
+      "feature": "HowTo",
+      "applies_to": "HowTo",
+      "status": "removed",
+      "effective_until": "2023-09-08",
+      "required": "ALL(name,step)",
+      "docs_revision": "google-search/howto-retired-2023-09"
+    },
+    {
+      "feature": "MerchantListing",
+      "applies_to": "Offer",
+      "status": "active",
+      "required": "ANY(price,priceSpecification)",
+      "docs_revision": "google-search/merchant-listing-2025-12"
+    },
+    {
+      "feature": "Product",
+      "applies_to": "Product",
+      "status": "active",
+      "required": "ALL(name,ANY(review,aggregateRating,offers))",
+      "docs_revision": "google-search/product-snippet-2025-12"
+    },
+    {
+      "feature": "LocalBusiness",
+      "applies_to": "LocalBusiness",
+      "status": "active",
+      "required": "ALL(name,address)",
+      "docs_revision": "google-search/local-business-2025-12"
+    },
+    {
+      "feature": "Article",
+      "applies_to": "Article",
+      "status": "active",
+      "required": "headline",
+      "docs_revision": "google-search/article-2026-06"
+    },
+    {
+      "feature": "Breadcrumb",
+      "applies_to": "BreadcrumbList",
+      "status": "active",
+      "required": "itemListElement",
+      "docs_revision": "google-search/breadcrumb-2026-06"
+    }
+  ]
+}

@@ -118,6 +118,26 @@ pub struct AiSurface {
     /// Known AI user-agents whose group contains `Disallow: /`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub robots_disallow_all: Vec<String>,
+    /// One row per known agent: role, policy intent, search impact.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub agent_matrix: Vec<AiAgentPolicy>,
+}
+
+/// robots.txt decision for one documented AI crawler.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AiAgentPolicy {
+    /// Token, lowercased.
+    pub agent: String,
+    /// Vendor.
+    pub provider: String,
+    /// Primary documented role.
+    pub role: String,
+    /// Whether `/` is allowed for this token.
+    pub allowed: bool,
+    /// Documented search-visibility effect of a block.
+    pub search_impact: String,
+    /// `ALLOW`, `BLOCK`, or `UNDECLARED` (only `*` matched).
+    pub policy_intent: String,
 }
 
 impl Inventory {

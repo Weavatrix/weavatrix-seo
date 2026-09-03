@@ -217,3 +217,28 @@ fn the_same_counts_from_search_console_do_rank() {
     );
     let _ = std::fs::remove_file(import);
 }
+
+#[test]
+fn invalid_gsc_is_not_absence() {
+    let site = spawn(one_page_site());
+    let import = write_import("gsc-bad", "{not json");
+    let report = run_audit(&AuditRequest {
+        site: Some(format!("{}/", site.base)),
+        max_pages: Some(4),
+        gsc: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    let finding = report
+        .findings
+        .iter()
+        .find(|item| item.code == "WVX-SEO-OBS-003")
+        .expect("invalid input finding");
+    assert!(
+        finding.summary.contains("GSC_INVALID"),
+        "{}",
+        finding.summary
+    );
+    assert_eq!(finding.severity, weavatrix_seo_model::Severity::Error);
+    let _ = std::fs::remove_file(import);
+}

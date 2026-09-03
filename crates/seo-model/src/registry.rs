@@ -243,6 +243,15 @@ const RULES: &[RuleDefinition] = &[
         "1",
     ),
     def(
+        FindingFamily::Schema,
+        4,
+        Severity::Info,
+        RuleAuthority::SearchEngineDocumented,
+        "retired rich-result feature",
+        "google-search",
+        "1",
+    ),
+    def(
         FindingFamily::Link,
         1,
         Severity::Error,
@@ -341,6 +350,33 @@ const RULES: &[RuleDefinition] = &[
         "robots",
         "1",
     ),
+    def(
+        FindingFamily::Obs,
+        1,
+        Severity::Info,
+        RuleAuthority::SearchEngineDocumented,
+        "GSC URL not in crawl",
+        "gsc",
+        "1",
+    ),
+    def(
+        FindingFamily::Obs,
+        2,
+        Severity::Info,
+        RuleAuthority::SearchEngineDocumented,
+        "search demand without bot hits",
+        "gsc",
+        "1",
+    ),
+    def(
+        FindingFamily::Obs,
+        3,
+        Severity::Error,
+        RuleAuthority::ProtocolRequirement,
+        "invalid observation file",
+        "input",
+        "1",
+    ),
 ];
 
 const fn def(
@@ -365,8 +401,9 @@ const fn def(
 
 #[cfg(test)]
 mod tests {
-    use super::{authority, lookup};
-    use crate::{FindingFamily, RuleAuthority};
+    use super::{RULES, all, authority, lookup};
+    use crate::{FindingFamily, RuleAuthority, Severity};
+    use std::collections::BTreeSet;
 
     #[test]
     fn registered_rules_override_family_defaults() {
@@ -385,6 +422,37 @@ mod tests {
         assert_eq!(
             lookup(FindingFamily::Canon, 4).expect("canon-004").title,
             "canonical target unmeasured"
+        );
+    }
+
+    #[test]
+    fn registry_codes_are_unique() {
+        let mut seen = BTreeSet::new();
+        for rule in all() {
+            let code = rule.code();
+            assert!(seen.insert(code.clone()), "duplicate {code}");
+        }
+        assert_eq!(seen.len(), RULES.len());
+    }
+
+    #[test]
+    fn lookup_matches_default_severity() {
+        for rule in all() {
+            let found = lookup(rule.family, rule.number).expect("registered");
+            assert_eq!(found.default_severity, rule.default_severity);
+            assert_eq!(found.authority, rule.authority);
+        }
+        assert_eq!(
+            lookup(FindingFamily::Schema, 4)
+                .expect("schema-004")
+                .default_severity,
+            Severity::Info
+        );
+        assert_eq!(
+            lookup(FindingFamily::Obs, 3)
+                .expect("obs-003")
+                .default_severity,
+            Severity::Error
         );
     }
 }

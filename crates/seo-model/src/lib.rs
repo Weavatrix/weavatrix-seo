@@ -14,6 +14,7 @@ mod evidence;
 mod finding;
 mod hash;
 mod identity;
+mod input;
 mod intelligence;
 mod inventory;
 mod link;
@@ -42,12 +43,13 @@ pub use evidence::{Confidence, Evidence, EvidenceKind, EvidenceSource, LayerStat
 pub use finding::{Finding, FindingFamily, Severity};
 pub use hash::ContentHash;
 pub use identity::{POLICY_VERSION, config_digest, new_run_id, site_identity, snapshot_digest};
+pub use input::{InputState, InputStateKind};
 pub use intelligence::{
     CandidatePage, Chunk, ContentProfile, FamilyContent, FamilyMatrix, IntentCoverage,
     NearDuplicateGroup, OutcomeMetric, SearchIntelligence, SignalLevel, SyntheticStyle, chunk_id,
     intent_id,
 };
-pub use inventory::{AiSurface, AnalysisMode, Inventory, InventoryCounts};
+pub use inventory::{AiAgentPolicy, AiSurface, AnalysisMode, Inventory, InventoryCounts};
 pub use link::{LinkLocation, LinkRef};
 pub use locator::Locator;
 pub use media::MediaKind;
@@ -64,8 +66,8 @@ pub use producer::ProducerFact;
 pub use registry::{RuleDefinition, all as rules, authority as rule_authority, lookup as rule};
 pub use report::{AuditReport, AxisScore, Opportunity, OpportunityAxes};
 pub use schema_feature::{
-    FeatureStatus, Requirement, SchemaFeatureProfile, SchemaProvider, missing as schema_missing,
-    profiles as schema_features, satisfied as schema_satisfied,
+    FeatureStatus, KNOWLEDGE_CHECKED_AT, Requirement, SchemaFeatureProfile, SchemaProvider,
+    missing as schema_missing, profiles as schema_features, satisfied as schema_satisfied,
 };
 pub use scope::EvidenceScope;
 pub use semantics::{

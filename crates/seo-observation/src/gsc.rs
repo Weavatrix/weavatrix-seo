@@ -2,7 +2,7 @@
 
 use crate::{Observation, ObservationKind, ObservationSnapshot};
 use serde::Deserialize;
-use weavatrix_seo_model::{Evidence, EvidenceKind, EvidenceSource};
+use weavatrix_seo_model::{Evidence, EvidenceKind, EvidenceSource, InputState};
 
 #[derive(Debug, Deserialize)]
 struct GscFile {
@@ -64,10 +64,16 @@ pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
             hits: 0,
             position: row.position,
         })
-        .collect();
+        .collect::<Vec<_>>();
+    let input = if rows.is_empty() {
+        InputState::empty("GSC")
+    } else {
+        InputState::connected("GSC")
+    };
     Ok(ObservationSnapshot {
         rows,
         connected: true,
+        input,
     })
 }
 
@@ -77,6 +83,7 @@ pub fn disconnected() -> ObservationSnapshot {
     ObservationSnapshot {
         rows: Vec::new(),
         connected: false,
+        input: InputState::absent("GSC"),
     }
 }
 

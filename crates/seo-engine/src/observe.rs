@@ -1,6 +1,8 @@
 //! Attach GSC demand to opportunities and emit unmeasured URL observations.
 
-use weavatrix_seo_model::{Finding, FindingFamily, Inventory, Locator, Opportunity, Severity};
+use weavatrix_seo_model::{
+    Finding, FindingFamily, InputStateKind, Inventory, Locator, Opportunity, Severity,
+};
 use weavatrix_seo_observation::{ObservationKind, ObservationSnapshot, axes_for};
 
 pub fn decorate(
@@ -45,6 +47,27 @@ pub fn decorate(
         if item.kind == "link_gap" {
             item.axes.graph_leverage = Some(80);
         }
+    }
+    if snapshot.input.kind == InputStateKind::Invalid {
+        return vec![
+            Finding::from_rule(
+                FindingFamily::Obs,
+                3,
+                &snapshot.input.label,
+                format!(
+                    "observation file is {}: {}",
+                    snapshot.input.label,
+                    snapshot.input.error.as_deref().unwrap_or("invalid")
+                ),
+                Locator::Url(snapshot.input.label.clone()),
+                weavatrix_seo_model::Evidence::unmeasured(weavatrix_seo_model::EvidenceSource::Gsc),
+            )
+            .explained(
+                "An unreadable evidence file is not the same as no file being supplied.",
+                "Fix the JSON or pass a valid GSC/observations export.",
+                "A later run reports GSC_CONNECTED or GSC_EMPTY, not GSC_INVALID.",
+            ),
+        ];
     }
     if !snapshot.connected {
         return Vec::new();

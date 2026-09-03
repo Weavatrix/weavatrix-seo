@@ -468,6 +468,7 @@ dependencies = [
 name = "weavatrix-seo-model"
 version = "0.6.2"
 dependencies = [
+ "blazingly-json",
  "serde",
 ]
 

@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-09-03",
+  "reviewer": "weavatrix-seo",
+  "source_revision": "openai-anthropic-google-crawlers-2026",
+  "max_age_days": 90,
+  "agents": [
+    { "token": "gptbot", "provider": "OpenAI", "role": "training", "search_impact": "none_established" },
+    { "token": "oai-searchbot", "provider": "OpenAI", "role": "search_discovery", "search_impact": "may_limit_chatgpt_search_discovery" },
+    { "token": "chatgpt-user", "provider": "OpenAI", "role": "citation_fetch", "search_impact": "may_limit_live_citation_fetch" },
+    { "token": "claudebot", "provider": "Anthropic", "role": "training", "search_impact": "none_established" },
+    { "token": "claude-searchbot", "provider": "Anthropic", "role": "search_discovery", "search_impact": "may_limit_claude_search_discovery" },
+    { "token": "claude-user", "provider": "Anthropic", "role": "citation_fetch", "search_impact": "may_limit_live_citation_fetch" },
+    { "token": "perplexitybot", "provider": "Perplexity", "role": "search_discovery", "search_impact": "may_limit_perplexity_discovery" },
+    { "token": "google-extended", "provider": "Google", "role": "grounding_control", "search_impact": "none_on_google_web_search" },
+    { "token": "ccbot", "provider": "Common Crawl", "role": "archive", "search_impact": "none_established" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-09-03",
+  "reviewer": "weavatrix-seo",
+  "source_revision": "schema.org/Organization",
+  "max_age_days": 365,
+  "features": [
+    {
+      "feature": "Organization",
+      "applies_to": "Organization",
+      "status": "active",
+      "required": "name",
+      "docs_revision": "schema.org/Organization"
+    }
+  ]
+}

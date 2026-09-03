@@ -8,7 +8,7 @@ mod outcome;
 mod provider;
 
 use serde::{Deserialize, Serialize};
-use weavatrix_seo_model::{Evidence, EvidenceSource};
+use weavatrix_seo_model::{Evidence, EvidenceSource, InputState};
 
 pub use gsc::{disconnected, from_json, load};
 pub use kind::ObservationKind;
@@ -53,6 +53,9 @@ pub struct ObservationSnapshot {
     pub rows: Vec<Observation>,
     /// Whether any provider was connected.
     pub connected: bool,
+    /// How the file was resolved. Invalid is never treated as absence.
+    #[serde(default)]
+    pub input: InputState,
 }
 
 impl ObservationSnapshot {
@@ -69,6 +72,35 @@ pub fn unmeasured() -> ObservationSnapshot {
     ObservationSnapshot {
         rows: Vec::new(),
         connected: false,
+        input: InputState::absent("GSC"),
+    }
+}
+
+/// Loads GSC or a generic observation file without turning parse errors into absence.
+#[must_use]
+pub fn load_state(path: Option<&str>, prefix: &str) -> ObservationSnapshot {
+    let Some(path) = path else {
+        return ObservationSnapshot {
+            rows: Vec::new(),
+            connected: false,
+            input: InputState::absent(prefix),
+        };
+    };
+    match load_any(path) {
+        Ok(mut snapshot) => {
+            snapshot.input = if snapshot.rows.is_empty() {
+                InputState::empty(prefix)
+            } else {
+                InputState::connected(prefix)
+            };
+            snapshot.connected = true;
+            snapshot
+        }
+        Err(error) => ObservationSnapshot {
+            rows: Vec::new(),
+            connected: false,
+            input: InputState::invalid(prefix, format!("{path}: {error}")),
+        },
     }
 }
 

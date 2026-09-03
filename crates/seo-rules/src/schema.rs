@@ -1,7 +1,7 @@
 //! JSON-LD parse evidence and search-feature eligibility.
 
 use weavatrix_seo_model::{
-    Finding, FindingFamily, Inventory, Locator, SchemaProvider, Severity, schema_features,
+    FeatureStatus, Finding, FindingFamily, Inventory, Locator, SchemaProvider, schema_features,
     schema_missing,
 };
 
@@ -9,10 +9,9 @@ pub fn audit(inventory: &Inventory, findings: &mut Vec<Finding>) {
     for page in &inventory.pages {
         for block in page.json_ld.iter().filter(|block| !block.valid_json) {
             findings.push(
-                Finding::new(
+                Finding::from_rule(
                     FindingFamily::Schema,
                     1,
-                    Severity::Warn,
                     &page.url.to_string(),
                     format!("{} has invalid JSON-LD", page.url),
                     Locator::JsonLd {
@@ -45,22 +44,36 @@ fn required_fields(page: &weavatrix_seo_model::ExtractedPage, findings: &mut Vec
                     if missing.is_empty() {
                         continue;
                     }
-                    let (number, severity) = match profile.provider {
-                        SchemaProvider::Google => (2, Severity::Warn),
-                        SchemaProvider::SchemaOrg => (3, Severity::Info),
+                    let google = profile.provider == SchemaProvider::Google;
+                    let active = profile.status.strong_eligibility();
+                    let number = if google && active {
+                        2
+                    } else if google {
+                        4
+                    } else {
+                        3
                     };
                     let label = profile.feature;
+                    let status = profile.status.as_str();
+                    let summary = if google && !active {
+                        format!(
+                            "{} `{short}` {label} is {status} in Google Search; missing {} is not a current eligibility failure",
+                            page.url,
+                            missing.join(" OR ")
+                        )
+                    } else {
+                        format!(
+                            "{} `{short}` fails {label}: missing {}",
+                            page.url,
+                            missing.join(" OR ")
+                        )
+                    };
                     findings.push(
-                        Finding::new(
+                        Finding::from_rule(
                             FindingFamily::Schema,
                             number,
-                            severity,
                             &page.url.to_string(),
-                            format!(
-                                "{} `{short}` fails {label}: missing {}",
-                                page.url,
-                                missing.join(" OR ")
-                            ),
+                            summary,
                             Locator::JsonLd {
                                 url: page.url.to_string(),
                                 path: format!("{short}/{label}"),
@@ -68,7 +81,11 @@ fn required_fields(page: &weavatrix_seo_model::ExtractedPage, findings: &mut Vec
                             page.evidence.clone(),
                         )
                         .explained(
-                            "Rich-result eligibility is not the same as schema.org validity.",
+                            if matches!(profile.status, FeatureStatus::Removed | FeatureStatus::Deprecated) {
+                                "A retired rich-result contract is historical compatibility, not a current Warn."
+                            } else {
+                                "Rich-result eligibility is not the same as schema.org validity."
+                            },
                             "Emit the missing fields from first-party facts, not invented values.",
                             "The declared type satisfies the documented feature profile, or the feature is not claimed.",
                         ),

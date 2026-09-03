@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use weavatrix_seo_model::{
     ContentHash, ExtractedPage, Finding, FindingFamily, Indexability, Inventory, Locator,
-    NearDuplicateGroup, Severity,
+    NearDuplicateGroup,
 };
 
 const HASHES: usize = 64;
@@ -26,19 +26,25 @@ pub fn near_duplicates(inventory: &Inventory) -> (Vec<NearDuplicateGroup>, Vec<F
         })
         .collect();
     let mut signatures = Vec::new();
+    let mut page_shingles: Vec<BTreeSet<String>> = Vec::new();
     for page in &pages {
         let toks = tokens(&page.visible_text());
-        let shingles = shingles(&toks, 3);
-        signatures.push((page.url.to_string(), page.content_hash, minhash(&shingles)));
+        let shingle_list = shingles(&toks, 3);
+        page_shingles.push(shingle_list.iter().cloned().collect());
+        signatures.push((
+            page.url.to_string(),
+            page.content_hash,
+            minhash(&shingle_list),
+        ));
     }
-    let mut buckets: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    let mut lsh_buckets: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (index, (_, _, sig)) in signatures.iter().enumerate() {
         for key in band_keys(sig) {
-            buckets.entry(key).or_default().push(index);
+            lsh_buckets.entry(key).or_default().push(index);
         }
     }
     let mut pairs: BTreeSet<(usize, usize)> = BTreeSet::new();
-    for members in buckets.values() {
+    for members in lsh_buckets.values() {
         if members.len() < 2 {
             continue;
         }
@@ -51,7 +57,7 @@ pub fn near_duplicates(inventory: &Inventory) -> (Vec<NearDuplicateGroup>, Vec<F
             }
         }
     }
-    let mut groups: BTreeMap<u128, Vec<usize>> = BTreeMap::new();
+    let mut dsu = Dsu::new(signatures.len());
     let mut similarity: BTreeMap<(usize, usize), u16> = BTreeMap::new();
     for (left, right) in pairs {
         if signatures[left].1 == signatures[right].1 {
@@ -62,43 +68,47 @@ pub fn near_duplicates(inventory: &Inventory) -> (Vec<NearDuplicateGroup>, Vec<F
             continue;
         }
         similarity.insert((left, right), sim);
-        let key = union_key(left, right);
-        groups.entry(key).or_default().extend([left, right]);
+        dsu.union(left, right);
     }
     let mut clustered: Vec<NearDuplicateGroup> = Vec::new();
-    let mut seen: BTreeSet<usize> = BTreeSet::new();
-    for members in groups.into_values() {
-        let mut urls = Vec::new();
-        let mut max_sim = 0_u16;
-        for index in members {
-            if seen.insert(index) {
-                urls.push(signatures[index].0.clone());
-            }
+    let mut buckets: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    for index in 0..signatures.len() {
+        buckets.entry(dsu.find(index)).or_default().push(index);
+    }
+    for members in buckets.into_values() {
+        if members.len() < 2 {
+            continue;
         }
+        let mut urls: Vec<String> = members
+            .iter()
+            .map(|index| signatures[*index].0.clone())
+            .collect();
+        urls.sort();
+        urls.dedup();
         if urls.len() < 2 {
             continue;
         }
-        urls.sort();
-        urls.dedup();
+        let mut max_sim = 0_u16;
         for ((left, right), sim) in &similarity {
-            if urls.contains(&signatures[*left].0) && urls.contains(&signatures[*right].0) {
+            if members.contains(left) && members.contains(right) {
                 max_sim = max_sim.max(*sim);
             }
         }
+        let witnesses = cluster_witnesses(&page_shingles, &members);
         clustered.push(NearDuplicateGroup {
             urls,
             similarity: max_sim,
-            witness: None,
+            witness: witnesses.first().cloned(),
+            witnesses,
         });
     }
     clustered.sort_by(|left, right| left.urls.cmp(&right.urls));
     let mut findings = Vec::new();
     for group in &clustered {
         findings.push(
-            Finding::new(
+            Finding::from_rule(
                 FindingFamily::Dup,
                 2,
-                Severity::Info,
                 &group.urls.join(" "),
                 format!(
                     "{} URLs are near-duplicates (~{}% MinHash overlap)",
@@ -159,19 +169,68 @@ fn estimated_jaccard(left: &[u64; HASHES], right: &[u64; HASHES]) -> u16 {
     u16::try_from((matched * 100) / HASHES).unwrap_or(100)
 }
 
-fn union_key(left: usize, right: usize) -> u128 {
-    let (a, b) = if left < right {
-        (left, right)
-    } else {
-        (right, left)
+struct Dsu {
+    parent: Vec<usize>,
+}
+
+impl Dsu {
+    fn new(len: usize) -> Self {
+        Self {
+            parent: (0..len).collect(),
+        }
+    }
+
+    fn find(&mut self, index: usize) -> usize {
+        let mut root = index;
+        while self.parent[root] != root {
+            root = self.parent[root];
+        }
+        let mut cursor = index;
+        while cursor != root {
+            let next = self.parent[cursor];
+            self.parent[cursor] = root;
+            cursor = next;
+        }
+        root
+    }
+
+    fn union(&mut self, left: usize, right: usize) {
+        let left = self.find(left);
+        let right = self.find(right);
+        if left != right {
+            self.parent[right] = left;
+        }
+    }
+}
+
+fn cluster_witnesses(shingles: &[BTreeSet<String>], members: &[usize]) -> Vec<String> {
+    let Some((first, rest)) = members.split_first() else {
+        return Vec::new();
     };
-    (u128::from(u64::try_from(a).unwrap_or(0)) << 64) | u128::from(u64::try_from(b).unwrap_or(0))
+    let mut shared = shingles.get(*first).cloned().unwrap_or_default();
+    for index in rest {
+        if let Some(other) = shingles.get(*index) {
+            shared = shared.intersection(other).cloned().collect();
+        }
+    }
+    let mut witnesses: Vec<String> = shared.into_iter().collect();
+    witnesses.sort_by_key(|item| std::cmp::Reverse(item.len()));
+    witnesses.truncate(3);
+    witnesses
 }
 
 #[cfg(test)]
 mod tests {
     use super::{estimated_jaccard, minhash};
     use crate::tokens::{shingles, tokens};
+
+    #[test]
+    fn dsu_merges_a_transitive_cluster() {
+        let mut dsu = super::Dsu::new(3);
+        dsu.union(0, 1);
+        dsu.union(1, 2);
+        assert_eq!(dsu.find(0), dsu.find(2));
+    }
 
     #[test]
     fn similar_copy_has_higher_minhash_overlap_than_unrelated() {

@@ -13,9 +13,7 @@ use weavatrix_seo_model::{
     AuditReport, Evidence, EvidenceSemantics, FamilyMatrix, Finding, FindingFamily, Inventory,
     Locator, SearchIntelligence, Severity,
 };
-use weavatrix_seo_observation::{
-    load as load_gsc, load_any, unmeasured as observations_unmeasured,
-};
+use weavatrix_seo_observation::load_state;
 use weavatrix_seo_opportunity::{opportunities, rank};
 use weavatrix_seo_programmatic::{SafetyVerdict, compile, enrich, thin_city_variants};
 use weavatrix_seo_quality::audit as quality_audit;
@@ -63,12 +61,11 @@ pub fn assemble(
     if request.mode == weavatrix_seo_model::AnalysisMode::Compare {
         items.extend(compare_inventories(&inventory, competitors));
     }
-    let observations = request
-        .observations
-        .as_deref()
-        .and_then(|path| load_any(path).ok())
-        .or_else(|| request.gsc.as_deref().and_then(|path| load_gsc(path).ok()))
-        .unwrap_or_else(observations_unmeasured);
+    let observations = if request.observations.is_some() {
+        load_state(request.observations.as_deref(), "GSC")
+    } else {
+        load_state(request.gsc.as_deref(), "GSC")
+    };
     findings.extend(observe::decorate(&observations, &inventory, &mut items));
     let outcomes = weavatrix_seo_observation::outcome_metrics(&observations);
     let items = rank(items);
