@@ -8,6 +8,7 @@ mod intel;
 mod kind;
 mod logs;
 mod outcome;
+mod prompts;
 mod provider;
 
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,7 @@ pub use intel::{ObservationIntel, analyze as analyze_gsc, expected_ctr};
 pub use kind::ObservationKind;
 pub use logs::{analyze as analyze_logs, classify_agent, from_combined};
 pub use outcome::metrics as outcome_metrics;
+pub use prompts::citation_drops;
 pub use provider::{from_any, load_any};
 
 /// One provider observation.
@@ -81,6 +83,9 @@ pub struct ObservationSnapshot {
     /// How the file was resolved. Invalid is never treated as absence.
     #[serde(default)]
     pub input: InputState,
+    /// Imported AI-visibility prompts. Additive; older files omit it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prompts: Vec<weavatrix_seo_model::PromptObservation>,
 }
 
 impl ObservationSnapshot {
@@ -98,6 +103,7 @@ pub fn unmeasured() -> ObservationSnapshot {
         rows: Vec::new(),
         connected: false,
         input: InputState::absent("GSC"),
+        prompts: Vec::new(),
     }
 }
 
@@ -109,11 +115,12 @@ pub fn load_state(path: Option<&str>, prefix: &str) -> ObservationSnapshot {
             rows: Vec::new(),
             connected: false,
             input: InputState::absent(prefix),
+            prompts: Vec::new(),
         };
     };
     match load_any(path) {
         Ok(mut snapshot) => {
-            snapshot.input = if snapshot.rows.is_empty() {
+            snapshot.input = if snapshot.rows.is_empty() && snapshot.prompts.is_empty() {
                 InputState::empty(prefix)
             } else {
                 InputState::connected(prefix)
@@ -125,6 +132,7 @@ pub fn load_state(path: Option<&str>, prefix: &str) -> ObservationSnapshot {
             rows: Vec::new(),
             connected: false,
             input: InputState::invalid(prefix, format!("{path}: {error}")),
+            prompts: Vec::new(),
         },
     }
 }

@@ -23,6 +23,11 @@ claude mcp add weavatrix-seo -- npx -y weavatrix-seo mcp --allow-root .
 
 ### Codex
 
+```text
+codex plugin marketplace add Weavatrix/weavatrix-seo --sparse .agents/plugins plugins/weavatrix-seo
+codex plugin add weavatrix-seo@weavatrix-seo
+```
+
 ```toml
 [mcp_servers.weavatrix-seo]
 command = "npx"

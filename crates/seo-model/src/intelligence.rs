@@ -92,6 +92,39 @@ pub struct AiFunnel {
     pub producer: Option<String>,
 }
 
+/// One imported AI-visibility prompt. Not search demand.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct PromptObservation {
+    /// Prompt text.
+    pub prompt: String,
+    /// Platform, for example `chatgpt` or `perplexity`.
+    pub platform: String,
+    /// Market / location when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    /// Language when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    /// Whether the owned brand was mentioned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand_mentioned: Option<bool>,
+    /// 1-based brand rank in the answer when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand_position: Option<u16>,
+    /// URLs the answer cited.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cited_urls: Vec<String>,
+    /// Competitor URLs mentioned.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub competitors: Vec<String>,
+    /// Observation time or period tag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_at: Option<String>,
+    /// Window tag: `current` / `previous`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period: Option<String>,
+}
+
 impl OutcomeMetric {
     /// Explicitly unmeasured outcome.
     #[must_use]
@@ -404,6 +437,9 @@ pub struct SearchIntelligence {
     /// AI search funnels. Empty when no discovery/citation/referral was imported.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ai_funnels: Vec<AiFunnel>,
+    /// Imported AI-visibility prompts. Empty when no prompt provider was connected.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prompts: Vec<PromptObservation>,
 }
 
 /// Chunk node id.

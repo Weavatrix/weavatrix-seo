@@ -391,3 +391,47 @@ fn ai_discovery_without_citation_fills_the_funnel() {
     );
     let _ = std::fs::remove_file(import);
 }
+
+#[test]
+fn a_dropped_ai_citation_is_obs_012() {
+    let site = spawn(one_page_site());
+    let origin = format!("{}/", site.base);
+    let import = write_import(
+        "ai-prompt",
+        &format!(
+            r#"{{"provider":"semrush-ai","prompts":[
+                {{"prompt":"best electrician","platform":"chatgpt","cited_urls":["{origin}"],"period":"previous"}},
+                {{"prompt":"best electrician","platform":"chatgpt","cited_urls":["{origin}other"],"period":"current"}}
+            ]}}"#
+        ),
+    );
+    let report = run_audit(&AuditRequest {
+        site: Some(origin),
+        max_pages: Some(4),
+        observations: Some(import.clone()),
+        ..AuditRequest::default()
+    })
+    .expect("audit");
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|finding| finding.code == "WVX-SEO-OBS-012"),
+        "{:?}",
+        report
+            .findings
+            .iter()
+            .map(|finding| finding.code.as_str())
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        report
+            .intelligence
+            .as_ref()
+            .expect("intelligence")
+            .prompts
+            .len()
+            >= 2
+    );
+    let _ = std::fs::remove_file(import);
+}

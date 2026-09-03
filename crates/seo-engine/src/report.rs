@@ -161,6 +161,7 @@ pub fn assemble(
         near_duplicates: content.near_duplicates,
         url_metrics,
         ai_funnels,
+        prompts: observations.prompts.clone(),
     };
     AuditReport {
         inventory,

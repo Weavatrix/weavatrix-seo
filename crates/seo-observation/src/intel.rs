@@ -430,6 +430,7 @@ mod tests {
             rows,
             connected: true,
             input: weavatrix_seo_model::InputState::connected("GSC"),
+            prompts: Vec::new(),
         }
     }
 

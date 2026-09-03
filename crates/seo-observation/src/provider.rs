@@ -23,6 +23,8 @@ struct File {
     lines: Vec<String>,
     #[serde(default)]
     rows: Vec<Row>,
+    #[serde(default)]
+    prompts: Vec<weavatrix_seo_model::PromptObservation>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,6 +72,7 @@ pub fn load_any(path: &str) -> Result<ObservationSnapshot, String> {
 /// # Errors
 ///
 /// Returns JSON errors.
+#[allow(clippy::too_many_lines)]
 pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
     let file: File = blazingly_json::from_str(weavatrix_seo_model::strip_bom(raw))
         .map_err(|error| error.to_string())?;
@@ -152,7 +155,18 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
             &default_provider,
         ));
     }
-    let input = if rows.is_empty() {
+    let prompt_evidence = Evidence {
+        kind: EvidenceKind::Observed,
+        source: weavatrix_seo_model::EvidenceSource::Provider,
+        confidence: weavatrix_seo_model::Confidence::High,
+        snapshot_id: None,
+        revision: None,
+        policy_version: None,
+    };
+    let (prompt_rows, prompts) =
+        crate::prompts::expand(file.prompts, &default_provider, &prompt_evidence);
+    rows.extend(prompt_rows);
+    let input = if rows.is_empty() && prompts.is_empty() {
         InputState::empty("GSC")
     } else {
         InputState::connected("GSC")
@@ -161,6 +175,7 @@ pub fn from_any(raw: &str) -> Result<ObservationSnapshot, String> {
         rows,
         connected: true,
         input,
+        prompts,
     })
 }
 
@@ -211,6 +226,17 @@ mod tests {
         .expect("nginx");
         assert_eq!(snap.rows[0].kind, ObservationKind::BotCrawl);
         assert_eq!(snap.rows[0].bot_role.as_deref(), Some("citation_fetch"));
+        assert_eq!(snap.rows[0].url, "https://x.test/a");
+    }
+
+    #[test]
+    fn prompt_file_expands_citations() {
+        let snap = from_any(
+            r#"{"provider":"semrush-ai","prompts":[{"prompt":"best electrician","platform":"chatgpt","cited_urls":["https://x.test/a"]}]}"#,
+        )
+        .expect("prompt");
+        assert_eq!(snap.prompts.len(), 1);
+        assert_eq!(snap.rows[0].kind, ObservationKind::AiCitation);
         assert_eq!(snap.rows[0].url, "https://x.test/a");
     }
 }

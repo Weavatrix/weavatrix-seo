@@ -1,0 +1,29 @@
+{
+  "name": "weavatrix-seo",
+  "owner": {
+    "name": "Sergii Ziborov",
+    "email": "sergii.ziborov@gmail.com"
+  },
+  "metadata": {
+    "description": "Source-aware Search Intelligence for coding agents",
+    "version": "0.6.2"
+  },
+  "plugins": [
+    {
+      "name": "weavatrix-seo",
+      "source": "./plugins/weavatrix-seo",
+      "description": "Read-only Search Evidence Graph: crawl, GSC, logs, AI citations, query, plan. Never writes source.",
+      "version": "0.6.2",
+      "author": {
+        "name": "Sergii Ziborov",
+        "email": "sergii.ziborov@gmail.com"
+      },
+      "homepage": "https://weavatrix.com/seo",
+      "repository": "https://github.com/Weavatrix/weavatrix-seo",
+      "license": "MIT",
+      "keywords": ["seo", "mcp", "search-evidence"],
+      "category": "Developer Tools",
+      "tags": ["MCP", "SEO", "Search Intelligence"]
+    }
+  ]
+}

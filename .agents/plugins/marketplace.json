@@ -1,0 +1,21 @@
+{
+  "name": "weavatrix-seo",
+  "interface": {
+    "displayName": "Weavatrix SEO"
+  },
+  "plugins": [
+    {
+      "name": "weavatrix-seo",
+      "source": {
+        "source": "local",
+        "path": "./plugins/weavatrix-seo"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity",
+      "icon": "./plugins/weavatrix-seo/assets/logo.svg"
+    }
+  ]
+}

@@ -96,6 +96,12 @@ pub struct HandoffTarget {
     pub required_facts: Vec<String>,
     /// Acceptance copied from the plan action.
     pub acceptance: String,
+    /// Symbol extent hash when the producer recorded it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol_hash: Option<String>,
+    /// File content hash when the producer recorded it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<String>,
 }
 
 /// Read-only handoff toward Weavatrix Refactor.
@@ -113,6 +119,12 @@ pub struct RefactorHandoff {
     /// Proposed source targets, spans included when producers recorded them.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub targets: Vec<HandoffTarget>,
+    /// Worktree revision the plan was compiled against.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo_revision: Option<String>,
+    /// Snapshot identity of the SEO run.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub snapshot_id: String,
 }
 
 /// One executable step in the plan DAG. Additive to [`PlanAction`].
@@ -330,6 +342,10 @@ fn handoff_from(actions: &[PlanAction], report: &AuditReport) -> RefactorHandoff
             subject: action.subject.clone(),
             required_facts: action.required_facts.clone(),
             acceptance: action.acceptance.clone(),
+            symbol_hash: producer
+                .symbol_hash
+                .map(weavatrix_seo_model::ContentHash::hex),
+            content_hash: Some(producer.content_hash.hex()),
         });
     }
     targets.sort_by(|left, right| {
@@ -343,7 +359,54 @@ fn handoff_from(actions: &[PlanAction], report: &AuditReport) -> RefactorHandoff
         to: "weavatrix-refactor".into(),
         read_only: true,
         targets,
+        repo_revision: report.inventory.repo_revision.clone(),
+        snapshot_id: report.inventory.snapshot_id.clone(),
     }
+}
+
+/// Reasons Refactor should refuse this handoff against the current worktree.
+///
+/// Empty means the source identity still matches. A later revision or symbol
+/// hash change is stale; SEO does not apply the edit.
+#[must_use]
+pub fn stale_targets(
+    handoff: &RefactorHandoff,
+    repo_revision: Option<&str>,
+    producers: &[weavatrix_seo_model::ProducerFact],
+) -> Vec<String> {
+    let mut reasons = Vec::new();
+    if let (Some(planned), Some(now)) = (handoff.repo_revision.as_deref(), repo_revision)
+        && planned != now
+    {
+        reasons.push(format!(
+            "source changed since SEO analysis ({planned} → {now})"
+        ));
+    }
+    for target in &handoff.targets {
+        let Some(producer) = producers.iter().find(|item| {
+            item.path == target.path && target.symbol.as_deref() == Some(item.name.as_str())
+        }) else {
+            reasons.push(format!(
+                "{}#{} is gone from the current worktree",
+                target.path,
+                target.symbol.as_deref().unwrap_or("?")
+            ));
+            continue;
+        };
+        if let (Some(planned), Some(now)) = (
+            target.symbol_hash.as_deref(),
+            producer
+                .symbol_hash
+                .map(weavatrix_seo_model::ContentHash::hex),
+        ) && planned != now
+        {
+            reasons.push(format!(
+                "{}#{} symbol hash changed since SEO analysis",
+                target.path, producer.name
+            ));
+        }
+    }
+    reasons
 }
 
 fn extras(kind: PlanKind, item: &Opportunity) -> (Vec<String>, Vec<String>, Vec<String>) {
@@ -474,6 +537,21 @@ mod tests {
                 .iter()
                 .any(|edge| edge.relation == "VERIFY_AFTER" && edge.to.contains("CRAWL"))
         );
+    }
+
+    #[test]
+    fn stale_guard_fires_when_revision_moves() {
+        let handoff = super::RefactorHandoff {
+            from: "weavatrix-seo".into(),
+            to: "weavatrix-refactor".into(),
+            read_only: true,
+            targets: Vec::new(),
+            repo_revision: Some("aaa".into()),
+            snapshot_id: "snap".into(),
+        };
+        let reasons = super::stale_targets(&handoff, Some("bbb"), &[]);
+        assert!(reasons.iter().any(|item| item.contains("source changed")));
+        assert!(super::stale_targets(&handoff, Some("aaa"), &[]).is_empty());
     }
 
     #[test]

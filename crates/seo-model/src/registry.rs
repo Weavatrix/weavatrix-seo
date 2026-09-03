@@ -512,6 +512,15 @@ const RULES: &[RuleDefinition] = &[
         "ai-search",
         "1",
     ),
+    def(
+        FindingFamily::Obs,
+        12,
+        Severity::Info,
+        RuleAuthority::SearchEngineDocumented,
+        "AI citation dropped versus previous prompt window",
+        "ai-visibility",
+        "1",
+    ),
 ];
 
 const fn def(

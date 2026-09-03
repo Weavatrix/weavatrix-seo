@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win prompt provider, stale source guard, Codex plugin. Nothing
+existing is removed.
+
+- AI-visibility prompt import (`prompts[]`, provider `semrush-ai`). Cited URLs
+  become `ai_citation` rows. A citation present in `previous` and missing in
+  `current` is `WVX-SEO-OBS-012`.
+- Refactor handoff stamps `repo_revision`, `snapshot_id`, `symbol_hash`, and
+  `content_hash`. `stale_targets()` tells Refactor to refuse when source moved.
+- Codex / Claude / Grok plugin at `plugins/weavatrix-seo` with `assets/logo.svg`
+  as `composerIcon` / marketplace `icon`.
+
 Finish-to-win logs, AI funnel, and plan DAG. Nothing existing is removed.
 
 - Server-log intelligence: nginx/Apache combined lines and JSON rows classify

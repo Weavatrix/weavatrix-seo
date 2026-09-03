@@ -22,7 +22,8 @@ pub use diff::diff_paths;
 pub use explain::{ExplainHop, Explanation, explain_chain};
 pub use html::render_html;
 pub use plan::{
-    HandoffTarget, PlanAction, PlanEdge, PlanKind, PlanStep, RefactorHandoff, SearchPlan, plan_from,
+    HandoffTarget, PlanAction, PlanEdge, PlanKind, PlanStep, RefactorHandoff, SearchPlan,
+    plan_from, stale_targets,
 };
 pub use query::{
     Query, QueryResult, parse as parse_query, run as run_query, run_on_history, run_on_report,

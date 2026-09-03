@@ -82,6 +82,7 @@ pub fn from_json(raw: &str) -> Result<ObservationSnapshot, String> {
         rows,
         connected: true,
         input,
+        prompts: Vec::new(),
     })
 }
 
@@ -92,6 +93,7 @@ pub fn disconnected() -> ObservationSnapshot {
         rows: Vec::new(),
         connected: false,
         input: InputState::absent("GSC"),
+        prompts: Vec::new(),
     }
 }
 

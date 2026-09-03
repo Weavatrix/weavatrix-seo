@@ -1,0 +1,28 @@
+{
+  "name": "weavatrix-seo",
+  "version": "0.6.2",
+  "description": "Source-aware Search Intelligence: crawl, GSC, logs, AI citations, and a read-only plan DAG over the Search Evidence Graph.",
+  "author": {
+    "name": "Sergii Ziborov",
+    "email": "sergii.ziborov@gmail.com",
+    "url": "https://weavatrix.com"
+  },
+  "homepage": "https://weavatrix.com/seo",
+  "repository": "https://github.com/Weavatrix/weavatrix-seo",
+  "license": "MIT",
+  "keywords": ["seo", "mcp", "search-evidence", "gsc"],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json",
+  "interface": {
+    "displayName": "Weavatrix SEO",
+    "shortDescription": "Search Evidence Graph audits and plans",
+    "longDescription": "Read-only SEO intelligence for coding agents. Fifteen MCP tools match the CLI. SEO never writes source; seo_plan can hand a location to Weavatrix Refactor.",
+    "developerName": "Weavatrix",
+    "category": "Productivity",
+    "capabilities": ["Read"],
+    "websiteURL": "https://weavatrix.com",
+    "brandColor": "#3ee0c4",
+    "composerIcon": "./assets/logo.svg",
+    "logo": "./assets/logo.svg"
+  }
+}

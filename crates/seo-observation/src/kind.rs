@@ -13,6 +13,8 @@ pub enum ObservationKind {
     BotCrawl,
     /// A generative-search answer that cited the URL.
     AiCitation,
+    /// An AI-visibility prompt (brand mention / citation tracking). Not demand.
+    AiPrompt,
     /// A click or session referred from an AI answer.
     AiReferral,
     /// A measured SERP position for one query.
@@ -35,6 +37,7 @@ impl ObservationKind {
             "search_performance" | "search" => Some(Self::SearchPerformance),
             "bot_crawl" | "bot" | "crawl" => Some(Self::BotCrawl),
             "ai_citation" | "ai" => Some(Self::AiCitation),
+            "ai_prompt" | "prompt" | "ai_visibility" => Some(Self::AiPrompt),
             "ai_referral" | "ai_click" | "referral" => Some(Self::AiReferral),
             "serp_position" | "serp" => Some(Self::SerpPosition),
             "analytics" => Some(Self::Analytics),
@@ -54,6 +57,7 @@ impl ObservationKind {
             "logs" | "cdn" | "bot-logs" | "nginx" | "apache" | "cloudflare" | "fastly"
             | "vercel" => Self::BotCrawl,
             "chatgpt" | "perplexity" | "gemini" | "copilot" | "ai-search" => Self::AiCitation,
+            "semrush-ai" | "ai-visibility" | "prompt" => Self::AiPrompt,
             "chatgpt-user" | "claude-user" | "ai-referral" => Self::AiReferral,
             "serp" => Self::SerpPosition,
             _ => Self::Analytics,

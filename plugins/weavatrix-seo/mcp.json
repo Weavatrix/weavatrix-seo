@@ -1,0 +1,16 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "weavatrix-seo": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "weavatrix-seo@0.6.2",
+        "mcp",
+        "--allow-root",
+        "."
+      ]
+    }
+  }
+}

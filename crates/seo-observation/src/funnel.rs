@@ -133,6 +133,7 @@ mod tests {
             rows: vec![bot("https://x.test/a", "search_discovery", 8)],
             connected: true,
             input: InputState::connected("logs"),
+            prompts: Vec::new(),
         };
         let (funnels, findings) = analyze(&snapshot);
         assert_eq!(funnels[0].discovery_hits, Some(8));
