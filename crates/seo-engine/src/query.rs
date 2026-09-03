@@ -619,6 +619,9 @@ fn opportunity_rows(report: &AuditReport) -> Vec<BTreeMap<String, String>> {
             if let Some(value) = item.axes.difficulty_to_rank {
                 row.insert("difficulty_to_rank".into(), value.to_string());
             }
+            if let Some(value) = item.axes.difficulty_to_build {
+                row.insert("difficulty_to_build".into(), value.to_string());
+            }
             row
         })
         .collect()

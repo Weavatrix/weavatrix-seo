@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win Personalized Difficulty. Nothing existing is removed.
+
+- `difficulty_to_rank` is market-aware (keyword difficulty + SERP strength −
+  owned internal authority). Unmeasured without keyword/SERP evidence.
+- `difficulty_to_build` is Weavatrix-owned: engineering cost + risk − unique
+  facts − fact coverage − producer reuse − internal-link leverage. Thin
+  programmatic families stay harder to build than an H1 gap. Neither axis
+  enters `rank_key`. Query DSL exposes `difficulty_to_build`.
+
 Finish-to-win market provider, opportunity expected value, typed
 programmatic requirements. Nothing existing is removed.
 

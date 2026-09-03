@@ -4,6 +4,7 @@
 
 mod axes;
 mod diff;
+mod difficulty;
 mod explain;
 mod graph;
 mod html;
