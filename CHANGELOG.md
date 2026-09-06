@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Finish-to-win Programmatic Matrix v3 and plan verification contracts.
+Nothing existing is removed.
+
+- Matrix rows carry `measured_sample_rate`, `canonical_coverage`,
+  `internal_discovery`, `demand_coverage`, `schema_fact_coverage`,
+  `claim_integrity`, `cannibalization_risk`, `doorway_risk`, and
+  `conversion_readiness` beside the existing verdict and
+  `unmet_requirements`. Estimated cardinality is crawl-observed unique
+  combinations, not a guessed generator size. Thin shared templates flag
+  doorway risk.
+- `PlanStep.verification` is a typed contract (`CRAWL_URL`, `GSC_ROW`,
+  `HTML_LINK`, `NOINDEX`, `DIFF_FINDING`) in state `UNMEASURED` until a
+  later run. `PlanAction.verification` strings stay.
+
 Finish-to-win Personalized Difficulty. Nothing existing is removed.
 
 - `difficulty_to_rank` is market-aware (keyword difficulty + SERP strength −

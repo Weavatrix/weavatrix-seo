@@ -24,11 +24,15 @@ pub enum RequirementKind {
     CannibalizationRisk,
     /// Internal-link support for the generated URLs.
     InternalLinkSupport,
+    /// Doorway / thin-template risk.
+    DoorwayRisk,
+    /// Conversion readiness (schema facts, offers, CTAs).
+    ConversionReadiness,
 }
 
 impl RequirementKind {
     /// Every known gate, in stable report order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 11] = [
         Self::SampleDiversity,
         Self::FactCoverage,
         Self::SemanticDistinctness,
@@ -38,6 +42,8 @@ impl RequirementKind {
         Self::DemandEvidence,
         Self::CannibalizationRisk,
         Self::InternalLinkSupport,
+        Self::DoorwayRisk,
+        Self::ConversionReadiness,
     ];
 
     /// Historical unmet-requirement label. Keep these strings stable.
@@ -53,6 +59,8 @@ impl RequirementKind {
             Self::DemandEvidence => "demand evidence",
             Self::CannibalizationRisk => "cannibalization risk",
             Self::InternalLinkSupport => "internal link support",
+            Self::DoorwayRisk => "doorway risk",
+            Self::ConversionReadiness => "conversion readiness",
         }
     }
 

@@ -306,6 +306,33 @@ pub struct FamilyMatrix {
     /// Typed gates beside the historical string list. Empty in older snapshots.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub requirements: Vec<RequirementResult>,
+    /// Crawl-observed unique combinations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_sample_rate: Option<u16>,
+    /// Canonical coverage 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub canonical_coverage: Option<u16>,
+    /// Internal discovery 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub internal_discovery: Option<u16>,
+    /// GSC demand coverage 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub demand_coverage: Option<u16>,
+    /// Schema-fact coverage 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema_fact_coverage: Option<u16>,
+    /// Claim-integrity score 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claim_integrity: Option<u16>,
+    /// Cannibalization risk 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cannibalization_risk: Option<u16>,
+    /// Doorway / thin-template risk 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub doorway_risk: Option<u16>,
+    /// Conversion readiness 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_readiness: Option<u16>,
 }
 
 /// First-class chunk of a page.

@@ -2,7 +2,9 @@
 
 use crate::{PageMatrix, RequirementKind, RequirementState, SafetyVerdict, unmeasured_gates};
 use std::collections::BTreeMap;
-use weavatrix_seo_model::{ContentHash, Indexability, Inventory, required_gates_passed};
+use weavatrix_seo_model::{
+    ContentHash, Finding, FindingFamily, Indexability, Inventory, required_gates_passed,
+};
 
 /// Compiles measured URLs and predicted families into a page matrix.
 #[must_use]
@@ -20,14 +22,18 @@ pub fn compile(inventory: &Inventory, predicted: &[String]) -> Vec<PageMatrix> {
     }
     let mut matrices = Vec::new();
     for (family, pages) in families {
-        matrices.push(compile_family(family, &pages));
+        matrices.push(compile_family(family, &pages, inventory));
     }
     matrices.sort_by(|left, right| left.family.cmp(&right.family));
     matrices
 }
 
 #[allow(clippy::too_many_lines)]
-fn compile_family(family: String, pages: &[&weavatrix_seo_model::ExtractedPage]) -> PageMatrix {
+fn compile_family(
+    family: String,
+    pages: &[&weavatrix_seo_model::ExtractedPage],
+    inventory: &Inventory,
+) -> PageMatrix {
     let indexable: Vec<_> = pages
         .iter()
         .filter(|page| page.indexability == Indexability::Indexable)
@@ -69,7 +75,24 @@ fn compile_family(family: String, pages: &[&weavatrix_seo_model::ExtractedPage])
         },
         unmet_requirements: Vec::new(),
         requirements: unmeasured_gates(),
+        measured_sample_rate: None,
+        canonical_coverage: None,
+        internal_discovery: None,
+        demand_coverage: None,
+        schema_fact_coverage: None,
+        claim_integrity: None,
+        cannibalization_risk: None,
+        doorway_risk: None,
+        conversion_readiness: None,
     };
+    let estimated = estimate_cardinality(&matrix.family, pages, inventory);
+    matrix.estimated_cardinality = estimated;
+    if let Some(total) = estimated.filter(|value| *value > 0) {
+        matrix.measured_sample_rate =
+            u16::try_from((matrix.measured_urls.saturating_mul(100)) / total)
+                .ok()
+                .map(|value| value.min(100));
+    }
     if pages.is_empty() {
         matrix.verdict = SafetyVerdict::Unmeasured;
         matrix.unmet_requirements = vec!["no measured URLs".into()];
@@ -127,6 +150,35 @@ fn compile_family(family: String, pages: &[&weavatrix_seo_model::ExtractedPage])
                 "{with_canonical}/{} pages declare a canonical",
                 indexable.len()
             )),
+        );
+        matrix.canonical_coverage = Some(percent);
+    }
+    matrix.internal_discovery = Some(if sitemap_only { 0 } else { 100 });
+    matrix.set_requirement(
+        RequirementKind::InternalLinkSupport,
+        if sitemap_only {
+            RequirementState::Failed
+        } else {
+            RequirementState::Passed
+        },
+        matrix.internal_discovery,
+        None,
+    );
+    if !pages.is_empty() {
+        let risk = u16::try_from(100usize.saturating_sub((unique * 100) / pages.len().max(1)))
+            .unwrap_or(0);
+        matrix.cannibalization_risk = Some(risk);
+        matrix.set_requirement(
+            RequirementKind::CannibalizationRisk,
+            if thin {
+                RequirementState::Failed
+            } else if unique >= 2 {
+                RequirementState::Passed
+            } else {
+                RequirementState::Unmeasured
+            },
+            Some(risk),
+            None,
         );
     }
     // Unique hashes are not fact coverage or semantic distinctness.
@@ -237,6 +289,36 @@ pub fn enrich(
             matrix.semantic_distinctness,
             unique_facts.map(|value| format!("unique fact ratio {value}")),
         );
+        matrix.schema_fact_coverage = row.schema_fact_coverage;
+        matrix.conversion_readiness = row.schema_fact_coverage;
+        let conversion_state = match row.schema_fact_coverage {
+            Some(value) if value >= 40 => RequirementState::Passed,
+            Some(_) => RequirementState::Failed,
+            None => RequirementState::Unmeasured,
+        };
+        matrix.set_requirement(
+            RequirementKind::ConversionReadiness,
+            conversion_state,
+            row.schema_fact_coverage,
+            None,
+        );
+        let doorway = match (row.template_shared_ratio, unique_facts) {
+            (Some(shared), Some(facts)) if shared >= 70 && facts < 15 => Some(80),
+            (Some(shared), _) if shared >= 70 => Some(55),
+            (_, Some(facts)) if facts >= 15 => Some(20),
+            _ => None,
+        };
+        matrix.doorway_risk = doorway;
+        matrix.set_requirement(
+            RequirementKind::DoorwayRisk,
+            match doorway {
+                Some(value) if value >= 70 => RequirementState::Failed,
+                Some(_) => RequirementState::Passed,
+                None => RequirementState::Unmeasured,
+            },
+            doorway,
+            None,
+        );
         if matrix.verdict == SafetyVerdict::SafeIfRequirementsMet
             && matrix.measured_urls >= 2
             && required_gates_passed(&matrix.requirements)
@@ -245,6 +327,111 @@ pub fn enrich(
         }
     }
     matrices
+}
+
+/// Fills demand and claim-integrity after GSC rollup and claim findings exist.
+#[must_use]
+pub fn annotate(
+    mut matrices: Vec<PageMatrix>,
+    findings: &[Finding],
+    families: &[weavatrix_seo_model::FamilyContent],
+) -> Vec<PageMatrix> {
+    let claims_ran = findings
+        .iter()
+        .any(|item| item.family == FindingFamily::Claim);
+    for matrix in &mut matrices {
+        if let Some(row) = families
+            .iter()
+            .find(|item| item.family == matrix.family || matrix.family.contains(&item.family))
+        {
+            if let Some(impressions) = row.gsc_impressions {
+                let coverage = if impressions > 0 { 100 } else { 0 };
+                matrix.demand_coverage = Some(coverage);
+                matrix.set_requirement(
+                    RequirementKind::DemandEvidence,
+                    if impressions > 0 {
+                        RequirementState::Passed
+                    } else {
+                        RequirementState::Failed
+                    },
+                    Some(coverage),
+                    Some(format!("gsc impressions {impressions}")),
+                );
+            }
+        }
+        if !claims_ran {
+            continue;
+        }
+        let hits = findings
+            .iter()
+            .filter(|item| item.family == FindingFamily::Claim)
+            .filter(|item| {
+                item.locator.subject_url().contains(&matrix.family)
+                    || item.summary.contains(&matrix.family)
+            })
+            .count();
+        let score = 100_u16.saturating_sub(u16::try_from(hits.saturating_mul(20)).unwrap_or(100));
+        matrix.claim_integrity = Some(score);
+        matrix.set_requirement(
+            RequirementKind::ClaimIntegrity,
+            if hits == 0 {
+                RequirementState::Passed
+            } else {
+                RequirementState::Failed
+            },
+            Some(score),
+            Some(format!("{hits} claim findings")),
+        );
+    }
+    matrices
+}
+
+fn estimate_cardinality(
+    family: &str,
+    pages: &[&weavatrix_seo_model::ExtractedPage],
+    inventory: &Inventory,
+) -> Option<u64> {
+    let mut slugs = std::collections::BTreeSet::new();
+    for page in pages {
+        if let Some(slug) = city_slug(page.url.path(), family) {
+            slugs.insert(slug);
+        }
+    }
+    let needle = format!("/{family}/");
+    for page in &inventory.pages {
+        for link in &page.links {
+            let Some(at) = link.find(&needle) else {
+                continue;
+            };
+            let rest = &link[at + needle.len()..];
+            let slug = rest.split(['/', '?', '#']).next().unwrap_or("");
+            if looks_like_city_slug(slug) {
+                slugs.insert(slug.to_owned());
+            }
+        }
+    }
+    if slugs.is_empty() {
+        None
+    } else {
+        Some(u64::try_from(slugs.len()).unwrap_or(0))
+    }
+}
+
+fn city_slug(path: &str, family: &str) -> Option<String> {
+    let needle = format!("/{family}/");
+    let rest = path.find(&needle).map(|at| &path[at + needle.len()..])?;
+    let slug = rest.split('/').find(|part| !part.is_empty())?;
+    looks_like_city_slug(slug).then(|| (*slug).to_owned())
+}
+
+fn looks_like_city_slug(segment: &str) -> bool {
+    if matches!(
+        segment,
+        "prices" | "reviews" | "about" | "new" | "edit" | "index" | "all"
+    ) {
+        return false;
+    }
+    segment.contains('-') || segment.len() >= 4
 }
 
 fn is_programmatic(pattern: &str) -> bool {
@@ -300,6 +487,15 @@ mod tests {
             semantic_distinctness: Some(100),
             unmet_requirements: Vec::new(),
             requirements: crate::unmeasured_gates(),
+            measured_sample_rate: None,
+            canonical_coverage: None,
+            internal_discovery: None,
+            demand_coverage: None,
+            schema_fact_coverage: None,
+            claim_integrity: None,
+            cannibalization_risk: None,
+            doorway_risk: None,
+            conversion_readiness: None,
         };
         matrix.set_requirement(
             RequirementKind::SampleDiversity,
@@ -341,6 +537,15 @@ mod tests {
                 semantic_distinctness: Some(80),
                 unmet_requirements: Vec::new(),
                 requirements: crate::unmeasured_gates(),
+                measured_sample_rate: None,
+                canonical_coverage: None,
+                internal_discovery: None,
+                demand_coverage: None,
+                schema_fact_coverage: None,
+                claim_integrity: None,
+                cannibalization_risk: None,
+                doorway_risk: None,
+                conversion_readiness: None,
             };
             matrix.set_requirement(
                 RequirementKind::SampleDiversity,
@@ -382,5 +587,64 @@ mod tests {
         let allowed = ready(20, 80);
         assert_eq!(allowed.verdict, SafetyVerdict::SafeToGenerate);
         assert!(allowed.unmet_requirements.is_empty());
+        assert_eq!(allowed.doorway_risk, Some(20));
+    }
+
+    #[test]
+    fn thin_shared_templates_are_doorway_risk() {
+        use crate::{PageMatrix, RequirementKind, RequirementState, SafetyVerdict, enrich};
+        use weavatrix_seo_model::FamilyContent;
+
+        let mut matrix = PageMatrix {
+            family: "category/electrician".into(),
+            measured_urls: 2,
+            verdict: SafetyVerdict::SafeIfRequirementsMet,
+            dimensions: vec!["service".into()],
+            estimated_cardinality: None,
+            fact_coverage: None,
+            unique_fact_ratio: None,
+            template_boilerplate_ratio: None,
+            semantic_distinctness: Some(80),
+            unmet_requirements: Vec::new(),
+            requirements: crate::unmeasured_gates(),
+            measured_sample_rate: None,
+            canonical_coverage: None,
+            internal_discovery: None,
+            demand_coverage: None,
+            schema_fact_coverage: None,
+            claim_integrity: None,
+            cannibalization_risk: None,
+            doorway_risk: None,
+            conversion_readiness: None,
+        };
+        matrix.set_requirement(
+            RequirementKind::SampleDiversity,
+            RequirementState::Passed,
+            Some(2),
+            None,
+        );
+        let families = [FamilyContent {
+            family: "category/electrician".into(),
+            measured_urls: 2,
+            template_shared_ratio: Some(85),
+            parameter_substitution_ratio: None,
+            unique_fact_ratio: Some(1),
+            unique_semantic_ratio: Some(10),
+            local_fact_coverage: Some(100),
+            schema_fact_coverage: Some(0),
+            primary_producer: None,
+            gsc_clicks: None,
+            gsc_impressions: None,
+            error_findings: None,
+        }];
+        let out = enrich(vec![matrix], &families).remove(0);
+        assert_eq!(out.doorway_risk, Some(80));
+        assert!(
+            out.requirements
+                .iter()
+                .any(|item| item.kind == RequirementKind::DoorwayRisk
+                    && item.state == RequirementState::Failed)
+        );
+        assert_eq!(out.schema_fact_coverage, Some(0));
     }
 }

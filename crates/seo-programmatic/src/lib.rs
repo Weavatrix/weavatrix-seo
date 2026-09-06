@@ -64,7 +64,7 @@ pub struct PageMatrix {
     /// Pattern dimensions (`city`, `service`, `locale`, …).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dimensions: Vec<String>,
-    /// Estimated cardinality when generators were read.
+    /// Crawl-observed unique combinations. Not generator size.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub estimated_cardinality: Option<u64>,
     /// Fact coverage 0–100 when content intelligence ran.
@@ -88,6 +88,33 @@ pub struct PageMatrix {
     /// Typed gates. `SAFE_TO_GENERATE` only when required kinds are `PASSED`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub requirements: Vec<RequirementResult>,
+    /// `measured_urls * 100 / estimated_cardinality` when cardinality is known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_sample_rate: Option<u16>,
+    /// Share of indexable URLs that declare a canonical, 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub canonical_coverage: Option<u16>,
+    /// Internal discovery: 100 when a page link exists, 0 when sitemap-only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub internal_discovery: Option<u16>,
+    /// GSC demand coverage 0–100. Unmeasured without search-performance rows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub demand_coverage: Option<u16>,
+    /// Schema-fact coverage 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema_fact_coverage: Option<u16>,
+    /// Claim-integrity score 0–100. Unmeasured when no claim rules ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claim_integrity: Option<u16>,
+    /// Cannibalization risk 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cannibalization_risk: Option<u16>,
+    /// Doorway / thin-template risk 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub doorway_risk: Option<u16>,
+    /// Conversion readiness 0–100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_readiness: Option<u16>,
 }
 
 impl PageMatrix {
@@ -120,7 +147,7 @@ impl PageMatrix {
     }
 }
 
-pub use compile::{compile, enrich};
+pub use compile::{annotate, compile, enrich};
 
 /// Default compiler output before route generators are wired.
 #[must_use]
@@ -137,6 +164,15 @@ pub fn unmeasured(family: impl Into<String>) -> PageMatrix {
         semantic_distinctness: None,
         unmet_requirements: vec!["no measured URLs".into()],
         requirements: unmeasured_gates(),
+        measured_sample_rate: None,
+        canonical_coverage: None,
+        internal_discovery: None,
+        demand_coverage: None,
+        schema_fact_coverage: None,
+        claim_integrity: None,
+        cannibalization_risk: None,
+        doorway_risk: None,
+        conversion_readiness: None,
     }
 }
 

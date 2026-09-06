@@ -127,6 +127,19 @@ pub struct RefactorHandoff {
     pub snapshot_id: String,
 }
 
+/// How a later run proves a plan step. Pending until re-measured.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerificationContract {
+    /// Machine kind: `CRAWL_URL`, `GSC_ROW`, `HTML_LINK`, `NOINDEX`, `DIFF_FINDING`.
+    pub kind: String,
+    /// Human check.
+    pub check: String,
+    /// URL or family to measure.
+    pub subject: String,
+    /// `UNMEASURED` until a later audit fills it. Never a silent pass.
+    pub state: String,
+}
+
 /// One executable step in the plan DAG. Additive to [`PlanAction`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlanStep {
@@ -145,6 +158,9 @@ pub struct PlanStep {
     /// Finding fingerprints or opportunity ids.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<String>,
+    /// Typed verification. `PlanAction.verification` stays the human string.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verification: Option<VerificationContract>,
 }
 
 /// Directed relation between plan steps.
@@ -444,6 +460,7 @@ fn dag(actions: &[PlanAction]) -> (Vec<PlanStep>, Vec<PlanEdge>) {
                 preconditions: action.dependencies.clone(),
                 postconditions: vec![action.acceptance.clone()],
                 evidence: action.evidence.clone(),
+                verification: verification_for(stage, &action.subject),
             });
             if let Some(from) = &previous {
                 edges.push(PlanEdge {
@@ -481,6 +498,38 @@ fn dag(actions: &[PlanAction]) -> (Vec<PlanStep>, Vec<PlanEdge>) {
         }
     }
     (steps, edges)
+}
+
+fn verification_for(stage: &str, subject: &str) -> Option<VerificationContract> {
+    let (kind, check) = match stage {
+        "CRAWL" => (
+            "CRAWL_URL",
+            "A later crawl fetches this subject with status 200.",
+        ),
+        "OBSERVE_GSC" => (
+            "GSC_ROW",
+            "A later search_performance row exists for this subject.",
+        ),
+        "DIFF" => (
+            "DIFF_FINDING",
+            "Error findings on this subject did not increase.",
+        ),
+        "ADD_INTERNAL_LINKS" => (
+            "HTML_LINK",
+            "The source HTML contains a crawlable link to the target.",
+        ),
+        "SET_NOINDEX" => (
+            "NOINDEX",
+            "The URL returns noindex or is omitted from the sitemap.",
+        ),
+        _ => return None,
+    };
+    Some(VerificationContract {
+        kind: kind.into(),
+        check: check.into(),
+        subject: subject.to_owned(),
+        state: "UNMEASURED".into(),
+    })
 }
 
 fn stages(kind: PlanKind) -> &'static [&'static str] {
@@ -537,6 +586,13 @@ mod tests {
                 .iter()
                 .any(|edge| edge.relation == "VERIFY_AFTER" && edge.to.contains("CRAWL"))
         );
+        let crawl = steps
+            .iter()
+            .find(|step| step.kind == "CRAWL")
+            .expect("crawl");
+        let contract = crawl.verification.as_ref().expect("verification contract");
+        assert_eq!(contract.kind, "CRAWL_URL");
+        assert_eq!(contract.state, "UNMEASURED");
     }
 
     #[test]

@@ -551,6 +551,21 @@ fn family_rows(intelligence: Option<&SearchIntelligence>) -> Vec<BTreeMap<String
             if let Some(value) = matrix.unique_fact_ratio {
                 row.insert("unique_fact_ratio".into(), value.to_string());
             }
+            if let Some(value) = matrix.estimated_cardinality {
+                row.insert("estimated_cardinality".into(), value.to_string());
+            }
+            if let Some(value) = matrix.measured_sample_rate {
+                row.insert("measured_sample_rate".into(), value.to_string());
+            }
+            if let Some(value) = matrix.doorway_risk {
+                row.insert("doorway_risk".into(), value.to_string());
+            }
+            if let Some(value) = matrix.cannibalization_risk {
+                row.insert("cannibalization_risk".into(), value.to_string());
+            }
+            if let Some(value) = matrix.canonical_coverage {
+                row.insert("canonical_coverage".into(), value.to_string());
+            }
             if let Some(family) = intelligence
                 .families
                 .iter()

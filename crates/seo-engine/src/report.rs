@@ -15,7 +15,7 @@ use weavatrix_seo_model::{
 };
 use weavatrix_seo_observation::load_state;
 use weavatrix_seo_opportunity::{opportunities, rank};
-use weavatrix_seo_programmatic::{SafetyVerdict, compile, enrich, thin_city_variants};
+use weavatrix_seo_programmatic::{SafetyVerdict, annotate, compile, enrich, thin_city_variants};
 use weavatrix_seo_quality::audit as quality_audit;
 use weavatrix_seo_render::{load as load_render, reconcile as reconcile_render};
 use weavatrix_seo_rules::audit as rule_audit;
@@ -52,7 +52,7 @@ pub fn assemble(
         findings.extend(source_findings(&inventory, surface));
         findings.extend(programmatic_findings(surface));
     }
-    let matrices = enrich(compile(&inventory, &predicted), &content.families);
+    let mut matrices = enrich(compile(&inventory, &predicted), &content.families);
     let semantic = analyze_semantic(&inventory, &architecture);
     findings.extend(semantic.findings);
     let mut items = opportunities(&inventory, &architecture);
@@ -84,6 +84,7 @@ pub fn assemble(
             family.error_findings = Some(u32::try_from(errors).unwrap_or(u32::MAX));
         }
     }
+    matrices = annotate(matrices, &findings, &content.families);
     let outcomes = weavatrix_seo_observation::outcome_metrics(&observations);
     let url_metrics = weavatrix_seo_observation::url_metrics(&observations);
     let (mut ai_funnels, funnel_findings) =
@@ -154,6 +155,15 @@ pub fn assemble(
                 semantic_distinctness: matrix.semantic_distinctness,
                 unmet_requirements: matrix.unmet_requirements.clone(),
                 requirements: matrix.requirements.clone(),
+                measured_sample_rate: matrix.measured_sample_rate,
+                canonical_coverage: matrix.canonical_coverage,
+                internal_discovery: matrix.internal_discovery,
+                demand_coverage: matrix.demand_coverage,
+                schema_fact_coverage: matrix.schema_fact_coverage,
+                claim_integrity: matrix.claim_integrity,
+                cannibalization_risk: matrix.cannibalization_risk,
+                doorway_risk: matrix.doorway_risk,
+                conversion_readiness: matrix.conversion_readiness,
             })
             .collect(),
         chunks: content.chunks,
