@@ -262,7 +262,7 @@ fn bind_instances(
         return;
     };
     for instance in &facts.instances {
-        if !url.contains(&instance.entity_id) {
+        if !url_names_instance(url, &instance.entity_id) {
             continue;
         }
         let entity = format!("entity:{}:instance:{}", pack.id, instance.entity_id);
@@ -313,7 +313,7 @@ fn bind_instances(
         );
         graph.facts.push(
             FactEdge::new(
-                field,
+                field.clone(),
                 SearchNodeKind::DataField,
                 symbol,
                 SearchNodeKind::SourceSymbol,
@@ -326,7 +326,39 @@ fn bind_instances(
                 instance.line,
             )),
         );
+        for rule in pack.claims {
+            if rule.requires_fact != instance.field {
+                continue;
+            }
+            let claim = claim_id(pack, rule.id);
+            if !graph.nodes.iter().any(|node| node.id == claim) {
+                continue;
+            }
+            graph.facts.push(FactEdge::new(
+                claim,
+                SearchNodeKind::Claim,
+                field.clone(),
+                SearchNodeKind::DataField,
+                Relation::Requires,
+                Evidence::repo(),
+            ));
+        }
     }
+}
+
+/// True when a URL path names this entity instance as a segment.
+///
+/// `/specialist/42` matches `42`. `/page/420` does not. Substring matching
+/// would treat every numeric id as a prefix of a longer token.
+fn url_names_instance(url: &str, entity_id: &str) -> bool {
+    if entity_id.is_empty() {
+        return false;
+    }
+    let path = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let path = path.find('/').map_or("/", |at| &path[at..]);
+    path.split(['/', '?', '#', '&', '='])
+        .filter(|segment| !segment.is_empty())
+        .any(|segment| segment.eq_ignore_ascii_case(entity_id))
 }
 
 fn push_node(graph: &mut DomainGraph, seen: &mut BTreeSet<String>, node: SearchNode) {
@@ -341,5 +373,26 @@ fn inferred_http() -> Evidence {
         kind: EvidenceKind::Inferred,
         confidence: Confidence::Medium,
         ..Evidence::http()
+    }
+}
+
+#[cfg(test)]
+mod instance_url_tests {
+    use super::url_names_instance;
+
+    #[test]
+    fn route_param_matches_the_instance_not_a_prefix() {
+        assert!(url_names_instance(
+            "https://kablay.co.il/he/specialist/42",
+            "42"
+        ));
+        assert!(!url_names_instance(
+            "https://kablay.co.il/he/specialist/420",
+            "42"
+        ));
+        assert!(url_names_instance(
+            "https://kablay.co.il/he/specialist/ivan-kamentsa",
+            "ivan-kamentsa"
+        ));
     }
 }

@@ -219,7 +219,15 @@ fn nearby_entity_id(source: &str, line: usize) -> Option<String> {
 
 fn capture_id(row: &str) -> Option<String> {
     let lower = row.to_ascii_lowercase();
-    for key in ["specialist_id", "specialistid", "entity_id", "entityid"] {
+    for key in [
+        "specialist_id",
+        "specialistid",
+        "entity_id",
+        "entityid",
+        "slug",
+        "username",
+        "handle",
+    ] {
         if let Some(at) = lower.find(key) {
             return first_token(&row[at + key.len()..]);
         }

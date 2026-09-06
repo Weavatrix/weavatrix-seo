@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Entity-instance URLs bind by path segment (`/specialist/42` ABOUT `42`),
+not substring. A page claim that requires the instance field gets a
+`REQUIRES` edge to that field. `slug` / `username` / `handle` are captured
+as instance ids.
+
 ## 0.6.3 - 2026-09-06
 
 Finish-to-win Programmatic Matrix v3 and plan verification contracts.
