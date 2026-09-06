@@ -17,7 +17,7 @@ let pass = analyze(&inventory, &architecture);
 
 ```toml
 [dependencies]
-weavatrix-seo-semantic = "0.6.2"
+weavatrix-seo-semantic = "0.6.3"
 ```
 
 MIT.

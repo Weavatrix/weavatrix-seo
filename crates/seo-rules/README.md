@@ -17,7 +17,7 @@ Findings use the per-code registry in [`weavatrix-seo-model`](https://crates.io/
 
 ```toml
 [dependencies]
-weavatrix-seo-rules = "0.6.2"
+weavatrix-seo-rules = "0.6.3"
 ```
 
 Quality headers/H1/a11y live in [`weavatrix-seo-quality`](https://crates.io/crates/weavatrix-seo-quality). MIT.

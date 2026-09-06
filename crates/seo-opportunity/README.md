@@ -18,7 +18,7 @@ CLI: `weavatrix-seo opportunities`. MCP: `seo_opportunities`.
 
 ```toml
 [dependencies]
-weavatrix-seo-opportunity = "0.6.2"
+weavatrix-seo-opportunity = "0.6.3"
 ```
 
 MIT.

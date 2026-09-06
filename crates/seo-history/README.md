@@ -20,7 +20,7 @@ CLI: `weavatrix-seo audit --history DIR`, `weavatrix-seo query --history DIR --q
 
 ```toml
 [dependencies]
-weavatrix-seo-history = "0.6.2"
+weavatrix-seo-history = "0.6.3"
 ```
 
 MIT.

@@ -51,7 +51,7 @@ Prebuilt binaries cover Windows, macOS, and Linux on x64 and arm64. The npm pack
 |---|---|
 | CLI | `weavatrix-seo <command>` |
 | MCP | `weavatrix-seo mcp` or `weavatrix-seo-mcp` |
-| Library | `weavatrix-seo = "0.6.2"` |
+| Library | `weavatrix-seo = "0.6.3"` |
 
 ## Why this is not another crawler
 
@@ -260,7 +260,7 @@ Install the engine:
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.6.2"
+weavatrix-seo = "0.6.3"
 ```
 
 Or compose a layer:

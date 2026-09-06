@@ -24,7 +24,7 @@ let fetcher = Fetcher::new(NetworkPolicy::PublicOnly);
 
 ```toml
 [dependencies]
-weavatrix-seo-http = "0.6.2"
+weavatrix-seo-http = "0.6.3"
 ```
 
 Crawling sits in [`weavatrix-seo-crawl`](https://crates.io/crates/weavatrix-seo-crawl). MIT.

@@ -18,7 +18,7 @@ CLI: `weavatrix-seo compare --site URL --competitor URL`. MCP: `seo_compare`. Li
 
 ```toml
 [dependencies]
-weavatrix-seo-competitor = "0.6.2"
+weavatrix-seo-competitor = "0.6.3"
 ```
 
 MIT.

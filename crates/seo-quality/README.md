@@ -17,7 +17,7 @@ This is not Weavatrix Quality (WVQ). Browser network proof is imported separatel
 
 ```toml
 [dependencies]
-weavatrix-seo-quality = "0.6.2"
+weavatrix-seo-quality = "0.6.3"
 ```
 
 MIT.

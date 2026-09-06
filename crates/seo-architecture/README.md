@@ -17,7 +17,7 @@ This is site-graph architecture, not Weavatrix Core's repository architecture co
 
 ```toml
 [dependencies]
-weavatrix-seo-architecture = "0.6.2"
+weavatrix-seo-architecture = "0.6.3"
 ```
 
 MIT.

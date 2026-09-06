@@ -17,7 +17,7 @@ License phrases without a true `license_verified` fact are contradictions. Forei
 
 ```toml
 [dependencies]
-weavatrix-seo-claims = "0.6.2"
+weavatrix-seo-claims = "0.6.3"
 ```
 
 MIT.

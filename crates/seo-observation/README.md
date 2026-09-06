@@ -18,7 +18,7 @@ CLI: `--gsc` / `--observations`. MCP: `seo_observations`. `ai_visibility` stays 
 
 ```toml
 [dependencies]
-weavatrix-seo-observation = "0.6.2"
+weavatrix-seo-observation = "0.6.3"
 ```
 
 MIT.

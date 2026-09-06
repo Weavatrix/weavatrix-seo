@@ -16,7 +16,7 @@ Exact-duplicate detection is never replaced by near-duplicates. Authorship of sy
 
 ```toml
 [dependencies]
-weavatrix-seo-content = "0.6.2"
+weavatrix-seo-content = "0.6.3"
 ```
 
 MIT.

@@ -17,7 +17,7 @@ let thin = thin_city_variants(&inventory);
 
 ```toml
 [dependencies]
-weavatrix-seo-programmatic = "0.6.2"
+weavatrix-seo-programmatic = "0.6.3"
 ```
 
 MIT.

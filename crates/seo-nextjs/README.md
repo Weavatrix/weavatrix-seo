@@ -17,7 +17,7 @@ Capabilities are honest: App Router metadata can be `exact`; Nuxt/Astro frontmat
 
 ```toml
 [dependencies]
-weavatrix-seo-nextjs = "0.6.2"
+weavatrix-seo-nextjs = "0.6.3"
 ```
 
 Surface types: [`weavatrix-seo-source`](https://crates.io/crates/weavatrix-seo-source). MIT.

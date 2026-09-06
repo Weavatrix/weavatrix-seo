@@ -13,7 +13,7 @@ The **CLI and MCP host are the same native binary** (`weavatrix-seo` / `weavatri
 
 ```toml
 [dependencies]
-weavatrix-seo = "0.6.2"
+weavatrix-seo = "0.6.3"
 ```
 
 ```rust

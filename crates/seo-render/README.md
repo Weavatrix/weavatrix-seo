@@ -18,7 +18,7 @@ API: `RenderSnapshot`, `RenderedPage`, `reconcile`, `RenderMode`.
 
 ```toml
 [dependencies]
-weavatrix-seo-render = "0.6.2"
+weavatrix-seo-render = "0.6.3"
 ```
 
 MIT.

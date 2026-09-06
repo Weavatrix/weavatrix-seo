@@ -31,7 +31,7 @@ let _ = rule_authority(FindingFamily::Ai, 4); // experimental llms.txt
 
 ```toml
 [dependencies]
-weavatrix-seo-model = "0.6.2"
+weavatrix-seo-model = "0.6.3"
 ```
 
 Product CLI/MCP: [`weavatrix-seo`](https://crates.io/crates/weavatrix-seo). MIT.

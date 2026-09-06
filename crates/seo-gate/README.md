@@ -19,7 +19,7 @@ Incomparable origin/mode/semantics do not resolve findings. A smaller crawl is c
 
 ```toml
 [dependencies]
-weavatrix-seo-gate = "0.6.2"
+weavatrix-seo-gate = "0.6.3"
 ```
 
 MIT.

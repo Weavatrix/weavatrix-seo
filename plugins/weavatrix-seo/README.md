@@ -7,7 +7,7 @@ search-intelligence tools** through one native MCP server. It covers crawl,
 GSC, logs, AI citations, bounded query, retrieve, and a plan DAG. It never
 writes source.
 
-The plugin starts the published `weavatrix-seo@0.6.2` npm package. That package
+The plugin starts the published `weavatrix-seo@0.6.3` npm package. That package
 already contains the matching prebuilt native binaries; it has no lifecycle
 scripts or runtime dependencies. Node.js 18 or newer is required.
 

@@ -18,7 +18,7 @@ Framework file prediction lives in [`weavatrix-seo-nextjs`](https://crates.io/cr
 
 ```toml
 [dependencies]
-weavatrix-seo-source = "0.6.2"
+weavatrix-seo-source = "0.6.3"
 ```
 
 MIT.

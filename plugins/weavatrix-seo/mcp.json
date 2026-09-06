@@ -6,7 +6,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "weavatrix-seo@0.6.2",
+        "weavatrix-seo@0.6.3",
         "mcp",
         "--allow-root",
         "."

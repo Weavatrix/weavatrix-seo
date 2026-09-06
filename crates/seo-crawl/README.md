@@ -18,7 +18,7 @@ Robots groups, sitemaps (including `.xml.gz`), HTML extraction, landings before 
 
 ```toml
 [dependencies]
-weavatrix-seo-crawl = "0.6.2"
+weavatrix-seo-crawl = "0.6.3"
 ```
 
 The product audit is [`weavatrix-seo`](https://crates.io/crates/weavatrix-seo). MIT.
