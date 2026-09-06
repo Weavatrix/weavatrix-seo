@@ -6,6 +6,7 @@
 [![docs.rs](https://docs.rs/weavatrix-seo/badge.svg)](https://docs.rs/weavatrix-seo)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](Cargo.toml)
+[![Weavatrix on StartupScores](https://startupscores.com/badge/weavatrix.svg?style=shield&v=combo&theme=dark)](https://startupscores.com/open-source/weavatrix)
 
 Source-aware Search Intelligence for the [Weavatrix ecosystem](https://weavatrix.com/ecosystem).
 
